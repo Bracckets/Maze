@@ -1,0 +1,16 @@
+{
+  "/_not-found/page": "/_not-found",
+  "/api/auth/signin/route": "/api/auth/signin",
+  "/api/integrations/status/route": "/api/integrations/status",
+  "/api/workspace/settings/route": "/api/workspace/settings",
+  "/api/workspace/api-keys/route": "/api/workspace/api-keys",
+  "/dashboard/page": "/dashboard",
+  "/docs/page": "/docs",
+  "/page": "/",
+  "/pricing/page": "/pricing",
+  "/privacy/page": "/privacy",
+  "/profile/page": "/profile",
+  "/signin/page": "/signin",
+  "/settings/page": "/settings",
+  "/terms/page": "/terms"
+}
