@@ -15,75 +15,111 @@ export function ApiKeyManager() {
   const [keys, setKeys] = useState<ApiKey[]>([]);
   const [name, setName] = useState("Backend ingestion key");
   const [environment, setEnvironment] = useState<"test" | "live">("live");
-  const [status, setStatus] = useState("Loading keys...");
+  const [status, setStatus] = useState<{ text: string; ok: boolean } | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     void (async () => {
       const response = await fetch("/api/workspace/api-keys", { cache: "no-store" });
       const data = await response.json();
       setKeys(data.keys ?? []);
-      setStatus("Keys ready");
+      setLoading(false);
     })();
   }, []);
 
   async function createKey(formData: FormData) {
-    setStatus("Generating key...");
+    setStatus({ text: "Generating…", ok: true });
 
     const response = await fetch("/api/workspace/api-keys", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         name: String(formData.get("name") ?? ""),
-        environment: String(formData.get("environment") ?? "live")
-      })
+        environment: String(formData.get("environment") ?? "live"),
+      }),
     });
 
     const data = await response.json();
     if (response.ok) {
       setKeys((current) => [data.key, ...current]);
-      setStatus(`New ${data.mode ?? "mock"} key generated: ${data.key.token}`);
-      return;
+      setStatus({ text: `Key created: ${data.key.token}`, ok: true });
+    } else {
+      setStatus({ text: data.error ?? "Unable to generate key.", ok: false });
     }
-
-    setStatus(data.error ?? "Unable to generate key.");
   }
 
   return (
-    <div className="stack">
-      <form action={createKey} className="field-grid">
-        <div className="field">
-          <label htmlFor="name">Key name</label>
-          <input id="name" name="name" onChange={(event) => setName(event.target.value)} value={name} />
+    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      {/* Generate form */}
+      <form action={createKey} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 10, alignItems: "end" }}>
+          <div className="field">
+            <label htmlFor="key-name">Key name</label>
+            <input id="key-name" name="name" value={name} onChange={(e) => setName(e.target.value)} />
+          </div>
+          <div className="field">
+            <label htmlFor="key-env">Environment</label>
+            <select id="key-env" name="environment" value={environment} onChange={(e) => setEnvironment(e.target.value as "test" | "live")}>
+              <option value="live">Live</option>
+              <option value="test">Test</option>
+            </select>
+          </div>
         </div>
-        <div className="field">
-          <label htmlFor="environment">Environment</label>
-          <select
-            id="environment"
-            name="environment"
-            onChange={(event) => setEnvironment(event.target.value as "test" | "live")}
-            value={environment}
-          >
-            <option value="live">Live</option>
-            <option value="test">Test</option>
-          </select>
-        </div>
-        <button className="button primary" type="submit">
-          Generate API key
+        <button className="btn btn-primary" type="submit" style={{ alignSelf: "flex-start" }}>
+          Generate key
         </button>
       </form>
 
-      <p className="status-copy">{status}</p>
+      {status && (
+        <p
+          style={{
+            fontSize: "0.82rem",
+            color: status.ok ? "var(--green)" : "var(--red)",
+            fontFamily: status.ok ? "var(--font-mono)" : "inherit",
+            background: status.ok ? "var(--green-dim)" : "var(--red-dim)",
+            padding: "10px 14px",
+            borderRadius: "var(--r-md)",
+            border: `1px solid ${status.ok ? "rgba(52,211,153,0.2)" : "rgba(248,113,113,0.2)"}`,
+            wordBreak: "break-all",
+          }}
+        >
+          {status.text}
+        </p>
+      )}
 
-      <div className="clean-list">
+      {/* Key list */}
+      <div>
+        <p style={{ fontSize: "0.78rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--text-3)", marginBottom: 10 }}>
+          {loading ? "Loading…" : `${keys.length} key${keys.length !== 1 ? "s" : ""}`}
+        </p>
         {keys.map((key) => (
-          <article className="clean-item" key={key.id}>
+          <div
+            key={key.id}
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: 14,
+              padding: "12px 0",
+              borderBottom: "1px solid var(--border)",
+            }}
+          >
             <div>
-              <strong>{key.name}</strong>
-              <p className="panel-copy">{key.token ?? `${key.prefix}••••••••••••`} · created {new Date(key.createdAt).toLocaleDateString()}</p>
+              <div style={{ fontSize: "0.88rem", fontWeight: 600, color: "var(--text)", marginBottom: 3 }}>{key.name}</div>
+              <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.78rem", color: "var(--text-3)" }}>
+                {key.token ?? `${key.prefix ?? "mz_"}••••••••••••`}
+              </div>
             </div>
-            <span className="inline-note">{key.lastUsedAt ? `last used ${new Date(key.lastUsedAt).toLocaleDateString()}` : "new key"}</span>
-          </article>
+            <div style={{ fontSize: "0.78rem", color: "var(--text-3)", whiteSpace: "nowrap" }}>
+              {key.lastUsedAt
+                ? `Used ${new Date(key.lastUsedAt).toLocaleDateString()}`
+                : `Created ${new Date(key.createdAt).toLocaleDateString()}`}
+            </div>
+          </div>
         ))}
+        {!loading && keys.length === 0 && (
+          <p style={{ fontSize: "0.85rem", color: "var(--text-3)" }}>No keys yet. Generate one above.</p>
+        )}
       </div>
     </div>
   );

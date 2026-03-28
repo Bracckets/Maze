@@ -1,52 +1,80 @@
 import { SiteShell } from "@/components/site-shell";
-import { Panel, Pill } from "@/components/ui";
+import { Card } from "@/components/ui";
+
+const sections = [
+  {
+    title: "What we collect",
+    body: "Maze collects behavioral metadata: screen names, event names, timestamps, element identifiers, and aggregate interaction patterns. We also collect operational telemetry — SDK version, delivery status, and ingestion metrics — to keep the service reliable.",
+  },
+  {
+    title: "What we do not collect",
+    body: "Maze is not designed to receive passwords, OTP codes, credit card numbers, national IDs, or bank account numbers. These fields must be masked or omitted before any event leaves the user's device. If they appear in your event stream, that is a misconfiguration.",
+  },
+  {
+    title: "How data is used",
+    body: "Collected events are used solely to generate funnel analysis, friction detection, and AI insights for your workspace. We do not sell behavioral data to third parties or use it to train models outside your workspace context.",
+  },
+  {
+    title: "Data retention",
+    body: "Starter and Growth workspaces retain session data for 90 days. Scale plan customers can configure retention windows from 30 days to 1 year. Workspace administrators can request deletion at any time.",
+  },
+  {
+    title: "Your controls",
+    body: "Workspace administrators can export data, configure masking policies, and request account deletion from the Settings page. We aim to fulfill deletion requests within 30 days.",
+  },
+  {
+    title: "Contact",
+    body: "For privacy questions, email privacy@maze.ai. We respond to all requests within 5 business days.",
+  },
+];
 
 export default function PrivacyPage() {
   return (
-    <SiteShell eyebrow="Privacy policy">
-      <section className="legal-grid">
-        <Panel glow>
-          <Pill tone="soft">Privacy policy</Pill>
-          <h1 className="page-title">Privacy that respects the signal.</h1>
-          <p className="page-copy">
-            Maze is designed to help teams understand product friction without capturing the private contents of users’ identities,
-            credentials, or financial details.
-          </p>
-        </Panel>
-        <Panel>
-          <Pill>At a glance</Pill>
-          <ul className="plan-features">
-            <li>We collect product interaction events, not raw secrets.</li>
-            <li>Passwords, OTP values, payment details, and national IDs must be masked or omitted.</li>
-            <li>Workspace administrators control retention and alert routing.</li>
-          </ul>
-        </Panel>
+    <SiteShell>
+      <section style={{ padding: "52px 0 40px", maxWidth: 640 }}>
+        <p className="eyebrow">Privacy policy</p>
+        <h1 className="display-sm" style={{ marginBottom: 14 }}>
+          Built to observe behavior,<br />not expose identity.
+        </h1>
+        <p className="subtext" style={{ fontSize: "0.95rem" }}>
+          Maze captures friction signals to help product teams improve their apps.
+          We are not designed to collect credentials, financial data, or personally identifiable information.
+        </p>
       </section>
 
-      <section className="content-grid">
-        <Panel className="docs-list">
-          <Pill>What we collect</Pill>
-          <article className="docs-item">
-            <strong>Behavioral metadata</strong>
-            <p className="panel-copy">Screen names, event names, timestamps, element identifiers, and aggregate interaction patterns.</p>
-          </article>
-          <article className="docs-item">
-            <strong>Operational telemetry</strong>
-            <p className="panel-copy">Delivery status, SDK version, and ingestion performance needed to keep the service reliable.</p>
-          </article>
-        </Panel>
-        <Panel className="docs-list">
-          <Pill tone="light">What we do not collect</Pill>
-          <article className="docs-item">
-            <strong>Raw secrets or regulated fields</strong>
-            <p className="panel-copy">Maze should never receive passwords, card numbers, bank identifiers, or government ID numbers.</p>
-          </article>
-          <article className="docs-item">
-            <strong>More data than necessary</strong>
-            <p className="panel-copy">The SDK is intended for targeted instrumentation, not indiscriminate full-screen capture.</p>
-          </article>
-        </Panel>
-      </section>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--gap)", marginBottom: 28 }}>
+        {[
+          { label: "We collect", items: ["Screen and event names", "Timestamps and session IDs", "Element identifiers", "Delivery and SDK telemetry"] },
+          { label: "We never collect", items: ["Passwords or OTP codes", "Card or bank account numbers", "National or government IDs", "Raw form field contents"] },
+        ].map((col) => (
+          <Card key={col.label} accent={col.label === "We never collect"}>
+            <p style={{ fontSize: "0.78rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--text-3)", marginBottom: 14 }}>
+              {col.label}
+            </p>
+            <ul style={{ listStyle: "none", display: "flex", flexDirection: "column", gap: 9 }}>
+              {col.items.map((item) => (
+                <li key={item} style={{ display: "flex", alignItems: "center", gap: 9, fontSize: "0.88rem", color: "var(--text-2)" }}>
+                  <span style={{ color: col.label === "We never collect" ? "var(--red)" : "var(--green)", fontWeight: 700, fontSize: "0.78rem" }}>
+                    {col.label === "We never collect" ? "✕" : "✓"}
+                  </span>
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </Card>
+        ))}
+      </div>
+
+      <Card>
+        <div className="legal-content">
+          {sections.map((s) => (
+            <div key={s.title}>
+              <h2>{s.title}</h2>
+              <p>{s.body}</p>
+            </div>
+          ))}
+        </div>
+      </Card>
     </SiteShell>
   );
 }

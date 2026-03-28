@@ -1,16 +1,10 @@
 {
-  "/_not-found/page": "app/_not-found/page.js",
-  "/api/auth/signin/route": "app/api/auth/signin/route.js",
-  "/api/integrations/status/route": "app/api/integrations/status/route.js",
-  "/api/workspace/settings/route": "app/api/workspace/settings/route.js",
   "/api/workspace/api-keys/route": "app/api/workspace/api-keys/route.js",
-  "/dashboard/page": "app/dashboard/page.js",
-  "/docs/page": "app/docs/page.js",
+  "/settings/page": "app/settings/page.js",
   "/page": "app/page.js",
   "/pricing/page": "app/pricing/page.js",
-  "/privacy/page": "app/privacy/page.js",
+  "/docs/page": "app/docs/page.js",
   "/profile/page": "app/profile/page.js",
-  "/signin/page": "app/signin/page.js",
-  "/settings/page": "app/settings/page.js",
-  "/terms/page": "app/terms/page.js"
+  "/privacy/page": "app/privacy/page.js",
+  "/dashboard/page": "app/dashboard/page.js"
 }

@@ -1,6 +1,6 @@
 import { ApiKeyManager } from "@/components/api-key-manager";
 import { DashboardShell } from "@/components/site-shell";
-import { Panel, Pill } from "@/components/ui";
+import { Card, StatusDot, Tag } from "@/components/ui";
 import { getIntegrationStatus, getWorkspaceSettings } from "@/lib/service-gateway";
 
 export default async function SettingsPage() {
@@ -9,57 +9,79 @@ export default async function SettingsPage() {
 
   return (
     <DashboardShell
-      aside={
-        <Panel>
-          <Pill tone="soft">Workspace status</Pill>
-          <strong className="metric-value">MVP</strong>
-          <p className="panel-copy">The app now exposes internal API routes that can proxy to external auth, key, and settings services.</p>
-        </Panel>
-      }
-      subtitle="Control the way Maze captures, routes, and safeguards behavioral data."
       title="Settings"
+      subtitle="Manage your SDK configuration, API keys, and service connections."
     >
-      <section className="settings-grid">
-        <Panel glow>
-          <Pill>SDK configuration</Pill>
-          <div className="field-grid">
-            <div className="field">
-              <label htmlFor="api-key">Workspace API key</label>
-              <input id="api-key" readOnly value="Use generated backend ingestion keys below" />
-            </div>
-            <div className="field">
-              <label htmlFor="sampling">Ingestion API</label>
-              <input id="sampling" readOnly value={settings.apiBaseUrl} />
-            </div>
-            <div className="field">
-              <label htmlFor="masking">Sensitive-field policy</label>
-              <textarea defaultValue="Mask passwords, card numbers, national IDs, OTP values, and banking identifiers before transport." id="masking" />
-            </div>
-          </div>
-        </Panel>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--gap)" }}>
 
-        <div className="stack">
-          <Panel glow>
-            <Pill tone="light">API keys</Pill>
-            <ApiKeyManager />
-          </Panel>
+        {/* SDK config */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "var(--gap)" }}>
+          <Card>
+            <div className="heading" style={{ marginBottom: 4 }}>SDK configuration</div>
+            <p className="subtext" style={{ fontSize: "0.85rem", marginBottom: 20 }}>
+              Use these values when initializing the Maze SDK in your mobile app.
+            </p>
 
-          <Panel>
-            <Pill>Service connections</Pill>
-            <div className="clean-list">
-              {integrations.services.map((service) => (
-                <article className="clean-item" key={service.name}>
-                  <div>
-                    <strong>{service.name}</strong>
-                    <p className="panel-copy">{service.path}</p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <div className="field">
+                <label>Ingestion endpoint</label>
+                <input readOnly value={settings.apiBaseUrl} />
+              </div>
+              <div className="field">
+                <label>Workspace key</label>
+                <input readOnly value="Use a generated API key below" />
+                <p className="field-hint" style={{ fontSize: "0.78rem", color: "var(--text-3)", marginTop: 4 }}>
+                  Generate a key in the API Keys section and use it in your SDK initialization.
+                </p>
+              </div>
+              <div className="field">
+                <label>Data masking rules</label>
+                <textarea
+                  defaultValue="Mask passwords, card numbers, national IDs, OTP codes, and bank account details before sending."
+                  rows={3}
+                />
+                <p className="field-hint" style={{ fontSize: "0.78rem", color: "var(--text-3)", marginTop: 4 }}>
+                  These fields are stripped on-device before any data leaves the user's phone.
+                </p>
+              </div>
+            </div>
+          </Card>
+
+          {/* Service connections */}
+          <Card>
+            <div className="heading" style={{ marginBottom: 4 }}>Service connections</div>
+            <p className="subtext" style={{ fontSize: "0.85rem", marginBottom: 18 }}>
+              Point these to your own backends via environment variables.
+            </p>
+
+            {integrations.services.map((service) => (
+              <div className="list-row" key={service.name}>
+                <div>
+                  <div style={{ fontSize: "0.88rem", fontWeight: 600, color: "var(--text)", marginBottom: 2 }}>
+                    {service.name}
                   </div>
-                  <span className="inline-note">{service.status}</span>
-                </article>
-              ))}
-            </div>
-          </Panel>
+                  <code style={{ fontSize: "0.76rem" }}>{service.path}</code>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <StatusDot status={service.status === "ready" ? "online" : "degraded"} />
+                  <Tag tone={service.status === "ready" ? "green" : "amber"}>{service.status}</Tag>
+                </div>
+              </div>
+            ))}
+          </Card>
         </div>
-      </section>
+
+        {/* API keys */}
+        <Card accent>
+          <div className="heading" style={{ marginBottom: 4 }}>API keys</div>
+          <p className="subtext" style={{ fontSize: "0.85rem", marginBottom: 20 }}>
+            Generate keys to authenticate your mobile SDK and backend integrations.
+            Keys are shown once — store them securely.
+          </p>
+          <ApiKeyManager />
+        </Card>
+
+      </div>
     </DashboardShell>
   );
 }
