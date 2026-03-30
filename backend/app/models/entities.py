@@ -1,42 +1,35 @@
+from dataclasses import dataclass
 from datetime import datetime
 
-from sqlalchemy import JSON, Boolean, DateTime, Integer, String
-from sqlalchemy.orm import Mapped, mapped_column
 
-from app.db import Base
-
-
-class EventRecord(Base):
-    __tablename__ = "events"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    user_id: Mapped[str] = mapped_column(String(128), index=True)
-    session_id: Mapped[str] = mapped_column(String(128), index=True)
-    timestamp: Mapped[datetime] = mapped_column(DateTime, index=True)
-    event_type: Mapped[str] = mapped_column(String(64), index=True)
-    screen: Mapped[str] = mapped_column(String(128), index=True)
-    element_id: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
-    event_metadata: Mapped[dict] = mapped_column("metadata", JSON, default=dict)
+@dataclass(slots=True)
+class SessionEvent:
+    session_id: str
+    device_id: str
+    occurred_at: datetime
+    event_type: str
+    screen: str | None
+    element_id: str | None
+    x: float | None
+    y: float | None
 
 
-class SessionRecord(Base):
-    __tablename__ = "sessions"
+@dataclass(slots=True)
+class SessionSummary:
+    session_id: str
+    device_id: str
+    start_time: datetime
+    end_time: datetime
+    last_screen: str | None
+    dropped_off: bool
 
-    session_id: Mapped[str] = mapped_column(String(128), primary_key=True)
-    user_id: Mapped[str] = mapped_column(String(128), index=True)
-    start_time: Mapped[datetime] = mapped_column(DateTime)
-    end_time: Mapped[datetime] = mapped_column(DateTime)
-    last_screen: Mapped[str] = mapped_column(String(128), index=True)
-    dropped_off: Mapped[bool] = mapped_column(Boolean, default=False)
 
-
-class IssueRecord(Base):
-    __tablename__ = "issues"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    type: Mapped[str] = mapped_column(String(64), index=True)
-    screen: Mapped[str] = mapped_column(String(128), index=True)
-    element_id: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
-    frequency: Mapped[int] = mapped_column(Integer, default=0)
-    affected_users_count: Mapped[int] = mapped_column(Integer, default=0)
-    details: Mapped[dict] = mapped_column(JSON, default=dict)
+@dataclass(slots=True)
+class IssueSummary:
+    issue_type: str
+    screen: str | None
+    element_id: str | None
+    frequency: int
+    affected_users_count: int
+    details: dict[str, str | int | float]
+    severity: str

@@ -146,7 +146,9 @@ Maze.screen("screen_name")
 Maze.track(
     event: "tap",
     screen: "CURRENT_SCREEN",
-    elementId: "continue_button"
+    elementId: "continue_button",
+    x: tapX,
+    y: tapY
 )
 ```
 
@@ -154,9 +156,15 @@ Maze.track(
 Maze.track(
     event = "tap",
     screen = "CURRENT_SCREEN",
-    elementId = "continue_button"
+    elementId = "continue_button",
+    x = tapX,
+    y = tapY
 )
 ```
+
+5. When native tap coordinates are available from the event handler, pass them.
+6. Maze SDK normalizes coordinates before sending them to the backend.
+7. If coordinates are unavailable in a specific handler, still send the event without them.
 
 ### elementId rules
 
@@ -182,8 +190,14 @@ Maze.track(
    Insert tracking at the start of the `setOnClickListener` body or click handler method.
 4. Jetpack Compose:
    Insert tracking at the start of the `onClick` lambda.
-
 5. Instrument at least 2 CTA tap events.
+
+### Coordinate rules
+
+1. Prefer the actual touch or click position from the native event object.
+2. Pass screen-relative coordinates when possible.
+3. Do not block the integration if a handler does not expose coordinates.
+4. Do not fabricate coordinates from unrelated layout state.
 
 ## 5. Form Interactions
 
@@ -253,11 +267,12 @@ Complete all checks before finishing.
 
 1. Confirm `Maze.initialize(...)` is called exactly once.
 2. Confirm at least 3 screens call `Maze.screen(...)`.
-3. Confirm at least 2 CTA handlers call `Maze.track(... event: "tap" ...)` or Kotlin equivalent.
+3. Confirm at least 2 CTA handlers call `Maze.track(... event: "tap" ...)` or the Kotlin equivalent.
 4. Confirm at least 1 form interaction event exists on an input-heavy onboarding screen.
-5. Build the app or run the project’s existing compile check.
-6. Fix compile errors caused by imports, lifecycle placement, or type mismatches.
-7. If the project has unit or UI tests covering onboarding, run the smallest relevant test set after changes.
+5. Confirm at least 1 primary CTA tap includes coordinate data when the platform event handler exposes the tap position.
+6. Build the app or run the project’s existing compile check.
+7. Fix compile errors caused by imports, lifecycle placement, or type mismatches.
+8. If the project has unit or UI tests covering onboarding, run the smallest relevant test set after changes.
 
 ## 8. Optional Test
 
@@ -267,12 +282,13 @@ If local execution is possible, run a lightweight functional check.
 2. Navigate through the onboarding flow.
 3. Trigger at least 2 tracked button taps.
 4. Submit at least 1 form.
-5. Confirm events are being sent using one of these signals:
+5. Confirm at least 1 tap event includes coordinate fields in the network payload or debug output.
+6. Confirm events are being sent using one of these signals:
    Maze debug logs
    existing network inspector
    HTTP proxy output
    app console output
-6. If runtime verification is not possible in the environment, still complete compile verification and document that runtime send verification could not be executed.
+7. If runtime verification is not possible in the environment, still complete compile verification and document that runtime send verification could not be executed.
 
 ## 9. Fallback Logic
 
@@ -327,10 +343,11 @@ Perform this sequence in order.
 4. Identify onboarding screens.
 5. Add `Maze.screen(...)` to at least 3 screens.
 6. Add `Maze.track(... event: "tap" ...)` to at least 2 CTA handlers.
-7. Add `form_submit` and `error_message` tracking on at least 1 form-heavy screen.
-8. Remove or mask sensitive values from any analytics payloads connected to Maze calls.
-9. Build or compile the app.
-10. Verify the instrumentation counts meet the minimum requirements.
+7. Pass tap coordinates where native handlers expose them.
+8. Add `form_submit` and `error_message` tracking on at least 1 form-heavy screen.
+9. Remove or mask sensitive values from any analytics payloads connected to Maze calls.
+10. Build or compile the app.
+11. Verify the instrumentation counts meet the minimum requirements.
 
 ## Success Criteria
 
@@ -340,7 +357,8 @@ The integration is successful only when all of the following are true:
 2. `Maze.initialize(...)` is present and executed once at app launch.
 3. At least 3 screens are instrumented with `Maze.screen(...)`.
 4. At least 2 CTA interactions are instrumented with `Maze.track(... event: "tap" ...)`.
-5. At least 1 form-heavy onboarding screen tracks `form_submit` and validation failure or error display.
-6. Sensitive values are not sent to Maze.
-7. The app compiles without new errors.
-8. Event sending is verified by runtime logs or, if runtime execution is unavailable, by successful build plus documented instrumentation points.
+5. At least 1 CTA tap includes coordinate data when the platform event handler exposes a tap position.
+6. At least 1 form-heavy onboarding screen tracks `form_submit` and validation failure or error display.
+7. Sensitive values are not sent to Maze.
+8. The app compiles without new errors.
+9. Event sending is verified by runtime logs or, if runtime execution is unavailable, by successful build plus documented instrumentation points.

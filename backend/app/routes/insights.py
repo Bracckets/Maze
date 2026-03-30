@@ -2,60 +2,59 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.db import get_db
-from app.models.schemas import InsightOut
-from app.repositories.event_repository import EventRepository
-from app.services.pipeline import issue_to_insight
+from app.models.schemas import HeatmapOut, HeatmapScenarioOut, HeatmapScenarioStepOut, InsightOut
+from app.routes.dependencies import get_current_account
+from app.services.platform import (
+    build_heatmap_points,
+    build_heatmap_scenario,
+    list_workspace_insight_snapshots,
+    list_workspace_issue_snapshots,
+    list_workspace_sessions,
+    serialize_session,
+)
 
 router = APIRouter()
 
 
 @router.get("/insights", response_model=list[InsightOut])
-def list_insights(db: Session = Depends(get_db)):
-    repo = EventRepository(db)
+def list_insights(account: dict = Depends(get_current_account), db: Session = Depends(get_db)):
     insights = []
-    for issue in repo.list_issues()[:5]:
-        insight = issue_to_insight(issue)
+    for row in list_workspace_insight_snapshots(db, account["workspace_id"])[:5]:
+        insight = row["payload"]
         insights.append(
             InsightOut(
                 **insight,
-                issue_type=issue.type,
-                screen=issue.screen,
-                element_id=issue.element_id,
-                frequency=issue.frequency,
-                affected_users_count=issue.affected_users_count,
+                issue_type=row["issue_type"],
+                screen=row["screen"] or "unknown",
+                element_id=row["element_id"],
+                frequency=row["frequency"],
+                affected_users_count=row["affected_users_count"],
             )
         )
     return insights
 
 
 @router.get("/issues")
-def list_issues(db: Session = Depends(get_db)):
-    repo = EventRepository(db)
-    return [
-        {
-            "id": issue.id,
-            "type": issue.type,
-            "screen": issue.screen,
-            "element_id": issue.element_id,
-            "frequency": issue.frequency,
-            "affected_users_count": issue.affected_users_count,
-            "details": issue.details,
-        }
-        for issue in repo.list_issues()
-    ]
+def list_issues(account: dict = Depends(get_current_account), db: Session = Depends(get_db)):
+    return list_workspace_issue_snapshots(db, account["workspace_id"])
 
 
 @router.get("/sessions")
-def list_sessions(db: Session = Depends(get_db)):
-    repo = EventRepository(db)
-    return [
-        {
-            "session_id": session.session_id,
-            "user_id": session.user_id,
-            "start_time": session.start_time,
-            "end_time": session.end_time,
-            "last_screen": session.last_screen,
-            "dropped_off": session.dropped_off,
-        }
-        for session in repo.list_sessions()
-    ]
+def list_sessions(account: dict = Depends(get_current_account), db: Session = Depends(get_db)):
+    return [serialize_session(session) for session in list_workspace_sessions(db, account["workspace_id"])]
+
+
+@router.get("/heatmap", response_model=HeatmapOut)
+def get_heatmap(screen: str, account: dict = Depends(get_current_account), db: Session = Depends(get_db)):
+    return HeatmapOut(screen=screen, points=build_heatmap_points(db, account["workspace_id"], screen))
+
+
+@router.get("/heatmap/scenario", response_model=HeatmapScenarioOut)
+def get_heatmap_scenario(account: dict = Depends(get_current_account), db: Session = Depends(get_db)):
+    scenario = build_heatmap_scenario(db, account["workspace_id"])
+    return HeatmapScenarioOut(
+        id=scenario["id"],
+        name=scenario["name"],
+        summary=scenario["summary"],
+        steps=[HeatmapScenarioStepOut(**step) for step in scenario["steps"]],
+    )

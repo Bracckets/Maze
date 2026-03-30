@@ -1,10 +1,10 @@
 {
+  "/api/heatmap/route": "app/api/heatmap/route.js",
   "/api/workspace/api-keys/route": "app/api/workspace/api-keys/route.js",
+  "/dashboard/page": "app/dashboard/page.js",
   "/settings/page": "app/settings/page.js",
+  "/heatmap/page": "app/heatmap/page.js",
   "/page": "app/page.js",
   "/pricing/page": "app/pricing/page.js",
-  "/docs/page": "app/docs/page.js",
-  "/profile/page": "app/profile/page.js",
-  "/privacy/page": "app/privacy/page.js",
-  "/dashboard/page": "app/dashboard/page.js"
+  "/profile/page": "app/profile/page.js"
 }

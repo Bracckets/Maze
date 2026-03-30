@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 
 public actor SessionManager {
     public static let shared = SessionManager()
@@ -13,29 +14,71 @@ public actor SessionManager {
     }
 }
 
+public struct MazeConfig: Sendable {
+    public let apiKey: String
+    public let deviceId: String
+    public let endpoint: URL
+    public let appVersion: String?
+
+    public init(
+        apiKey: String,
+        deviceId: String,
+        endpoint: URL = URL(string: "http://127.0.0.1:8000/events")!,
+        appVersion: String? = nil
+    ) {
+        self.apiKey = apiKey
+        self.deviceId = deviceId
+        self.endpoint = endpoint
+        self.appVersion = appVersion
+    }
+}
+
 public struct UXEvent: Codable {
-    let userId: String
+    let eventId: String
     let sessionId: String
-    let timestamp: String
+    let deviceId: String
+    let occurredAt: String
     let event: String
-    let screen: String
+    let screen: String?
     let elementId: String?
+    let x: Double?
+    let y: Double?
+    let screenWidth: Double?
+    let screenHeight: Double?
+    let appVersion: String?
     let metadata: [String: String]
+
+    enum CodingKeys: String, CodingKey {
+        case eventId = "event_id"
+        case sessionId = "session_id"
+        case deviceId = "device_id"
+        case occurredAt = "occurred_at"
+        case event
+        case screen
+        case elementId = "element_id"
+        case x
+        case y
+        case screenWidth = "screen_width"
+        case screenHeight = "screen_height"
+        case appVersion = "app_version"
+        case metadata
+    }
 }
 
 actor NetworkClient {
-    private let endpoint: URL
+    private let config: MazeConfig
     private let session: URLSession
 
-    init(endpoint: URL, session: URLSession = .shared) {
-        self.endpoint = endpoint
+    init(config: MazeConfig, session: URLSession = .shared) {
+        self.config = config
         self.session = session
     }
 
     func send(events: [UXEvent]) async throws {
-        var request = URLRequest(url: endpoint)
+        var request = URLRequest(url: config.endpoint)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(config.apiKey, forHTTPHeaderField: "X-API-Key")
         request.httpBody = try JSONEncoder().encode(["events": events])
         _ = try await session.data(for: request)
     }
@@ -93,42 +136,61 @@ actor EventQueue {
 public final class UXTracker: @unchecked Sendable {
     public static let shared = UXTracker()
 
-    private let queue: EventQueue
     private let isoFormatter = ISO8601DateFormatter()
     private var currentScreen: String?
-    private var userId: String = "anonymous"
+    private var config: MazeConfig?
+    private var queue: EventQueue?
 
-    private init() {
-        let endpoint = URL(string: "http://127.0.0.1:8000/events")!
-        queue = EventQueue(client: NetworkClient(endpoint: endpoint))
-    }
+    private init() {}
 
-    public func configure(userId: String) {
-        self.userId = userId
+    public func configure(_ config: MazeConfig) {
+        self.config = config
+        self.queue = EventQueue(client: NetworkClient(config: config))
     }
 
     public func screen(_ name: String) {
         currentScreen = name
-        track(event: "screen_view", screen: name, elementId: nil, metadata: [:])
+        track(event: "screen_view", screen: name, elementId: nil, metadata: [:], x: nil, y: nil)
     }
 
-    public func track(event: String, screen: String? = nil, elementId: String?, metadata: [String: String]) {
-        let activeScreen = screen ?? currentScreen ?? "unknown"
+    public func track(
+        event: String,
+        screen: String? = nil,
+        elementId: String?,
+        metadata: [String: String],
+        x: CGFloat? = nil,
+        y: CGFloat? = nil
+    ) {
+        guard let config, let queue else {
+            assertionFailure("Call UXTracker.shared.configure(MazeConfig) before tracking events.")
+            return
+        }
+
+        let activeScreen = screen ?? currentScreen
         Task {
             let sessionId = await SessionManager.shared.currentSessionId()
             let sanitizedMetadata = metadata.mapValues { value in
                 value.count > 24 ? "***" : value
             }
-            let event = UXEvent(
-                userId: userId,
+            let bounds = UIScreen.main.bounds
+            let normalizedX = x.map { Double(min(max($0 / bounds.width, 0), 1)) }
+            let normalizedY = y.map { Double(min(max($0 / bounds.height, 0), 1)) }
+            let payload = UXEvent(
+                eventId: UUID().uuidString,
                 sessionId: sessionId,
-                timestamp: isoFormatter.string(from: Date()),
+                deviceId: config.deviceId,
+                occurredAt: isoFormatter.string(from: Date()),
                 event: event,
                 screen: activeScreen,
                 elementId: elementId,
+                x: normalizedX,
+                y: normalizedY,
+                screenWidth: Double(bounds.width),
+                screenHeight: Double(bounds.height),
+                appVersion: config.appVersion,
                 metadata: sanitizedMetadata
             )
-            await queue.enqueue(event)
+            await queue.enqueue(payload)
         }
     }
 }

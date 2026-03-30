@@ -4,7 +4,7 @@ import { createApiKey, listApiKeys } from "@/lib/service-gateway";
 
 export async function GET() {
   const keys = await listApiKeys();
-  return NextResponse.json(keys);
+  return NextResponse.json(keys, { status: "detail" in keys ? 401 : 200 });
 }
 
 export async function POST(request: NextRequest) {
@@ -12,8 +12,9 @@ export async function POST(request: NextRequest) {
   const result = await createApiKey(payload);
 
   if (!result.ok) {
-    return NextResponse.json(result.data, { status: result.status });
+    const message = "detail" in result.data ? result.data.detail : "Unable to create API key.";
+    return NextResponse.json({ error: message }, { status: result.status });
   }
 
-  return NextResponse.json({ ...result.data, mode: process.env.MAZE_API_KEYS_SERVICE_URL ? "connected" : "mock" }, { status: result.status });
+  return NextResponse.json(result.data, { status: result.status });
 }

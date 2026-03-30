@@ -3,149 +3,149 @@ import Link from "next/link";
 import { DashboardShell } from "@/components/site-shell";
 import { Card, KpiCard, StatusDot, Tag } from "@/components/ui";
 import { getIntegrationStatus } from "@/lib/service-gateway";
-import { getInsights } from "@/lib/site-data";
+import { getInsights, getIssues, getSessions } from "@/lib/site-data";
 
-const funnel = [
-  { stage: "Welcome screen",   pct: 100, users: "2,340" },
-  { stage: "Phone number",     pct: 82,  users: "1,919" },
-  { stage: "OTP verification", pct: 67,  users: "1,568" },
-  { stage: "KYC form",         pct: 44,  users: "1,030" },
-  { stage: "Account approved", pct: 31,  users: "725" },
-];
+const toneMap: Record<string, "red" | "amber" | "green"> = {
+  rage_tap: "red",
+  drop_off: "red",
+  slow_response: "amber",
+  dead_tap: "amber",
+  form_friction: "amber",
+};
 
-const sessions = [
-  { id: "s_1041", screen: "kyc_form",        friction: "Rage taps",     users: 14, time: "11:42", severity: "red" as const },
-  { id: "s_1032", screen: "otp_verification", friction: "Slow response", users: 9,  time: "11:17", severity: "amber" as const },
-  { id: "s_1028", screen: "welcome",          friction: "Dead taps",     users: 4,  time: "10:58", severity: "amber" as const },
-  { id: "s_1022", screen: "kyc_form",         friction: "Drop-off",      users: 28, time: "10:46", severity: "red" as const },
-];
+const integrationToneMap: Record<string, "online" | "degraded" | "offline"> = {
+  healthy: "online",
+  configured: "online",
+  connected: "online",
+  degraded: "degraded",
+  attention: "degraded",
+  offline: "offline",
+};
 
-const frictionToneMap: Record<string, "red" | "amber" | "green"> = {
-  "Rage taps":     "red",
-  "Drop-off":      "red",
-  "Slow response": "amber",
-  "Dead taps":     "amber",
+const integrationTagToneMap: Record<string, "green" | "amber" | "red" | "default"> = {
+  healthy: "green",
+  configured: "green",
+  connected: "green",
+  degraded: "amber",
+  attention: "amber",
+  offline: "red",
 };
 
 export default async function DashboardPage() {
-  const insights = await getInsights();
-  const integrations = await getIntegrationStatus();
+  const [insights, integrations, issues, sessions] = await Promise.all([
+    getInsights(),
+    getIntegrationStatus(),
+    getIssues(),
+    getSessions(),
+  ]);
+
+  const totalSessions = sessions.length;
+  const dropOffs = sessions.filter((session) => session.dropped_off).length;
+  const completionRate = totalSessions > 0 ? `${Math.round(((totalSessions - dropOffs) / totalSessions) * 100)}%` : "0%";
+  const activeScreens = new Set(sessions.map((session) => session.last_screen).filter(Boolean)).size;
 
   return (
     <DashboardShell
       title="Dashboard"
-      subtitle="Session behavior across your onboarding flow — last 24 hours."
+      subtitle="Live session behavior across your current workspace."
     >
-      {/* KPI strip */}
       <div className="kpi-strip">
-        <KpiCard label="Sessions today"      value="2,340" delta="+12% vs yesterday" />
-        <KpiCard label="Completion rate"     value="31%"   delta="-3pts this week" />
-        <KpiCard label="Friction events"     value="847"   delta="+18% this week" />
-        <KpiCard label="Delivery success"    value="92.4%" delta="Last 24 hours" />
+        <KpiCard label="Sessions tracked" value={String(totalSessions)} delta="Live from PostgreSQL" />
+        <KpiCard label="Completion rate" value={completionRate} delta={`${dropOffs} drop-offs observed`} />
+        <KpiCard label="Friction issues" value={String(issues.length)} delta="Detected from recent sessions" />
+        <KpiCard label="Active screens" value={String(activeScreens)} delta="Screens seen in recent traffic" />
       </div>
 
-      {/* Main grid */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: "var(--gap)" }}>
-
-        {/* Left column */}
         <div style={{ display: "flex", flexDirection: "column", gap: "var(--gap)" }}>
-
-          {/* Funnel */}
           <Card>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
               <div>
-                <div className="heading">Onboarding funnel</div>
-                <div className="subtext" style={{ fontSize: "0.84rem", marginTop: 2 }}>Where users drop off during sign-up</div>
+                <div className="heading">Recent sessions</div>
+                <div className="subtext" style={{ fontSize: "0.84rem", marginTop: 2 }}>Latest sessions recorded by the ingestion pipeline</div>
               </div>
               <Tag tone="accent">Live</Tag>
-            </div>
-
-            <div className="funnel">
-              {funnel.map((item, i) => (
-                <div className="funnel-row" key={item.stage}>
-                  <div className="funnel-header">
-                    <span className="funnel-label">{item.stage}</span>
-                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                      <span className="funnel-users">{item.users} users</span>
-                      <span className="funnel-pct">{item.pct}%</span>
-                    </div>
-                  </div>
-                  <div className="funnel-track">
-                    <div
-                      className="funnel-fill"
-                      style={{
-                        width: `${item.pct}%`,
-                        opacity: 1 - i * 0.12,
-                      }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="divider" />
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.82rem" }}>
-              <span style={{ color: "var(--text-3)" }}>1,615 users lost in funnel</span>
-              <span style={{ color: "var(--red)", fontWeight: 600 }}>−69% total drop</span>
-            </div>
-          </Card>
-
-          {/* Session table */}
-          <Card>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-              <div>
-                <div className="heading">Recent friction sessions</div>
-                <div className="subtext" style={{ fontSize: "0.84rem", marginTop: 2 }}>Highest-impact sessions from today</div>
-              </div>
-              <Link href="/settings" className="btn btn-ghost btn-sm">View all</Link>
             </div>
 
             <table className="data-table">
               <thead>
                 <tr>
                   <th>Session ID</th>
-                  <th>Screen</th>
-                  <th>Friction type</th>
-                  <th>Users</th>
-                  <th>Time</th>
+                  <th>Device</th>
+                  <th>Last screen</th>
+                  <th>Status</th>
                 </tr>
               </thead>
               <tbody>
-                {sessions.map((row) => (
-                  <tr key={row.id}>
-                    <td>{row.id}</td>
-                    <td style={{ color: "var(--text-2)" }}>{row.screen}</td>
+                {sessions.slice(0, 8).map((session) => (
+                  <tr key={session.session_id}>
+                    <td>{session.session_id.slice(0, 8)}</td>
+                    <td style={{ color: "var(--text-2)" }}>{session.device_id}</td>
+                    <td>{session.last_screen ?? "unknown"}</td>
                     <td>
-                      <Tag tone={frictionToneMap[row.friction] ?? "default"}>
-                        {row.friction}
+                      <Tag tone={session.dropped_off ? "amber" : "green"}>
+                        {session.dropped_off ? "Dropped off" : "Completed"}
                       </Tag>
                     </td>
-                    <td style={{ fontFamily: "var(--font-mono)", color: "var(--text)" }}>{row.users}</td>
-                    <td style={{ color: "var(--text-3)" }}>{row.time}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
+
+            {sessions.length === 0 ? (
+              <p style={{ fontSize: "0.85rem", color: "var(--text-3)" }}>No sessions ingested yet. Generate an API key in Settings and send SDK events to begin.</p>
+            ) : null}
+          </Card>
+
+          <Card>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+              <div>
+                <div className="heading">Detected issues</div>
+                <div className="subtext" style={{ fontSize: "0.84rem", marginTop: 2 }}>Live friction patterns inferred from your stored events</div>
+              </div>
+              <Link href="/heatmap" className="btn btn-ghost btn-sm">Open heatmap</Link>
+            </div>
+
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Type</th>
+                  <th>Screen</th>
+                  <th>Frequency</th>
+                  <th>Affected</th>
+                </tr>
+              </thead>
+              <tbody>
+                {issues.slice(0, 8).map((issue) => (
+                  <tr key={issue.id}>
+                    <td>
+                      <Tag tone={toneMap[issue.type] ?? "default"}>{issue.type.replace(/_/g, " ")}</Tag>
+                    </td>
+                    <td>{issue.screen ?? "unknown"}</td>
+                    <td>{issue.frequency}</td>
+                    <td>{issue.affected_users_count}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            {issues.length === 0 ? (
+              <p style={{ fontSize: "0.85rem", color: "var(--text-3)" }}>No friction issues have been detected yet.</p>
+            ) : null}
           </Card>
         </div>
 
-        {/* Right column */}
         <div style={{ display: "flex", flexDirection: "column", gap: "var(--gap)" }}>
-
-          {/* Insights */}
           <Card accent>
             <div style={{ marginBottom: 16 }}>
               <div className="heading">Top insights</div>
-              <div className="subtext" style={{ fontSize: "0.84rem", marginTop: 2 }}>AI-detected friction patterns</div>
+              <div className="subtext" style={{ fontSize: "0.84rem", marginTop: 2 }}>Generated from your current workspace events</div>
             </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {insights.length > 0 ? (
                 insights.slice(0, 4).map((insight) => (
-                  <div
-                    className="insight-card"
-                    key={`${insight.issue_type}-${insight.screen}`}
-                  >
+                  <div className="insight-card" key={`${insight.issue_type}-${insight.screen}`}>
                     <div className="insight-title">{insight.title}</div>
                     <div className="insight-body">{insight.impact}</div>
                     <div className="insight-footer">
@@ -156,19 +156,15 @@ export default async function DashboardPage() {
                 ))
               ) : (
                 <div className="insight-card">
-                  <div className="insight-title">Backend not connected</div>
+                  <div className="insight-title">No insights yet</div>
                   <div className="insight-body">
-                    Start the FastAPI backend to see live AI insights here.
-                  </div>
-                  <div className="insight-footer">
-                    <Tag tone="amber">Offline</Tag>
+                    Once the SDK starts sending events, Maze will surface friction patterns here.
                   </div>
                 </div>
               )}
             </div>
           </Card>
 
-          {/* Integration status */}
           <Card>
             <div style={{ marginBottom: 14 }}>
               <div className="heading">Integrations</div>
@@ -181,13 +177,13 @@ export default async function DashboardPage() {
                     <div style={{ fontSize: "0.88rem", fontWeight: 600, color: "var(--text)", marginBottom: 2 }}>
                       {service.name}
                     </div>
-                    <div style={{ fontSize: "0.78rem", color: "var(--text-3)", fontFamily: "var(--font-mono)" }}>
+                  <div style={{ fontSize: "0.78rem", color: "var(--text-3)", fontFamily: "var(--font-mono)" }}>
                       {service.path}
                     </div>
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <StatusDot status={service.status === "ready" ? "online" : "degraded"} />
-                    <span style={{ fontSize: "0.8rem", color: "var(--text-2)" }}>{service.status}</span>
+                    <StatusDot status={integrationToneMap[service.status] ?? "degraded"} />
+                    <Tag tone={integrationTagToneMap[service.status] ?? "default"}>{service.status}</Tag>
                   </div>
                 </div>
               ))}
@@ -199,7 +195,6 @@ export default async function DashboardPage() {
               </Link>
             </div>
           </Card>
-
         </div>
       </div>
     </DashboardShell>

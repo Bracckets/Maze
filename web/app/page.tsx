@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { SiteShell } from "@/components/site-shell";
 import { Card, Tag } from "@/components/ui";
+import { getCurrentUser } from "@/lib/service-gateway";
 
 const stats = [
   { label: "Behaviors captured", value: "4.2M", delta: "+18% this week" },
@@ -33,7 +34,10 @@ const howItWorks = [
   { step: "03", title: "Act on insights", body: "The AI surfaces what's broken and why. Ship the fix. Watch completion rates climb." },
 ];
 
-export default function HomePage() {
+export default async function HomePage() {
+  const currentUser = await getCurrentUser();
+  const user = "user" in currentUser.data ? currentUser.data.user : null;
+
   return (
     <SiteShell>
       {/* Hero */}
@@ -48,8 +52,8 @@ export default function HomePage() {
           exactly what to fix and why it matters.
         </p>
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-          <Link className="btn btn-primary btn-lg" href="/signin">Get started free</Link>
-          <Link className="btn btn-ghost btn-lg" href="/dashboard">See the dashboard</Link>
+          <Link className="btn btn-primary btn-lg" href={user ? "/dashboard" : "/signup"}>{user ? "Open dashboard" : "Get started free"}</Link>
+          <Link className="btn btn-ghost btn-lg" href={user ? "/profile" : "/pricing"}>{user ? "View profile" : "See pricing"}</Link>
         </div>
       </section>
 
@@ -101,7 +105,7 @@ export default function HomePage() {
             </p>
           </div>
           <div style={{ display: "flex", gap: 10, flexShrink: 0 }}>
-            <Link className="btn btn-primary btn-lg" href="/signin">Start for free</Link>
+            <Link className="btn btn-primary btn-lg" href={user ? "/dashboard" : "/signup"}>{user ? "Open dashboard" : "Start for free"}</Link>
             <Link className="btn btn-ghost btn-lg" href="/pricing">See pricing</Link>
           </div>
         </div>

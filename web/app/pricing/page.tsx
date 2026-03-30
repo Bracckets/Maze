@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { SiteShell } from "@/components/site-shell";
 import { Card } from "@/components/ui";
+import { getCurrentUser } from "@/lib/service-gateway";
 import { pricingPlans } from "@/lib/site-data";
 
 const faqs = [
@@ -23,7 +24,12 @@ const faqs = [
   },
 ];
 
-export default function PricingPage() {
+export default async function PricingPage() {
+  const currentUser = await getCurrentUser();
+  const user = "user" in currentUser.data ? currentUser.data.user : null;
+  const primaryHref = user ? "/dashboard" : "/signup";
+  const currentPlanId = user?.plan_id ?? null;
+
   return (
     <SiteShell>
       {/* Hero */}
@@ -60,6 +66,11 @@ export default function PricingPage() {
               >
                 {plan.name}
               </div>
+              {currentPlanId === "free" && plan.name === "Starter" ? (
+                <div style={{ fontSize: "0.76rem", fontWeight: 700, color: "var(--green)", marginBottom: 10 }}>
+                  Current plan
+                </div>
+              ) : null}
               <div className="pricing-price">{plan.price}</div>
               {plan.cadence && (
                 <div className="pricing-cadence">{plan.cadence}</div>
@@ -78,10 +89,14 @@ export default function PricingPage() {
 
             <Link
               className={`btn ${plan.featured ? "btn-primary" : "btn-ghost"}`}
-              href="/signin"
+              href={primaryHref}
               style={{ width: "100%", justifyContent: "center" }}
             >
-              {plan.price === "Custom" ? "Talk to us" : "Get started free"}
+              {plan.price === "Custom"
+                ? (user ? "Open dashboard" : "Talk to us")
+                : currentPlanId === "free" && plan.name === "Starter"
+                  ? "Current plan"
+                  : "Subscribe now"}
             </Link>
           </div>
         ))}
@@ -192,8 +207,8 @@ export default function PricingPage() {
               We're happy to walk you through it. No sales pressure.
             </p>
           </div>
-          <Link className="btn btn-primary btn-lg" href="/signin">
-            Talk to the team
+          <Link className="btn btn-primary btn-lg" href={user ? "/dashboard" : "/signin"}>
+            {user ? "Open dashboard" : "Talk to the team"}
           </Link>
         </div>
       </Card>

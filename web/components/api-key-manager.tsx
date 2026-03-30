@@ -22,13 +22,16 @@ export function ApiKeyManager() {
     void (async () => {
       const response = await fetch("/api/workspace/api-keys", { cache: "no-store" });
       const data = await response.json();
-      setKeys(data.keys ?? []);
+      setKeys(Array.isArray(data.keys) ? data.keys : []);
+      if (!response.ok && data.error) {
+        setStatus({ text: data.error, ok: false });
+      }
       setLoading(false);
     })();
   }, []);
 
   async function createKey(formData: FormData) {
-    setStatus({ text: "Generating…", ok: true });
+    setStatus({ text: "Generating...", ok: true });
 
     const response = await fetch("/api/workspace/api-keys", {
       method: "POST",
@@ -50,7 +53,6 @@ export function ApiKeyManager() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-      {/* Generate form */}
       <form action={createKey} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 10, alignItems: "end" }}>
           <div className="field">
@@ -87,10 +89,9 @@ export function ApiKeyManager() {
         </p>
       )}
 
-      {/* Key list */}
       <div>
         <p style={{ fontSize: "0.78rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--text-3)", marginBottom: 10 }}>
-          {loading ? "Loading…" : `${keys.length} key${keys.length !== 1 ? "s" : ""}`}
+          {loading ? "Loading..." : `${keys.length} key${keys.length !== 1 ? "s" : ""}`}
         </p>
         {keys.map((key) => (
           <div
@@ -107,7 +108,7 @@ export function ApiKeyManager() {
             <div>
               <div style={{ fontSize: "0.88rem", fontWeight: 600, color: "var(--text)", marginBottom: 3 }}>{key.name}</div>
               <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.78rem", color: "var(--text-3)" }}>
-                {key.token ?? `${key.prefix ?? "mz_"}••••••••••••`}
+                {key.token ?? `${key.prefix ?? "mz_"}************`}
               </div>
             </div>
             <div style={{ fontSize: "0.78rem", color: "var(--text-3)", whiteSpace: "nowrap" }}>

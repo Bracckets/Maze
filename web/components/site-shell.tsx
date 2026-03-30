@@ -3,26 +3,33 @@ import { ReactNode } from "react";
 
 import { Brand } from "@/components/brand";
 import { navLinks } from "@/lib/site-data";
+import { getCurrentUser } from "@/lib/service-gateway";
 
-export function SiteShell({
+export async function SiteShell({
   children,
   eyebrow,
 }: {
   children: ReactNode;
   eyebrow?: string;
 }) {
+  const currentUser = await getCurrentUser();
+  const user = "user" in currentUser.data ? currentUser.data.user : null;
+
   return (
     <div className="site-frame">
       <header className="topbar">
-        <Brand />
+        <Brand href={user ? "/dashboard" : "/"} />
         <nav className="topnav">
-          {navLinks.map((item) => (
+          {navLinks.filter((item) => item.public || user).map((item) => (
             <Link key={item.href} href={item.href}>
               {item.label}
             </Link>
           ))}
-          <Link className="btn btn-primary btn-sm" href="/signin" style={{ marginLeft: 4 }}>
-            Sign in
+          <Link className="btn btn-ghost btn-sm" href={user ? "/profile" : "/signin"} style={{ marginLeft: 4 }}>
+            {user ? "Profile" : "Sign in"}
+          </Link>
+          <Link className="btn btn-primary btn-sm" href={user ? "/dashboard" : "/signup"} style={{ marginLeft: 4 }}>
+            {user ? "Dashboard" : "Sign up"}
           </Link>
         </nav>
       </header>
@@ -30,7 +37,7 @@ export function SiteShell({
       {children}
       <footer className="site-footer">
         <div>
-          <Brand compact />
+          <Brand compact href={user ? "/dashboard" : "/"} />
           <p className="footer-copy" style={{ marginTop: 8 }}>
             Observe. Infer. Act.
           </p>
@@ -46,7 +53,7 @@ export function SiteShell({
   );
 }
 
-export function DashboardShell({
+export async function DashboardShell({
   title,
   subtitle,
   children,
@@ -57,22 +64,26 @@ export function DashboardShell({
   children: ReactNode;
 }) {
   const navItems = [
-    { href: "/dashboard", label: "Dashboard", icon: "▦" },
-    { href: "/settings",  label: "Settings",  icon: "⚙" },
-    { href: "/profile",   label: "Profile",   icon: "◉" },
-  ];
+    { href: "/dashboard", label: "Dashboard", icon: "*" },
+    { href: "/heatmap", label: "Heatmap", icon: "o" },
+    { href: "/settings", label: "Settings", icon: "+" },
+    { href: "/profile", label: "Profile", icon: "@" },
+  ] as const;
 
   const marketingItems = [
-    { href: "/pricing", label: "Pricing",  icon: "◇" },
-    { href: "/docs",    label: "Docs",     icon: "⊞" },
-  ];
+    { href: "/pricing", label: "Pricing", icon: "$" },
+    { href: "/docs", label: "Docs", icon: ">" },
+  ] as const;
+
+  const currentUser = await getCurrentUser();
+  const user = "user" in currentUser.data ? currentUser.data.user : null;
+  const initials = user?.email.slice(0, 2).toUpperCase() ?? "NA";
 
   return (
     <div className="sidebar-layout">
-      {/* Sidebar */}
       <aside className="sidebar">
         <div className="sidebar-brand">
-          <Brand sidebar />
+          <Brand sidebar href="/dashboard" />
         </div>
 
         <nav className="sidebar-nav">
@@ -94,17 +105,16 @@ export function DashboardShell({
         </nav>
 
         <div className="sidebar-footer">
-          <div className="sidebar-link" style={{ cursor: "default" }}>
-            <div className="avatar" style={{ width: 28, height: 28, borderRadius: 8, fontSize: "0.7rem" }}>AN</div>
+          <Link href="/profile" className="sidebar-link">
+            <div className="avatar" style={{ width: 28, height: 28, borderRadius: 8, fontSize: "0.7rem" }}>{initials}</div>
             <div>
-              <div style={{ fontSize: "0.83rem", fontWeight: 600, color: "var(--text)" }}>Amina Noor</div>
-              <div style={{ fontSize: "0.75rem", color: "var(--text-3)" }}>Pro plan</div>
+              <div style={{ fontSize: "0.83rem", fontWeight: 600, color: "var(--text)" }}>{user?.email ?? "Workspace account"}</div>
+              <div style={{ fontSize: "0.75rem", color: "var(--text-3)" }}>{user?.workspace_name ?? "Maze workspace"}</div>
             </div>
-          </div>
+          </Link>
         </div>
       </aside>
 
-      {/* Main */}
       <main className="main-content">
         <div className="page-header">
           <h1 className="page-title">{title}</h1>

@@ -1,16 +1,18 @@
-import { ReactNode } from "react";
+import { CSSProperties, ReactNode } from "react";
 
 export function Card({
   children,
   className = "",
   accent = false,
+  style,
 }: {
   children: ReactNode;
   className?: string;
   accent?: boolean;
+  style?: CSSProperties;
 }) {
   return (
-    <div className={`card ${accent ? "card-accent" : ""} ${className}`.trim()}>
+    <div className={`card ${accent ? "card-accent" : ""} ${className}`.trim()} style={style}>
       {children}
     </div>
   );
@@ -22,11 +24,13 @@ export const Panel = Card;
 export function Tag({
   children,
   tone = "default",
+  style,
 }: {
   children: ReactNode;
   tone?: "default" | "accent" | "green" | "amber" | "red";
+  style?: CSSProperties;
 }) {
-  return <span className={`tag tag-${tone}`}>{children}</span>;
+  return <span className={`tag tag-${tone}`} style={style}>{children}</span>;
 }
 
 // Pill kept as alias

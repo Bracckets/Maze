@@ -1,6 +1,12 @@
-import { randomBytes } from "crypto";
+import { cookies } from "next/headers";
 
 type HttpMethod = "GET" | "POST" | "PUT";
+
+type BackendResult<T> = {
+  ok: boolean;
+  status: number;
+  data: T;
+};
 
 export type IntegrationService = {
   name: string;
@@ -12,142 +18,121 @@ export type IntegrationStatusResponse = {
   services: IntegrationService[];
 };
 
-const serviceUrls = {
-  auth: process.env.MAZE_AUTH_SERVICE_URL,
-  apiKeys: process.env.MAZE_API_KEYS_SERVICE_URL,
-  workspace: process.env.MAZE_WORKSPACE_SERVICE_URL,
-  integrations: process.env.MAZE_INTEGRATIONS_SERVICE_URL
+export type CurrentUserPayload = {
+  user: {
+    id: string;
+    email: string;
+    workspace_id: string;
+    workspace_name: string;
+    plan_id?: string | null;
+    plan_name?: string | null;
+  };
 };
 
-async function proxyRequest(serviceUrl: string | undefined, path: string, method: HttpMethod, body?: unknown) {
-  if (!serviceUrl) {
-    return null;
+const backendBaseUrl = (process.env.MAZE_BACKEND_URL ?? process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000").replace(/\/$/, "");
+
+async function getSessionToken() {
+  return (await cookies()).get("maze_session_token")?.value;
+}
+
+async function backendRequest<T>(path: string, method: HttpMethod, body?: unknown, token?: string): Promise<BackendResult<T>> {
+  const headers = new Headers({ "Content-Type": "application/json" });
+  const authToken = token ?? (await getSessionToken());
+  if (authToken) {
+    headers.set("Authorization", `Bearer ${authToken}`);
   }
 
-  const response = await fetch(`${serviceUrl}${path}`, {
-    method,
-    headers: { "Content-Type": "application/json" },
-    body: body ? JSON.stringify(body) : undefined,
-    cache: "no-store"
-  });
+  try {
+    const response = await fetch(`${backendBaseUrl}${path}`, {
+      method,
+      headers,
+      body: body ? JSON.stringify(body) : undefined,
+      cache: "no-store",
+    });
 
-  const data = await response.json();
-  return { ok: response.ok, status: response.status, data };
+    const rawBody = await response.text();
+    const data = (rawBody ? JSON.parse(rawBody) : {}) as T;
+    return { ok: response.ok, status: response.status, data };
+  } catch {
+    return {
+      ok: false,
+      status: 503,
+      data: { detail: "Maze backend is unavailable right now. Please try again in a moment." } as T,
+    };
+  }
 }
 
 export async function signInWithProvider(payload: { email: string; password: string }) {
-  const proxied = await proxyRequest(serviceUrls.auth, "/signin", "POST", payload);
-  if (proxied) {
-    return proxied;
-  }
+  return backendRequest<{ user: { id: string; email: string; workspace_id: string; workspace_name: string; plan_id?: string | null; plan_name?: string | null }; token: string } | { detail?: string }>("/auth/signin", "POST", payload, undefined);
+}
 
-  const valid = payload.email.includes("@") && payload.password.length >= 8;
-  return {
-    ok: valid,
-    status: valid ? 200 : 400,
-    data: valid
-      ? {
-          user: {
-            id: "usr_demo_01",
-            email: payload.email,
-            name: "Amina Noor",
-            workspace: "Maze HQ"
-          },
-          token: "demo-session-token"
-        }
-      : { error: "Use a valid email and a password with at least 8 characters." }
-  };
+export async function signUpWithProvider(payload: { email: string; password: string; workspace_name: string }) {
+  return backendRequest<{ user: { id: string; email: string; workspace_id: string; workspace_name: string; plan_id?: string | null; plan_name?: string | null }; token: string } | { detail?: string }>("/auth/signup", "POST", payload, undefined);
+}
+
+export async function getCurrentUser() {
+  return backendRequest<CurrentUserPayload | { detail?: string }>("/auth/me", "GET");
+}
+
+export async function updateCurrentUser(payload: { email: string; workspace_name: string }) {
+  return backendRequest<CurrentUserPayload | { detail?: string }>("/auth/me", "PUT", payload);
 }
 
 export async function listApiKeys() {
-  const proxied = await proxyRequest(serviceUrls.apiKeys, "", "GET");
-  if (proxied) {
-    return proxied.data;
-  }
-
-  return {
-    keys: [
-      {
-        id: "key_live_primary",
-        name: "Primary ingestion key",
-        prefix: "mz_live_",
-        lastUsedAt: "2026-03-28T10:42:00Z",
-        createdAt: "2026-03-12T08:15:00Z"
-      },
-      {
-        id: "key_test_ios",
-        name: "iOS sandbox key",
-        prefix: "mz_test_",
-        lastUsedAt: "2026-03-28T09:58:00Z",
-        createdAt: "2026-03-18T14:00:00Z"
-      }
-    ]
-  };
+  const result = await backendRequest<{ keys: Array<{ id: string; name: string; prefix?: string; token?: string; createdAt: string; lastUsedAt?: string | null }> } | { detail?: string }>("/workspace/api-keys", "GET");
+  return result.data;
 }
 
 export async function createApiKey(payload: { name: string; environment: "test" | "live" }) {
-  const proxied = await proxyRequest(serviceUrls.apiKeys, "", "POST", payload);
-  if (proxied) {
-    return proxied;
-  }
-
-  const prefix = payload.environment === "live" ? "mz_live_" : "mz_test_";
-  return {
-    ok: true,
-    status: 201,
-    data: {
-      key: {
-        id: `key_${payload.environment}_${Date.now()}`,
-        name: payload.name,
-        token: `${prefix}${randomBytes(12).toString("hex")}`,
-        createdAt: new Date().toISOString()
-      }
-    }
-  };
+  return backendRequest<{ key: { id: string; name: string; prefix?: string; token?: string; createdAt: string; lastUsedAt?: string | null } } | { detail?: string }>("/workspace/api-keys", "POST", payload);
 }
 
 export async function getWorkspaceSettings() {
-  const proxied = await proxyRequest(serviceUrls.workspace, "/settings", "GET");
-  if (proxied) {
-    return proxied.data;
-  }
-
-  return {
-    apiBaseUrl: process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000",
-    authProvider: serviceUrls.auth ? "external" : "mock",
-    ingestionMode: "batched",
-    masking: "strict"
-  };
+  const result = await backendRequest<{
+    workspaceId: string;
+    workspaceName: string;
+    apiBaseUrl: string;
+    authProvider: string;
+    ingestionMode: string;
+    masking: string;
+    planId?: string | null;
+    planName?: string | null;
+  } | { detail?: string }>("/workspace/settings", "GET");
+  return result.data;
 }
 
-export async function updateWorkspaceSettings(payload: Record<string, string>) {
-  const proxied = await proxyRequest(serviceUrls.workspace, "/settings", "PUT", payload);
-  if (proxied) {
-    return proxied;
-  }
-
-  return {
-    ok: true,
-    status: 200,
-    data: {
-      saved: true,
-      settings: payload
-    }
-  };
+export async function updateWorkspaceSettings(payload: {
+  apiBaseUrl: string;
+  authProvider: string;
+  ingestionMode: string;
+  masking: string;
+}) {
+  return backendRequest<{
+    workspaceId: string;
+    workspaceName: string;
+    apiBaseUrl: string;
+    authProvider: string;
+    ingestionMode: string;
+    masking: string;
+    planId?: string | null;
+    planName?: string | null;
+  } | { detail?: string }>("/workspace/settings", "PUT", payload);
 }
 
 export async function getIntegrationStatus(): Promise<IntegrationStatusResponse> {
-  const proxied = await proxyRequest(serviceUrls.integrations, "/status", "GET");
-  if (proxied) {
-    return proxied.data;
+  const result = await backendRequest<IntegrationStatusResponse>("/integrations/status", "GET");
+  if (!result.ok || "detail" in (result.data as IntegrationStatusResponse | { detail?: string })) {
+    return {
+      services: [
+        {
+          name: "Mobile SDK ingestion",
+          status: "offline",
+          path: "Sign in and send events from your app to see workspace health",
+        },
+      ],
+    };
   }
-
-  return {
-    services: [
-      { name: "Sign in API", status: serviceUrls.auth ? "connected" : "mock", path: "/api/auth/signin" },
-      { name: "API key service", status: serviceUrls.apiKeys ? "connected" : "mock", path: "/api/workspace/api-keys" },
-      { name: "Workspace settings", status: serviceUrls.workspace ? "connected" : "mock", path: "/api/workspace/settings" },
-      { name: "Insight ingestion", status: "ready", path: process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000/events" }
-    ]
-  };
+  return result.data;
 }
+
+export { backendBaseUrl };

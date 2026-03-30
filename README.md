@@ -1,62 +1,207 @@
 # Mobile UX Insight Engine
 
-This repo contains a Maze product MVP with:
+This repo now runs against PostgreSQL and includes:
 
-- `backend`: FastAPI ingestion API, storage, processing, and insight generation
-- `web`: Next.js product site, dashboard, settings, sign-in, and integration-ready API routes
-- `ios-sdk`: Swift Package Manager SDK stub with batching + retry
-- `android-sdk`: Kotlin SDK stub with batching + retry
+- `backend`: FastAPI auth, workspace management, API keys, ingestion, issues, insights, and heatmaps
+- `web`: Next.js marketing site plus sign up, sign in, dashboard, settings, profile, and heatmap views
+- `ios-sdk`: Swift SDK that batches authenticated event uploads
+- `android-sdk`: Kotlin SDK that batches authenticated event uploads
 
-## Quick start
+## What Changed
 
-### Backend
+- Mock auth and mock API-key flows were removed from the active app path.
+- SQLite and demo seeding are no longer part of the main runtime path.
+- The backend expects your PostgreSQL schema to already exist.
+- The SDKs now send production-shaped payloads with `event_id`, `session_id`, `device_id`, `occurred_at`, and `X-API-Key`.
 
-```bash
-cd backend
-python -m venv .venv
+## Local Env Files
+
+These files are already created for local use:
+
+- [backend/.env](E:/Maze/backend/.env)
+- [web/.env](E:/Maze/web/.env)
+
+Before starting the app, edit [backend/.env](E:/Maze/backend/.env) and replace:
+
+- the PostgreSQL password in `DATABASE_URL` for user `postgres`
+
+Default local values currently assume:
+
+- PostgreSQL host: `127.0.0.1`
+- PostgreSQL port: `5432`
+- PostgreSQL database: `Maze`
+- Backend URL: `http://127.0.0.1:8000`
+- Web URL: `http://127.0.0.1:3000`
+
+If you want phones or other machines on your LAN to reach the backend, change:
+
+- `PUBLIC_API_BASE_URL` in [backend/.env](E:/Maze/backend/.env)
+- `NEXT_PUBLIC_API_BASE_URL` in [web/.env](E:/Maze/web/.env)
+- `MAZE_BACKEND_URL` in [web/.env](E:/Maze/web/.env)
+
+from `127.0.0.1` to your machine's reachable IP.
+
+## Required Database Schema
+
+The backend assumes your PostgreSQL schema already exists, including:
+
+- `users`
+- `workspaces`
+- `plans`
+- `subscriptions`
+- `api_keys`
+- `sessions`
+- `events`
+- `event_dedup`
+- `usage_daily`
+- `usage_monthly`
+- `api_key_usage_daily`
+- `ingestion_logs`
+- `issues`
+- `insights`
+- `billing_cycles`
+
+Use [backend/maze.sql](E:/Maze/backend/maze.sql) as the source of truth for schema setup.
+On boot, the backend also applies safe runtime upgrades for production persistence:
+
+- creates `workspace_settings` if it is missing
+- adds `events.metadata`
+- adds `api_keys.environment` and `api_keys.key_prefix`
+- expands `issues` and `insights` for persisted snapshots
+
+## Run Order
+
+### 1. Start PostgreSQL
+
+Make sure your PostgreSQL server is running and the `Maze` database has been initialized with [backend/maze.sql](E:/Maze/backend/maze.sql).
+
+### 2. Start the backend
+
+```powershell
+cd E:\Maze\backend
 .venv\Scripts\activate
 pip install -r requirements.txt
-uvicorn app.main:app --reload
+uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 ```
 
-Backend exposes:
+Backend endpoints:
 
+- `POST /auth/signup`
+- `POST /auth/signin`
+- `GET /auth/me`
+- `GET /workspace/settings`
+- `PUT /workspace/settings`
+- `GET /workspace/api-keys`
+- `POST /workspace/api-keys`
 - `POST /events`
-- `GET /health`
-- `GET /ready`
 - `GET /insights`
 - `GET /issues`
 - `GET /sessions`
+- `GET /heatmap?screen=<screen>`
+- `GET /heatmap/scenario`
+- `GET /integrations/status`
+- `GET /health`
+- `GET /ready`
 
-Demo data is seeded only when `SEED_DEMO_DATA=true`. In `APP_ENV=production`, demo seeding defaults to off.
+### 3. Start the web app
 
-### Web
-
-```bash
-cd web
+```powershell
+cd E:\Maze\web
 npm install
 npm run dev
 ```
 
-Set `NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000` if needed.
+Open:
 
-The web app also supports these integration env vars:
+- `http://127.0.0.1:3000`
 
-- `MAZE_AUTH_SERVICE_URL`
-- `MAZE_API_KEYS_SERVICE_URL`
-- `MAZE_WORKSPACE_SERVICE_URL`
-- `MAZE_INTEGRATIONS_SERVICE_URL`
+### 4. Create your first workspace
 
-Internal API routes act as stable integration boundaries:
+Go to:
 
-- `POST /api/auth/signin`
-- `GET/POST /api/workspace/api-keys`
-- `GET/PUT /api/workspace/settings`
-- `GET /api/integrations/status`
+- `http://127.0.0.1:3000/signup`
 
-## Notes
+Create an account and workspace. The app will sign you in automatically.
 
-- The backend blocks SQLite in `APP_ENV=production`; set a real `DATABASE_URL` for deployed environments.
-- Copy [backend/.env.example](E:\Maze\backend\.env.example) and [web/.env.example](E:\Maze\web\.env.example) to create local env files.
-- The seeded dataset simulates drop-offs, rage taps, dead taps, slow response, and form friction on a fintech onboarding flow.
-- The production work plan lives in [PRODUCTION_ROADMAP.md](E:\Maze\PRODUCTION_ROADMAP.md).
+### 5. Generate an API key
+
+After sign-in:
+
+- open `Settings`
+- generate a `Live` or `Test` API key
+- copy the key when it is shown
+
+That key is what the iOS and Android SDKs send as `X-API-Key`.
+
+### 6. Save SDK settings
+
+In `Settings`, you can also persist:
+
+- ingestion endpoint
+- auth provider label
+- ingestion mode
+- masking rules
+
+The masking rule is now applied during event ingestion before metadata is stored in PostgreSQL.
+
+## SDK Configuration
+
+### Android
+
+Configure with:
+
+```kotlin
+UXTracker.configure(
+    MazeConfig(
+        apiKey = "mz_live_...",
+        deviceId = "android-device-001",
+        endpoint = "http://10.0.2.2:8000/events",
+        appVersion = "1.0.0"
+    )
+)
+```
+
+Notes:
+
+- Android emulator should use `10.0.2.2` to reach a backend running on your development machine.
+- Physical devices should use your machine's reachable LAN IP instead.
+
+### iOS
+
+Configure with:
+
+```swift
+UXTracker.shared.configure(
+    MazeConfig(
+        apiKey: "mz_live_...",
+        deviceId: "ios-device-001",
+        endpoint: URL(string: "http://127.0.0.1:8000/events")!,
+        appVersion: "1.0.0"
+    )
+)
+```
+
+For a simulator or physical device, replace `127.0.0.1` with a reachable host when needed.
+
+## Verification Status
+
+The codebase has been sanity-checked with:
+
+- backend `python -m compileall app`
+- web `npx tsc --noEmit`
+
+A full `next build` may fail if an existing local dev process is still holding files inside `web/.next`.
+
+## Persisted Production Features
+
+The production path now persists:
+
+- workspace settings in `workspace_settings`
+- event metadata in `events.metadata`
+- API-key environment and prefix in `api_keys`
+- issue snapshots in `issues`
+- structured insight payloads in `insights`
+
+One schema addition is still worth considering if you need deeper product analytics:
+
+- add a nullable authenticated user identifier to `sessions` if you want analytics by signed-in end user instead of only by `device_id`

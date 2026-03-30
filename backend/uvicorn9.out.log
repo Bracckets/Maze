@@ -1,0 +1,7 @@
+INFO:     127.0.0.1:59143 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59151 - "POST /auth/signup HTTP/1.1" 201 Created
+INFO:     127.0.0.1:59152 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59153 - "GET /workspace/settings HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64942 - "POST /auth/signup HTTP/1.1" 201 Created
+INFO:     127.0.0.1:64942 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64942 - "GET /auth/me HTTP/1.1" 200 OK

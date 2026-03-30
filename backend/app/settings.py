@@ -1,6 +1,10 @@
 import os
 from dataclasses import dataclass
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 
 def _as_bool(value: str | None, default: bool) -> bool:
     if value is None:
@@ -12,7 +16,11 @@ def _as_bool(value: str | None, default: bool) -> bool:
 class Settings:
     app_env: str
     database_url: str
-    seed_demo_data: bool
+    cors_allow_origins: tuple[str, ...]
+    auth_secret: str
+    auth_token_ttl_minutes: int
+    public_api_base_url: str
+    default_plan_id: str | None
 
     @property
     def is_production(self) -> bool:
@@ -21,14 +29,20 @@ class Settings:
 
 def load_settings() -> Settings:
     app_env = os.getenv("APP_ENV", "development")
-    default_database_url = "sqlite:///./ux_insights.db" if app_env != "production" else ""
-    database_url = os.getenv("DATABASE_URL", default_database_url)
-    seed_default = app_env != "production"
+    database_url = os.getenv("DATABASE_URL", "")
+    cors_origins_raw = os.getenv("CORS_ALLOW_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000")
+    cors_allow_origins = tuple(origin.strip() for origin in cors_origins_raw.split(",") if origin.strip())
+    auth_secret = os.getenv("AUTH_SECRET", "")
+    public_api_base_url = os.getenv("PUBLIC_API_BASE_URL", "http://127.0.0.1:8000")
 
     return Settings(
         app_env=app_env,
         database_url=database_url,
-        seed_demo_data=_as_bool(os.getenv("SEED_DEMO_DATA"), seed_default),
+        cors_allow_origins=cors_allow_origins,
+        auth_secret=auth_secret,
+        auth_token_ttl_minutes=int(os.getenv("AUTH_TOKEN_TTL_MINUTES", "10080")),
+        public_api_base_url=public_api_base_url.rstrip("/"),
+        default_plan_id=os.getenv("DEFAULT_PLAN_ID") or None,
     )
 
 

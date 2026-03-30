@@ -1,5 +1,6 @@
 package com.maze.uxtracker
 
+import android.content.res.Resources
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -14,12 +15,18 @@ import java.util.UUID
 import java.util.concurrent.ConcurrentLinkedQueue
 
 data class UXEvent(
-    val user_id: String,
+    val event_id: String,
     val session_id: String,
-    val timestamp: String,
+    val device_id: String,
+    val occurred_at: String,
     val event: String,
-    val screen: String,
+    val screen: String?,
     val element_id: String?,
+    val x: Float?,
+    val y: Float?,
+    val screen_width: Float?,
+    val screen_height: Float?,
+    val app_version: String?,
     val metadata: Map<String, String>
 )
 
@@ -35,25 +42,37 @@ object SessionManager {
 
 private class NetworkClient(
     private val endpoint: String,
+    private val apiKey: String,
     private val client: OkHttpClient = OkHttpClient()
 ) {
     fun send(events: List<UXEvent>) {
         val jsonEvents = events.joinToString(separator = ",") { event ->
             """
             {
-              "user_id":"${event.user_id}",
+              "event_id":"${event.event_id}",
               "session_id":"${event.session_id}",
-              "timestamp":"${event.timestamp}",
+              "device_id":"${event.device_id}",
+              "occurred_at":"${event.occurred_at}",
               "event":"${event.event}",
-              "screen":"${event.screen}",
+              "screen":${event.screen?.let { "\"$it\"" } ?: "null"},
               "element_id":${event.element_id?.let { "\"$it\"" } ?: "null"},
+              "x":${event.x?.toString() ?: "null"},
+              "y":${event.y?.toString() ?: "null"},
+              "screen_width":${event.screen_width?.toString() ?: "null"},
+              "screen_height":${event.screen_height?.toString() ?: "null"},
+              "app_version":${event.app_version?.let { "\"$it\"" } ?: "null"},
               "metadata":${event.metadata.entries.joinToString(prefix = "{", postfix = "}") { "\"${it.key}\":\"${it.value}\"" }}
             }
             """.trimIndent()
         }
 
         val body = """{"events":[$jsonEvents]}""".toRequestBody("application/json".toMediaType())
-        val request = Request.Builder().url(endpoint).post(body).build()
+        val request = Request.Builder()
+            .url(endpoint)
+            .addHeader("X-API-Key", apiKey)
+            .post(body)
+            .build()
+
         client.newCall(request).execute().use { response ->
             if (!response.isSuccessful) {
                 error("Failed to upload events: ${response.code}")
@@ -108,37 +127,59 @@ private class EventQueue(
     }
 }
 
+data class MazeConfig(
+    val apiKey: String,
+    val deviceId: String,
+    val endpoint: String = "http://10.0.2.2:8000/events",
+    val appVersion: String? = null
+)
+
 object UXTracker {
     private var currentScreen: String? = null
-    private var userId: String = "anonymous"
-    private val queue = EventQueue(NetworkClient("http://10.0.2.2:8000/events"))
+    private var config: MazeConfig? = null
+    private var queue: EventQueue? = null
 
-    fun configure(userId: String) {
-        this.userId = userId
+    fun configure(config: MazeConfig) {
+        this.config = config
+        this.queue = EventQueue(NetworkClient(config.endpoint, config.apiKey))
     }
 
     fun screen(name: String) {
         currentScreen = name
-        track(event = "screen_view", screen = name, elementId = null, metadata = emptyMap())
+        track(event = "screen_view", screen = name, elementId = null, metadata = emptyMap(), x = null, y = null)
     }
 
     fun track(
         event: String,
         screen: String? = null,
         elementId: String?,
-        metadata: Map<String, String>
+        metadata: Map<String, String>,
+        x: Float? = null,
+        y: Float? = null
     ) {
+        val activeConfig = requireNotNull(config) { "Call UXTracker.configure(MazeConfig) before tracking events." }
+        val activeQueue = requireNotNull(queue) { "Tracker queue is not initialized." }
         val safeMetadata = metadata.mapValues { (_, value) ->
             if (value.length > 24) "***" else value
         }
-        queue.enqueue(
+        val displayMetrics = Resources.getSystem().displayMetrics
+        val normalizedX = x?.let { (it / displayMetrics.widthPixels).coerceIn(0f, 1f) }
+        val normalizedY = y?.let { (it / displayMetrics.heightPixels).coerceIn(0f, 1f) }
+
+        activeQueue.enqueue(
             UXEvent(
-                user_id = userId,
+                event_id = UUID.randomUUID().toString(),
                 session_id = SessionManager.currentSessionId(),
-                timestamp = Instant.now().toString(),
+                device_id = activeConfig.deviceId,
+                occurred_at = Instant.now().toString(),
                 event = event,
-                screen = screen ?: currentScreen ?: "unknown",
+                screen = screen ?: currentScreen,
                 element_id = elementId,
+                x = normalizedX,
+                y = normalizedY,
+                screen_width = displayMetrics.widthPixels.toFloat(),
+                screen_height = displayMetrics.heightPixels.toFloat(),
+                app_version = activeConfig.appVersion,
                 metadata = safeMetadata
             )
         )

@@ -1,10 +1,13 @@
 "use client";
 
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 export function SignInForm() {
-  const [email, setEmail] = useState("team@maze.ai");
-  const [password, setPassword] = useState("maze-demo-123");
+  const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [isError, setIsError] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -29,6 +32,8 @@ export function SignInForm() {
       const data = await response.json();
       if (response.ok) {
         setMessage(`Welcome back, ${data.user.email}`);
+        router.push("/dashboard");
+        router.refresh();
       } else {
         setIsError(true);
         setMessage(data.error ?? "Sign in failed. Please try again.");
@@ -62,7 +67,7 @@ export function SignInForm() {
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          placeholder="••••••••"
+          placeholder="Enter your password"
         />
       </div>
 
@@ -72,7 +77,7 @@ export function SignInForm() {
         disabled={isSubmitting}
         type="submit"
       >
-        {isSubmitting ? "Signing in…" : "Sign in"}
+        {isSubmitting ? "Signing in..." : "Sign in"}
       </button>
 
       {message && (
@@ -90,6 +95,13 @@ export function SignInForm() {
           {message}
         </p>
       )}
+
+      <p style={{ fontSize: "0.82rem", color: "var(--text-3)", textAlign: "center" }}>
+        Need an account?{" "}
+        <Link href="/signup" style={{ color: "var(--text)" }}>
+          Create one
+        </Link>
+      </p>
     </form>
   );
 }

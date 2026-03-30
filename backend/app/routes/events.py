@@ -1,28 +1,27 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.db import get_db
-from app.models.entities import EventRecord
 from app.models.schemas import EventBatchIn
-from app.services.processor import ingest_events
-from app.services.privacy import sanitize_metadata
+from app.routes.dependencies import get_api_key_context
+from app.services.platform import ingest_events
 
 router = APIRouter()
 
 
 @router.post("/events")
-def create_events(payload: EventBatchIn, db: Session = Depends(get_db)):
-    event_records = [
-        EventRecord(
-            user_id=item.user_id,
-            session_id=item.session_id,
-            timestamp=item.timestamp,
-            event_type=item.event_type,
-            screen=item.screen,
-            element_id=item.element_id,
-            event_metadata=sanitize_metadata(item.metadata),
+def create_events(
+    payload: EventBatchIn,
+    api_key_context: dict = Depends(get_api_key_context),
+    db: Session = Depends(get_db),
+):
+    try:
+        accepted = ingest_events(
+            db,
+            api_key_context["workspace_id"],
+            api_key_context["api_key_id"],
+            [item.model_dump(by_alias=False) for item in payload.events],
         )
-        for item in payload.events
-    ]
-    ingest_events(db, event_records)
-    return {"accepted": len(event_records)}
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return {"accepted": accepted}
