@@ -27,13 +27,22 @@ def verify_required_schema() -> None:
     inspector = inspect(engine)
     tables = set(inspector.get_table_names())
     required_tables = {
-        "users",
-        "workspaces",
+        "api_key_usage_daily",
         "api_keys",
-        "sessions",
-        "events",
+        "billing_cycles",
         "event_dedup",
+        "events",
         "ingestion_logs",
+        "insights",
+        "issues",
+        "plans",
+        "sessions",
+        "subscriptions",
+        "usage_daily",
+        "usage_monthly",
+        "users",
+        "workspace_settings",
+        "workspaces"
     }
     missing = sorted(required_tables - tables)
     if missing:

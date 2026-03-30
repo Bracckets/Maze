@@ -36,7 +36,18 @@ export function SignInForm() {
         router.refresh();
       } else {
         setIsError(true);
-        setMessage(data.error ?? "Sign in failed. Please try again.");
+        const errorData = data.error;
+
+        if (Array.isArray(errorData)) {
+          // If it's an array of errors, take the first one's message
+          setMessage(errorData[0]?.msg || "Invalid input");
+        } else if (typeof errorData === "object" && errorData !== null) {
+          // If it's a single error object {type, loc, msg...}
+          setMessage(errorData.msg || "An error occurred");
+        } else {
+          // Fallback if it's already a string
+          setMessage(errorData ?? "Sign in failed. Please try again.");
+        }
       }
     } catch {
       setIsError(true);
@@ -47,13 +58,17 @@ export function SignInForm() {
   }
 
   return (
-    <form action={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+    <form
+      action={handleSubmit}
+      style={{ display: "flex", flexDirection: "column", gap: 14 }}
+    >
       <div className="field">
         <label htmlFor="email">Email address</label>
         <input
           id="email"
           name="email"
           type="email"
+          required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="you@company.com"
@@ -65,6 +80,7 @@ export function SignInForm() {
           id="password"
           name="password"
           type="password"
+          required
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="Enter your password"
@@ -96,7 +112,13 @@ export function SignInForm() {
         </p>
       )}
 
-      <p style={{ fontSize: "0.82rem", color: "var(--text-3)", textAlign: "center" }}>
+      <p
+        style={{
+          fontSize: "0.82rem",
+          color: "var(--text-3)",
+          textAlign: "center",
+        }}
+      >
         Need an account?{" "}
         <Link href="/signup" style={{ color: "var(--text)" }}>
           Create one

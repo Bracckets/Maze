@@ -14,21 +14,32 @@ export async function SiteShell({
 }) {
   const currentUser = await getCurrentUser();
   const user = "user" in currentUser.data ? currentUser.data.user : null;
+  console.log("Current user in SiteShell:", currentUser.data);
 
   return (
     <div className="site-frame">
       <header className="topbar">
         <Brand href={user ? "/dashboard" : "/"} />
         <nav className="topnav">
-          {navLinks.filter((item) => item.public || user).map((item) => (
-            <Link key={item.href} href={item.href}>
-              {item.label}
-            </Link>
-          ))}
-          <Link className="btn btn-ghost btn-sm" href={user ? "/profile" : "/signin"} style={{ marginLeft: 4 }}>
+          {navLinks
+            .filter((item) => item.public || user)
+            .map((item) => (
+              <Link key={item.href} href={item.href}>
+                {item.label}
+              </Link>
+            ))}
+          <Link
+            className="btn btn-ghost btn-sm"
+            href={user ? "/profile" : "/signin"}
+            style={{ marginLeft: 4 }}
+          >
             {user ? "Profile" : "Sign in"}
           </Link>
-          <Link className="btn btn-primary btn-sm" href={user ? "/dashboard" : "/signup"} style={{ marginLeft: 4 }}>
+          <Link
+            className="btn btn-primary btn-sm"
+            href={user ? "/dashboard" : "/signup"}
+            style={{ marginLeft: 4 }}
+          >
             {user ? "Dashboard" : "Sign up"}
           </Link>
         </nav>
@@ -106,10 +117,30 @@ export async function DashboardShell({
 
         <div className="sidebar-footer">
           <Link href="/profile" className="sidebar-link">
-            <div className="avatar" style={{ width: 28, height: 28, borderRadius: 8, fontSize: "0.7rem" }}>{initials}</div>
+            <div
+              className="avatar"
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: 8,
+                fontSize: "0.7rem",
+              }}
+            >
+              {initials}
+            </div>
             <div>
-              <div style={{ fontSize: "0.83rem", fontWeight: 600, color: "var(--text)" }}>{user?.email ?? "Workspace account"}</div>
-              <div style={{ fontSize: "0.75rem", color: "var(--text-3)" }}>{user?.workspace_name ?? "Maze workspace"}</div>
+              <div
+                style={{
+                  fontSize: "0.83rem",
+                  fontWeight: 600,
+                  color: "var(--text)",
+                }}
+              >
+                {user?.workspace_name ?? "Workspace account"}
+              </div>
+              <div style={{ fontSize: "0.75rem", color: "var(--text-3)" }}>
+                {user?.plan_name ?? "Maze workspace"}
+              </div>
             </div>
           </Link>
         </div>

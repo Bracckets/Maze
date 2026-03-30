@@ -49,12 +49,16 @@ export function SignUpForm() {
   }
 
   return (
-    <form action={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+    <form
+      action={handleSubmit}
+      style={{ display: "flex", flexDirection: "column", gap: 14 }}
+    >
       <div className="field">
         <label htmlFor="workspace_name">Workspace name</label>
         <input
           id="workspace_name"
           name="workspace_name"
+          required
           value={workspaceName}
           onChange={(e) => setWorkspaceName(e.target.value)}
           placeholder="Acme Growth"
@@ -66,6 +70,7 @@ export function SignUpForm() {
           id="email"
           name="email"
           type="email"
+          required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="you@company.com"
@@ -77,6 +82,7 @@ export function SignUpForm() {
           id="password"
           name="password"
           type="password"
+          required
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="Use at least 8 characters"
@@ -108,7 +114,13 @@ export function SignUpForm() {
         </p>
       )}
 
-      <p style={{ fontSize: "0.82rem", color: "var(--text-3)", textAlign: "center" }}>
+      <p
+        style={{
+          fontSize: "0.82rem",
+          color: "var(--text-3)",
+          textAlign: "center",
+        }}
+      >
         Already have an account?{" "}
         <Link href="/signin" style={{ color: "var(--text)" }}>
           Sign in
