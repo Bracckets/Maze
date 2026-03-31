@@ -1,5 +1,6 @@
 import { DashboardShell } from "@/components/site-shell";
 import { ProfileEditor } from "@/components/profile-editor";
+import { SignOutButton } from "@/components/signout-button";
 import { Card, Tag } from "@/components/ui";
 import { getCurrentUser } from "@/lib/service-gateway";
 
@@ -77,6 +78,7 @@ export default async function ProfilePage() {
               <label htmlFor="workspace-id">Workspace ID</label>
               <input defaultValue={user?.workspace_id ?? ""} id="workspace-id" readOnly />
             </div>
+            {user ? <SignOutButton /> : null}
           </div>
         </Card>
       </div>

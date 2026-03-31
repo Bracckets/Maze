@@ -1,7 +1,12 @@
 import json
+import os
+from base64 import urlsafe_b64decode, urlsafe_b64encode
 from collections import Counter, defaultdict
 from datetime import UTC, datetime, timedelta
-from uuid import UUID
+import hashlib
+import hmac
+from pathlib import Path
+from uuid import UUID, uuid4
 
 from sqlalchemy import text
 from sqlalchemy.orm import Session
@@ -336,6 +341,203 @@ def increment_usage(db: Session, workspace_id: str, event_count: int, api_reques
     )
 
 
+def _safe_percent(used: int, limit: int | None) -> float | None:
+    if limit is None or limit <= 0:
+        return None
+    return round((used / limit) * 100, 2)
+
+
+def _backfill_usage_monthly_if_missing(db: Session, workspace_id: str, month_start: datetime, next_month_start: datetime) -> None:
+    existing = db.execute(
+        text(
+            """
+            SELECT 1
+            FROM usage_monthly
+            WHERE workspace_id = CAST(:workspace_id AS uuid)
+              AND month = CAST(:month_start AS date)
+            LIMIT 1
+            """
+        ),
+        {"workspace_id": workspace_id, "month_start": month_start.date()},
+    ).scalar_one_or_none()
+    if existing is not None:
+        return
+
+    events_count = db.execute(
+        text(
+            """
+            SELECT COUNT(*)::bigint
+            FROM events
+            WHERE workspace_id = CAST(:workspace_id AS uuid)
+              AND occurred_at >= :month_start
+              AND occurred_at < :next_month_start
+            """
+        ),
+        {"workspace_id": workspace_id, "month_start": month_start, "next_month_start": next_month_start},
+    ).scalar_one()
+
+    sessions_count = db.execute(
+        text(
+            """
+            SELECT COUNT(*)::bigint
+            FROM sessions
+            WHERE workspace_id = CAST(:workspace_id AS uuid)
+              AND started_at >= :month_start
+              AND started_at < :next_month_start
+            """
+        ),
+        {"workspace_id": workspace_id, "month_start": month_start, "next_month_start": next_month_start},
+    ).scalar_one()
+
+    api_requests_count = db.execute(
+        text(
+            """
+            SELECT COALESCE(SUM(aku.request_count), 0)::bigint
+            FROM api_key_usage_daily aku
+            JOIN api_keys ak ON ak.id = aku.api_key_id
+            WHERE ak.workspace_id = CAST(:workspace_id AS uuid)
+              AND aku.date >= CAST(:month_start AS date)
+              AND aku.date < CAST(:next_month_start AS date)
+            """
+        ),
+        {"workspace_id": workspace_id, "month_start": month_start.date(), "next_month_start": next_month_start.date()},
+    ).scalar_one()
+
+    db.execute(
+        text(
+            """
+            INSERT INTO usage_monthly (workspace_id, month, events_count, sessions_count, api_requests_count)
+            VALUES (
+              CAST(:workspace_id AS uuid),
+              CAST(:month_start AS date),
+              :events_count,
+              :sessions_count,
+              :api_requests_count
+            )
+            ON CONFLICT (workspace_id, month)
+            DO UPDATE SET
+              events_count = EXCLUDED.events_count,
+              sessions_count = EXCLUDED.sessions_count,
+              api_requests_count = EXCLUDED.api_requests_count
+            """
+        ),
+        {
+            "workspace_id": workspace_id,
+            "month_start": month_start.date(),
+            "events_count": int(events_count or 0),
+            "sessions_count": int(sessions_count or 0),
+            "api_requests_count": int(api_requests_count or 0),
+        },
+    )
+    db.commit()
+
+
+def get_workspace_usage(db: Session, workspace_id: str) -> dict:
+    now = datetime.now(UTC)
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    next_month_start = (month_start.replace(day=28) + timedelta(days=4)).replace(day=1)
+    month_end = next_month_start - timedelta(microseconds=1)
+    _backfill_usage_monthly_if_missing(db, workspace_id, month_start, next_month_start)
+
+    row = db.execute(
+        text(
+            """
+            SELECT
+                w.id::text AS workspace_id,
+                w.name AS workspace_name,
+                sub.plan_id,
+                sub.plan_name,
+                sub.max_events_per_month,
+                sub.max_sessions_per_month,
+                sub.max_api_requests_per_minute,
+                COALESCE(um.events_count, 0)::bigint AS events_used,
+                COALESCE(um.sessions_count, 0)::bigint AS sessions_used,
+                COALESCE(um.api_requests_count, 0)::bigint AS api_requests_used
+            FROM workspaces w
+            LEFT JOIN LATERAL (
+                SELECT
+                    s.plan_id,
+                    p.name AS plan_name,
+                    p.max_events_per_month,
+                    p.max_sessions_per_month,
+                    p.max_api_requests_per_minute
+                FROM subscriptions s
+                JOIN plans p ON p.id = s.plan_id
+                WHERE s.workspace_id = w.id
+                ORDER BY s.created_at DESC
+                LIMIT 1
+            ) sub ON true
+            LEFT JOIN usage_monthly um
+              ON um.workspace_id = w.id
+             AND um.month = CAST(:month_start AS date)
+            WHERE w.id = CAST(:workspace_id AS uuid)
+            LIMIT 1
+            """
+        ),
+        {"workspace_id": workspace_id, "month_start": month_start.date()},
+    ).mappings().one()
+
+    daily_rows = db.execute(
+        text(
+            """
+            SELECT
+              date::text AS date,
+              events_count::bigint AS events,
+              sessions_count::bigint AS sessions,
+              api_requests_count::bigint AS api_requests
+            FROM usage_daily
+            WHERE workspace_id = CAST(:workspace_id AS uuid)
+              AND date >= CAST(:month_start AS date)
+              AND date < CAST(:next_month_start AS date)
+            ORDER BY date ASC
+            """
+        ),
+        {"workspace_id": workspace_id, "month_start": month_start.date(), "next_month_start": next_month_start.date()},
+    ).mappings().all()
+
+    events_used = int(row["events_used"] or 0)
+    sessions_used = int(row["sessions_used"] or 0)
+    api_requests_used = int(row["api_requests_used"] or 0)
+
+    events_limit = int(row["max_events_per_month"]) if row["max_events_per_month"] is not None else None
+    sessions_limit = int(row["max_sessions_per_month"]) if row["max_sessions_per_month"] is not None else None
+    api_requests_limit = int(row["max_api_requests_per_minute"]) if row["max_api_requests_per_minute"] is not None else None
+
+    return {
+        "workspaceId": row["workspace_id"],
+        "workspaceName": row["workspace_name"],
+        "planId": row["plan_id"],
+        "planName": row["plan_name"],
+        "monthStart": month_start.date().isoformat(),
+        "monthEnd": month_end.date().isoformat(),
+        "events": {
+            "used": events_used,
+            "limit": events_limit,
+            "percent": _safe_percent(events_used, events_limit),
+        },
+        "sessions": {
+            "used": sessions_used,
+            "limit": sessions_limit,
+            "percent": _safe_percent(sessions_used, sessions_limit),
+        },
+        "apiRequests": {
+            "used": api_requests_used,
+            "limit": api_requests_limit,
+            "percent": _safe_percent(api_requests_used, api_requests_limit),
+        },
+        "daily": [
+            {
+                "date": row_item["date"],
+                "events": int(row_item["events"] or 0),
+                "sessions": int(row_item["sessions"] or 0),
+                "apiRequests": int(row_item["api_requests"] or 0),
+            }
+            for row_item in daily_rows
+        ],
+        "updatedAt": datetime.now(UTC).isoformat(),
+    }
+
+
 def log_ingestion(db: Session, workspace_id: str | None, status: str, reason: str | None = None) -> None:
     db.execute(
         text(
@@ -442,6 +644,7 @@ def ingest_events(db: Session, workspace_id: str, api_key_id: str, events: list[
                     element_id,
                     x,
                     y,
+                    screenshot_id,
                     metadata,
                     occurred_at
                 )
@@ -454,6 +657,7 @@ def ingest_events(db: Session, workspace_id: str, api_key_id: str, events: list[
                     :element_id,
                     :x,
                     :y,
+                    CAST(:screenshot_id AS uuid),
                     CAST(:metadata AS jsonb),
                     :occurred_at
                 )
@@ -468,6 +672,7 @@ def ingest_events(db: Session, workspace_id: str, api_key_id: str, events: list[
                 "element_id": event.get("element_id"),
                 "x": event.get("x"),
                 "y": event.get("y"),
+                "screenshot_id": str(event["screenshot_id"]) if event.get("screenshot_id") else None,
                 "metadata": json.dumps(sanitized_metadata),
                 "occurred_at": event["occurred_at"],
             },
@@ -1133,3 +1338,209 @@ def serialize_session(session: SessionSummary) -> dict:
         "last_screen": session.last_screen,
         "dropped_off": session.dropped_off,
     }
+
+
+def _screenshot_storage_root() -> Path:
+    root = Path(settings.screenshot_storage_dir).resolve()
+    root.mkdir(parents=True, exist_ok=True)
+    return root
+
+
+def purge_expired_screenshots(db: Session) -> None:
+    rows = db.execute(
+        text(
+            """
+            SELECT id::text AS screenshot_id, object_key
+            FROM screenshot_assets
+            WHERE expires_at <= now()
+            """
+        )
+    ).mappings().all()
+    if not rows:
+        return
+    root = _screenshot_storage_root()
+    for row in rows:
+        path = root / row["object_key"]
+        if path.exists():
+            path.unlink(missing_ok=True)
+    db.execute(text("DELETE FROM screenshot_assets WHERE expires_at <= now()"))
+    db.commit()
+
+
+def _sign_screenshot_payload(screenshot_id: str, expires_unix: int) -> str:
+    payload = f"{screenshot_id}.{expires_unix}".encode("utf-8")
+    digest = hmac.new(settings.screenshot_signing_secret.encode("utf-8"), payload, hashlib.sha256).digest()
+    return urlsafe_b64encode(digest).decode("utf-8").rstrip("=")
+
+
+def generate_screenshot_token(screenshot_id: str, expires_unix: int) -> str:
+    signature = _sign_screenshot_payload(screenshot_id, expires_unix)
+    token_payload = f"{screenshot_id}.{expires_unix}.{signature}".encode("utf-8")
+    return urlsafe_b64encode(token_payload).decode("utf-8").rstrip("=")
+
+
+def verify_screenshot_token(screenshot_id: str, token: str) -> bool:
+    try:
+        padded = token + "=" * (-len(token) % 4)
+        decoded = urlsafe_b64decode(padded.encode("utf-8")).decode("utf-8")
+        token_screenshot_id, expires_raw, signature = decoded.split(".", 2)
+        expires_unix = int(expires_raw)
+    except Exception:
+        return False
+    if token_screenshot_id != screenshot_id:
+        return False
+    if expires_unix < int(datetime.now(UTC).timestamp()):
+        return False
+    expected = _sign_screenshot_payload(screenshot_id, expires_unix)
+    return hmac.compare_digest(expected, signature)
+
+
+def store_screenshot_asset(
+    db: Session,
+    workspace_id: str,
+    session_id: str | None,
+    screen: str | None,
+    content_type: str,
+    payload: bytes,
+    width: int | None,
+    height: int | None,
+) -> dict:
+    purge_expired_screenshots(db)
+    now = datetime.now(UTC)
+    expires_at = now + timedelta(seconds=settings.screenshot_object_ttl_seconds)
+    screenshot_id = str(uuid4())
+    extension = ".jpg" if content_type == "image/jpeg" else ".png"
+    object_key = f"{workspace_id}/{screenshot_id}{extension}"
+    row = db.execute(
+        text(
+            """
+            INSERT INTO screenshot_assets (
+                id,
+                workspace_id,
+                session_id,
+                screen,
+                object_key,
+                content_type,
+                width,
+                height,
+                byte_size,
+                expires_at
+            )
+            VALUES (
+                CAST(:id AS uuid),
+                CAST(:workspace_id AS uuid),
+                CAST(:session_id AS uuid),
+                :screen,
+                :object_key,
+                :content_type,
+                :width,
+                :height,
+                :byte_size,
+                :expires_at
+            )
+            RETURNING id::text AS id, object_key, uploaded_at, expires_at
+            """
+        ),
+        {
+            "id": screenshot_id,
+            "workspace_id": workspace_id,
+            "session_id": session_id,
+            "screen": screen,
+            "object_key": object_key,
+            "content_type": content_type,
+            "width": width,
+            "height": height,
+            "byte_size": len(payload),
+            "expires_at": expires_at,
+        },
+    ).mappings().one()
+    db.commit()
+
+    file_path = _screenshot_storage_root() / object_key
+    file_path.parent.mkdir(parents=True, exist_ok=True)
+    file_path.write_bytes(payload)
+    return {
+        "screenshot_id": screenshot_id,
+        "uploaded_at": row["uploaded_at"].isoformat(),
+        "expires_at": expires_at.isoformat(),
+        "object_key": object_key,
+    }
+
+
+def list_workspace_screenshots(
+    db: Session,
+    workspace_id: str,
+    screen: str | None = None,
+    session_id: str | None = None,
+    limit: int = 10,
+) -> list[dict]:
+    purge_expired_screenshots(db)
+    query = """
+        SELECT
+            id::text AS screenshot_id,
+            session_id::text AS session_id,
+            screen,
+            content_type,
+            width,
+            height,
+            byte_size,
+            uploaded_at,
+            expires_at
+        FROM screenshot_assets
+        WHERE workspace_id = CAST(:workspace_id AS uuid)
+          AND expires_at > now()
+    """
+    params: dict[str, str | int] = {"workspace_id": workspace_id, "limit": limit}
+    if screen is not None:
+        query += " AND screen = :screen"
+        params["screen"] = screen
+    if session_id is not None:
+        query += " AND session_id = CAST(:session_id AS uuid)"
+        params["session_id"] = session_id
+    query += " ORDER BY uploaded_at DESC LIMIT :limit"
+
+    rows = db.execute(text(query), params).mappings().all()
+
+    base = settings.public_api_base_url.rstrip("/")
+    signed_ttl = settings.screenshot_signed_url_ttl_seconds
+    output = []
+    for row in rows:
+        expires_unix = int((datetime.now(UTC) + timedelta(seconds=signed_ttl)).timestamp())
+        token = generate_screenshot_token(row["screenshot_id"], expires_unix)
+        output.append(
+            {
+                "screenshot_id": row["screenshot_id"],
+                "session_id": row["session_id"],
+                "screen": row["screen"],
+                "signed_url": f"{base}/screenshots/file/{row['screenshot_id']}?token={token}",
+                "content_type": row["content_type"],
+                "width": row["width"],
+                "height": row["height"],
+                "byte_size": int(row["byte_size"]),
+                "uploaded_at": row["uploaded_at"].isoformat(),
+                "expires_at": row["expires_at"].isoformat(),
+            }
+        )
+    return output
+
+
+def resolve_screenshot_file(db: Session, screenshot_id: str) -> dict | None:
+    row = db.execute(
+        text(
+            """
+            SELECT id::text AS screenshot_id, object_key, content_type, expires_at
+            FROM screenshot_assets
+            WHERE id = CAST(:screenshot_id AS uuid)
+            LIMIT 1
+            """
+        ),
+        {"screenshot_id": screenshot_id},
+    ).mappings().one_or_none()
+    if row is None:
+        return None
+    if row["expires_at"] <= datetime.now(UTC):
+        return None
+    file_path = _screenshot_storage_root() / row["object_key"]
+    if not file_path.exists():
+        return None
+    return {"content_type": row["content_type"], "file_path": str(file_path)}

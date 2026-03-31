@@ -66,6 +66,7 @@ def ensure_runtime_schema() -> None:
             )
         )
         connection.execute(text("ALTER TABLE events ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb"))
+        connection.execute(text("ALTER TABLE events ADD COLUMN IF NOT EXISTS screenshot_id UUID"))
         connection.execute(text("ALTER TABLE api_keys ADD COLUMN IF NOT EXISTS environment TEXT NOT NULL DEFAULT 'live'"))
         connection.execute(text("ALTER TABLE api_keys ADD COLUMN IF NOT EXISTS key_prefix TEXT"))
         connection.execute(text("ALTER TABLE issues ALTER COLUMN session_id DROP NOT NULL"))
@@ -80,3 +81,24 @@ def ensure_runtime_schema() -> None:
         connection.execute(text("ALTER TABLE insights ADD COLUMN IF NOT EXISTS frequency BIGINT NOT NULL DEFAULT 0"))
         connection.execute(text("ALTER TABLE insights ADD COLUMN IF NOT EXISTS affected_users_count INTEGER NOT NULL DEFAULT 0"))
         connection.execute(text("ALTER TABLE insights ADD COLUMN IF NOT EXISTS payload JSONB NOT NULL DEFAULT '{}'::jsonb"))
+        connection.execute(
+            text(
+                """
+                CREATE TABLE IF NOT EXISTS screenshot_assets (
+                    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                    workspace_id UUID NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+                    session_id UUID,
+                    screen TEXT,
+                    object_key TEXT NOT NULL UNIQUE,
+                    content_type TEXT NOT NULL,
+                    width INTEGER,
+                    height INTEGER,
+                    byte_size BIGINT NOT NULL,
+                    uploaded_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                    expires_at TIMESTAMPTZ NOT NULL
+                )
+                """
+            )
+        )
+        connection.execute(text("CREATE INDEX IF NOT EXISTS idx_screenshot_assets_workspace ON screenshot_assets(workspace_id, uploaded_at DESC)"))
+        connection.execute(text("CREATE INDEX IF NOT EXISTS idx_screenshot_assets_screen ON screenshot_assets(workspace_id, screen, uploaded_at DESC)"))

@@ -131,6 +131,7 @@ CREATE TABLE events (
 
     x FLOAT,
     y FLOAT,
+    screenshot_id UUID,
     metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
 
     occurred_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -159,6 +160,26 @@ ON events_2026_04(workspace_id, occurred_at);
 
 CREATE INDEX idx_events_ws_screen_2026_04 
 ON events_2026_04(workspace_id, screen);
+
+-- =========================
+-- SCREENSHOT ASSETS
+-- =========================
+CREATE TABLE screenshot_assets (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    workspace_id UUID NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+    session_id UUID,
+    screen TEXT,
+    object_key TEXT NOT NULL UNIQUE,
+    content_type TEXT NOT NULL,
+    width INTEGER,
+    height INTEGER,
+    byte_size BIGINT NOT NULL,
+    uploaded_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    expires_at TIMESTAMPTZ NOT NULL
+);
+
+CREATE INDEX idx_screenshot_assets_workspace ON screenshot_assets(workspace_id, uploaded_at DESC);
+CREATE INDEX idx_screenshot_assets_screen ON screenshot_assets(workspace_id, screen, uploaded_at DESC);
 
 -- =========================
 -- INSIGHTS

@@ -1,5 +1,6 @@
 from datetime import datetime
 from typing import Any
+from uuid import UUID
 
 from pydantic import BaseModel, Field
 
@@ -17,6 +18,7 @@ class EventIn(BaseModel):
     screen_width: float | None = None
     screen_height: float | None = None
     app_version: str | None = None
+    screenshot_id: UUID | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
 
     model_config = {"populate_by_name": True}
@@ -24,6 +26,23 @@ class EventIn(BaseModel):
 
 class EventBatchIn(BaseModel):
     events: list[EventIn]
+
+
+class ScreenshotUploadOut(BaseModel):
+    screenshot_id: str
+
+
+class ScreenshotRefOut(BaseModel):
+    screenshot_id: str
+    session_id: str | None = None
+    screen: str | None = None
+    signed_url: str
+    content_type: str
+    width: int | None = None
+    height: int | None = None
+    byte_size: int
+    uploaded_at: str
+    expires_at: str
 
 
 class AuthPayload(BaseModel):
@@ -98,6 +117,33 @@ class IntegrationServiceOut(BaseModel):
 
 class IntegrationStatusOut(BaseModel):
     services: list[IntegrationServiceOut]
+
+
+class UsageMetricOut(BaseModel):
+    used: int
+    limit: int | None = None
+    percent: float | None = None
+
+
+class UsageDailyTrendOut(BaseModel):
+    date: str
+    events: int
+    sessions: int
+    apiRequests: int
+
+
+class UsageOut(BaseModel):
+    workspaceId: str
+    workspaceName: str
+    planId: str | None = None
+    planName: str | None = None
+    monthStart: str
+    monthEnd: str
+    events: UsageMetricOut
+    sessions: UsageMetricOut
+    apiRequests: UsageMetricOut
+    daily: list[UsageDailyTrendOut]
+    updatedAt: str
 
 
 class InsightOut(BaseModel):

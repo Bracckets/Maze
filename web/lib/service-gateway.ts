@@ -18,6 +18,46 @@ export type IntegrationStatusResponse = {
   services: IntegrationService[];
 };
 
+export type UsageMetric = {
+  used: number;
+  limit: number | null;
+  percent: number | null;
+};
+
+export type UsageDailyTrend = {
+  date: string;
+  events: number;
+  sessions: number;
+  apiRequests: number;
+};
+
+export type UsageResponse = {
+  workspaceId: string;
+  workspaceName: string;
+  planId: string | null;
+  planName: string | null;
+  monthStart: string;
+  monthEnd: string;
+  events: UsageMetric;
+  sessions: UsageMetric;
+  apiRequests: UsageMetric;
+  daily: UsageDailyTrend[];
+  updatedAt: string;
+};
+
+export type ScreenshotRef = {
+  screenshot_id: string;
+  session_id?: string | null;
+  screen?: string | null;
+  signed_url: string;
+  content_type: string;
+  width?: number | null;
+  height?: number | null;
+  byte_size: number;
+  uploaded_at: string;
+  expires_at: string;
+};
+
 export type CurrentUserPayload = {
   user: {
     id: string;
@@ -133,6 +173,28 @@ export async function getIntegrationStatus(): Promise<IntegrationStatusResponse>
     };
   }
   return result.data;
+}
+
+export async function getUsage() {
+  return backendRequest<UsageResponse | { detail?: string }>("/usage", "GET");
+}
+
+export async function getScreenshots(params?: { screen?: string; session_id?: string; latest?: boolean; limit?: number }) {
+  const query = new URLSearchParams();
+  if (params?.screen) {
+    query.set("screen", params.screen);
+  }
+  if (params?.session_id) {
+    query.set("session_id", params.session_id);
+  }
+  if (params?.latest !== undefined) {
+    query.set("latest", String(params.latest));
+  }
+  if (params?.limit !== undefined) {
+    query.set("limit", String(params.limit));
+  }
+  const suffix = query.toString() ? `?${query.toString()}` : "";
+  return backendRequest<ScreenshotRef[] | { detail?: string }>(`/screenshots${suffix}`, "GET");
 }
 
 export { backendBaseUrl };

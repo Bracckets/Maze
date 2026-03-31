@@ -14,7 +14,6 @@ export async function SiteShell({
 }) {
   const currentUser = await getCurrentUser();
   const user = "user" in currentUser.data ? currentUser.data.user : null;
-  console.log("Current user in SiteShell:", currentUser.data);
 
   return (
     <div className="site-frame">
@@ -75,15 +74,16 @@ export async function DashboardShell({
   children: ReactNode;
 }) {
   const navItems = [
-    { href: "/dashboard", label: "Dashboard", icon: "*" },
-    { href: "/heatmap", label: "Heatmap", icon: "o" },
-    { href: "/settings", label: "Settings", icon: "+" },
-    { href: "/profile", label: "Profile", icon: "@" },
+    { href: "/dashboard", label: "Dashboard" },
+    { href: "/usage", label: "Usage" },
+    { href: "/heatmap", label: "Heatmap" },
+    { href: "/settings", label: "Settings" },
+    { href: "/profile", label: "Profile" },
   ] as const;
 
   const marketingItems = [
-    { href: "/pricing", label: "Pricing", icon: "$" },
-    { href: "/docs", label: "Docs", icon: ">" },
+    { href: "/pricing", label: "Pricing" },
+    { href: "/docs", label: "Docs" },
   ] as const;
 
   const currentUser = await getCurrentUser();
@@ -101,7 +101,6 @@ export async function DashboardShell({
           <p className="sidebar-label">Product</p>
           {navItems.map((item) => (
             <Link key={item.href} href={item.href} className="sidebar-link">
-              <span className="s-icon">{item.icon}</span>
               {item.label}
             </Link>
           ))}
@@ -109,7 +108,6 @@ export async function DashboardShell({
           <p className="sidebar-label">Resources</p>
           {marketingItems.map((item) => (
             <Link key={item.href} href={item.href} className="sidebar-link">
-              <span className="s-icon">{item.icon}</span>
               {item.label}
             </Link>
           ))}
@@ -136,7 +134,7 @@ export async function DashboardShell({
                   color: "var(--text)",
                 }}
               >
-                {user?.workspace_name ?? "Workspace account"}
+                {user?.workspace_name ?? "Workspace"}
               </div>
               <div style={{ fontSize: "0.75rem", color: "var(--text-3)" }}>
                 {user?.plan_name ?? "Maze workspace"}

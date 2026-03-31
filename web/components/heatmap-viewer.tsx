@@ -40,6 +40,7 @@ export function HeatmapViewer({ initialScreen, screens }: Props) {
   const heatmapInstanceRef = useRef<any>(null);
   const [selectedScreen, setSelectedScreen] = useState(initialScreen);
   const [points, setPoints] = useState<HeatmapPoint[]>([]);
+  const [screenshotUrl, setScreenshotUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [frameSize, setFrameSize] = useState({ width: 375, height: 812 });
 
@@ -100,6 +101,19 @@ export function HeatmapViewer({ initialScreen, screens }: Props) {
     };
 
     void loadHeatmap();
+  }, [selectedScreen]);
+
+  useEffect(() => {
+    const loadScreenshot = async () => {
+      const response = await fetch(`/api/screenshots?screen=${encodeURIComponent(selectedScreen)}&latest=true`, { cache: "no-store" });
+      const data = await response.json();
+      if (!response.ok || !Array.isArray(data) || data.length === 0) {
+        setScreenshotUrl(null);
+        return;
+      }
+      setScreenshotUrl(typeof data[0].signed_url === "string" ? data[0].signed_url : null);
+    };
+    void loadScreenshot();
   }, [selectedScreen]);
 
   useEffect(() => {
@@ -192,6 +206,21 @@ export function HeatmapViewer({ initialScreen, screens }: Props) {
                 }}
               />
             ))}
+
+            {screenshotUrl ? (
+              <img
+                alt={`Latest ${selectedScreen} screenshot`}
+                src={screenshotUrl}
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "cover",
+                  opacity: 0.42,
+                }}
+              />
+            ) : null}
 
             <div ref={heatmapLayerRef} style={{ position: "absolute", inset: 0 }} />
           </div>
