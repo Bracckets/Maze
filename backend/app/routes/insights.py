@@ -40,8 +40,15 @@ def list_issues(account: dict = Depends(get_current_account), db: Session = Depe
 
 
 @router.get("/sessions")
-def list_sessions(account: dict = Depends(get_current_account), db: Session = Depends(get_db)):
-    return [serialize_session(session) for session in list_workspace_sessions(db, account["workspace_id"])]
+def list_sessions(
+    account: dict = Depends(get_current_account),
+    db: Session = Depends(get_db),
+    limit: int | None = None,
+):
+    return [
+        serialize_session(session)
+        for session in list_workspace_sessions(db, account["workspace_id"], limit)
+    ]
 
 
 @router.get("/heatmap", response_model=HeatmapOut)

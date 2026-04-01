@@ -4,7 +4,12 @@ import { ReactNode } from "react";
 
 export const metadata: Metadata = {
   title: "Maze — Mobile UX Intelligence",
-  description: "Find out why users don't finish signing up. Maze captures session behavior and surfaces friction fast.",
+  description:
+    "Find out why users don't finish signing up. Maze captures session behavior and surfaces friction fast.",
+  icons: {
+    icon: "favicon-32x32.png",
+    apple: "/apple-touch-icon.png",
+  },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

@@ -175,8 +175,9 @@ export async function getIntegrationStatus(): Promise<IntegrationStatusResponse>
   return result.data;
 }
 
-export async function getUsage() {
-  return backendRequest<UsageResponse | { detail?: string }>("/usage", "GET");
+export async function getUsage(month?: string) {
+  const suffix = month ? `?month=${encodeURIComponent(month)}` : "";
+  return backendRequest<UsageResponse | { detail?: string }>(`/usage${suffix}`, "GET");
 }
 
 export async function getScreenshots(params?: { screen?: string; session_id?: string; latest?: boolean; limit?: number }) {

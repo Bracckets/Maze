@@ -432,8 +432,15 @@ def _backfill_usage_monthly_if_missing(db: Session, workspace_id: str, month_sta
     db.commit()
 
 
-def get_workspace_usage(db: Session, workspace_id: str) -> dict:
-    now = datetime.now(UTC)
+def get_workspace_usage(db: Session, workspace_id: str, month: str | None = None) -> dict:
+    if month:
+        try:
+            parsed = datetime.strptime(month, "%Y-%m")
+            now = parsed.replace(tzinfo=UTC)
+        except ValueError:
+            now = datetime.now(UTC)
+    else:
+        now = datetime.now(UTC)
     month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     next_month_start = (month_start.replace(day=28) + timedelta(days=4)).replace(day=1)
     month_end = next_month_start - timedelta(microseconds=1)
@@ -755,10 +762,8 @@ def update_workspace_settings(db: Session, workspace_id: str, payload: dict[str,
     return get_workspace_settings(db, workspace_id)
 
 
-def list_workspace_sessions(db: Session, workspace_id: str) -> list[SessionSummary]:
-    rows = db.execute(
-        text(
-            """
+def list_workspace_sessions(db: Session, workspace_id: str, limit: int | None = None) -> list[SessionSummary]:
+    query = """
             SELECT
                 s.id::text AS session_id,
                 s.device_id,
@@ -775,11 +780,15 @@ def list_workspace_sessions(db: Session, workspace_id: str) -> list[SessionSumma
             ) latest ON true
             WHERE s.workspace_id = CAST(:workspace_id AS uuid)
             ORDER BY s.started_at DESC
-            LIMIT 200
             """
-        ),
-        {"workspace_id": workspace_id},
-    ).mappings().all()
+    if limit is not None:
+        query += "\nLIMIT :limit"
+
+    params = {"workspace_id": workspace_id}
+    if limit is not None:
+        params["limit"] = limit
+
+    rows = db.execute(text(query), params).mappings().all()
     return [
         SessionSummary(
             session_id=row["session_id"],
