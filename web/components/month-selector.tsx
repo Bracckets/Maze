@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 type Props = {
   months: { value: string; label: string }[];
@@ -9,28 +10,73 @@ type Props = {
 
 export function MonthSelector({ months, selected }: Props) {
   const router = useRouter();
+  const menuRef = useRef<HTMLDivElement | null>(null);
+  const [isOpen, setIsOpen] = useState(false);
+
+  const selectedMonth = useMemo(
+    () => months.find((month) => month.value === selected) ?? months[0],
+    [months, selected],
+  );
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!menuRef.current?.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsOpen(false);
+      }
+    };
+
+    window.addEventListener("mousedown", handlePointerDown);
+    window.addEventListener("keydown", handleEscape);
+    return () => {
+      window.removeEventListener("mousedown", handlePointerDown);
+      window.removeEventListener("keydown", handleEscape);
+    };
+  }, [isOpen]);
 
   return (
-    <select
-      className="field"
-      value={selected}
-      onChange={(e) => router.push(`/usage?month=${e.target.value}`)}
-      style={{
-        background: "var(--surface-0)",
-        border: "1px solid var(--border-strong)",
-        borderRadius: "var(--r-md)",
-        color: "var(--text)",
-        padding: "8px 14px",
-        fontSize: "0.87rem",
-        cursor: "pointer",
-        outline: "none",
-      }}
-    >
-      {months.map((m) => (
-        <option key={m.value} value={m.value}>
-          {m.label}
-        </option>
-      ))}
-    </select>
+    <div className="surface-select" ref={menuRef}>
+      <button
+        aria-expanded={isOpen}
+        aria-haspopup="menu"
+        className={`surface-select-trigger ${isOpen ? "open" : ""}`}
+        type="button"
+        onClick={() => setIsOpen((open) => !open)}
+      >
+        <span className="surface-select-value">{selectedMonth?.label ?? "Select month"}</span>
+        <span className="surface-select-chevron" aria-hidden="true">
+          ▾
+        </span>
+      </button>
+
+      {isOpen ? (
+        <div className="surface-select-popover" role="menu">
+          {months.map((month) => (
+            <button
+              className={`surface-select-option ${month.value === selected ? "active" : ""}`}
+              key={month.value}
+              role="menuitemradio"
+              type="button"
+              onClick={() => {
+                setIsOpen(false);
+                router.push(`/usage?month=${month.value}`);
+              }}
+            >
+              <span>{month.label}</span>
+              {month.value === selected ? <strong>Current</strong> : null}
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </div>
   );
 }

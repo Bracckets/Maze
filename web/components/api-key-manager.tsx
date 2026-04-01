@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type ApiKey = {
   id: string;
@@ -17,6 +17,8 @@ export function ApiKeyManager() {
   const [environment, setEnvironment] = useState<"test" | "live">("live");
   const [status, setStatus] = useState<{ text: string; ok: boolean } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isEnvironmentOpen, setIsEnvironmentOpen] = useState(false);
+  const environmentRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     void (async () => {
@@ -29,6 +31,31 @@ export function ApiKeyManager() {
       setLoading(false);
     })();
   }, []);
+
+  useEffect(() => {
+    if (!isEnvironmentOpen) {
+      return;
+    }
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!environmentRef.current?.contains(event.target as Node)) {
+        setIsEnvironmentOpen(false);
+      }
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsEnvironmentOpen(false);
+      }
+    };
+
+    window.addEventListener("mousedown", handlePointerDown);
+    window.addEventListener("keydown", handleEscape);
+    return () => {
+      window.removeEventListener("mousedown", handlePointerDown);
+      window.removeEventListener("keydown", handleEscape);
+    };
+  }, [isEnvironmentOpen]);
 
   async function createKey(formData: FormData) {
     setStatus({ text: "Generating...", ok: true });
@@ -54,20 +81,56 @@ export function ApiKeyManager() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
       <form action={createKey} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 10, alignItems: "end" }}>
+        <div className="api-key-form-grid">
           <div className="field">
             <label htmlFor="key-name">Key name</label>
             <input id="key-name" name="name" value={name} onChange={(e) => setName(e.target.value)} />
           </div>
-          <div className="field">
+          <div className="field api-key-environment-field">
             <label htmlFor="key-env">Environment</label>
-            <select id="key-env" name="environment" value={environment} onChange={(e) => setEnvironment(e.target.value as "test" | "live")}>
-              <option value="live">Live</option>
-              <option value="test">Test</option>
-            </select>
+            <input id="key-env" name="environment" type="hidden" value={environment} />
+            <div className="surface-select" ref={environmentRef}>
+              <button
+                aria-expanded={isEnvironmentOpen}
+                aria-haspopup="menu"
+                className={`surface-select-trigger ${isEnvironmentOpen ? "open" : ""}`}
+                type="button"
+                onClick={() => setIsEnvironmentOpen((open) => !open)}
+              >
+                <span className="surface-select-value">
+                  {environment === "live" ? "Live" : "Test"}
+                </span>
+                <span className="surface-select-chevron" aria-hidden="true">
+                  ▾
+                </span>
+              </button>
+
+              {isEnvironmentOpen ? (
+                <div className="surface-select-popover" role="menu">
+                  {[
+                    { value: "live" as const, label: "Live" },
+                    { value: "test" as const, label: "Test" },
+                  ].map((option) => (
+                    <button
+                      className={`surface-select-option ${option.value === environment ? "active" : ""}`}
+                      key={option.value}
+                      role="menuitemradio"
+                      type="button"
+                      onClick={() => {
+                        setEnvironment(option.value);
+                        setIsEnvironmentOpen(false);
+                      }}
+                    >
+                      <span>{option.label}</span>
+                      {option.value === environment ? <strong>Current</strong> : null}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
           </div>
         </div>
-        <button className="btn btn-primary" type="submit" style={{ alignSelf: "flex-start" }}>
+        <button className="btn btn-primary api-key-submit" type="submit">
           Generate key
         </button>
       </form>

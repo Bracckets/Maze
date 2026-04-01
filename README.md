@@ -77,7 +77,7 @@ Make sure your PostgreSQL server is running and the `Maze` database has been ini
 
 ### 2. Start the backend
 
-```powershell
+```bash
 cd E:\Maze\backend
 .venv\Scripts\activate
 pip install -r requirements.txt
@@ -105,7 +105,7 @@ Backend endpoints:
 
 ### 3. Start the web app
 
-```powershell
+```bash
 cd E:\Maze\web
 npm install
 npm run dev

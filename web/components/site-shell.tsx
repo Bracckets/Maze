@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ReactNode } from "react";
 
 import { Brand } from "@/components/brand";
+import { MobileNavMenu } from "@/components/mobile-nav-menu";
 import { navLinks } from "@/lib/site-data";
 import { getCurrentUser } from "@/lib/service-gateway";
 
@@ -42,6 +43,22 @@ export async function SiteShell({
             {user ? "Dashboard" : "Sign up"}
           </Link>
         </nav>
+        <MobileNavMenu
+          brandHref={user ? "/dashboard" : "/"}
+          sections={[
+            {
+              items: navLinks
+                .filter((item) => item.public || user)
+                .map((item) => ({ href: item.href, label: item.label })),
+            },
+            {
+              items: [
+                { href: user ? "/profile" : "/signin", label: user ? "Profile" : "Sign in" },
+                { href: user ? "/dashboard" : "/signup", label: user ? "Dashboard" : "Sign up", tone: "primary" },
+              ],
+            },
+          ]}
+        />
       </header>
       {eyebrow ? <p className="eyebrow">{eyebrow}</p> : null}
       {children}
@@ -145,6 +162,23 @@ export async function DashboardShell({
       </aside>
 
       <main className="main-content">
+        <MobileNavMenu
+          brandHref="/dashboard"
+          summary={{
+            title: user?.workspace_name ?? "Workspace",
+            subtitle: user?.plan_name ?? "Maze workspace",
+          }}
+          sections={[
+            {
+              title: "Product",
+              items: navItems.map((item) => ({ href: item.href, label: item.label })),
+            },
+            {
+              title: "Resources",
+              items: marketingItems.map((item) => ({ href: item.href, label: item.label })),
+            },
+          ]}
+        />
         <div className="page-header">
           <h1 className="page-title">{title}</h1>
           <p className="page-subtitle">{subtitle}</p>

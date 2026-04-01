@@ -58,6 +58,7 @@ export function SignUpForm() {
         <input
           id="workspace_name"
           name="workspace_name"
+          autoComplete="organization"
           required
           value={workspaceName}
           onChange={(e) => setWorkspaceName(e.target.value)}
@@ -70,6 +71,7 @@ export function SignUpForm() {
           id="email"
           name="email"
           type="email"
+          autoComplete="email"
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
@@ -82,6 +84,7 @@ export function SignUpForm() {
           id="password"
           name="password"
           type="password"
+          autoComplete="new-password"
           required
           value={password}
           onChange={(e) => setPassword(e.target.value)}

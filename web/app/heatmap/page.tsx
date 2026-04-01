@@ -11,47 +11,47 @@ export default async function HeatmapPage() {
 
   return (
     <DashboardShell
-      title="Heatmap"
-      subtitle="Visualize where mobile users tap most often from your live workspace data."
+      title="Heatmap explorer"
+      subtitle="Inspect clustered tap behavior, expand the canvas, and export hotspot rows for mobile and web workflows."
     >
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: "var(--gap)" }}>
-        <Card accent>
-          <HeatmapViewer initialScreen={initialHeatmap.screen} screens={screens.length > 0 ? screens : [initialHeatmap.screen]} />
+      <div style={{ display: "grid", gap: "var(--gap)" }}>
+        <Card accent className="ops-panel">
+          <HeatmapViewer
+            initialScreen={initialHeatmap.screen}
+            screens={screens.length > 0 ? screens : [initialHeatmap.screen]}
+          />
         </Card>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: "var(--gap)" }}>
-          <Card>
-            <div className="heading" style={{ marginBottom: 10 }}>What this view shows</div>
-            <p className="subtext" style={{ fontSize: "0.88rem", marginBottom: 14 }}>
-              Every point represents normalized mobile tap coordinates aggregated to two decimal places on the backend.
-            </p>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-              <Tag tone="accent">Blue = low density</Tag>
-              <Tag tone="amber">Yellow = medium</Tag>
-              <Tag tone="red">Red = high</Tag>
+        <div className="ops-kpis" style={{ marginBottom: 0 }}>
+          <Card className="kpi-panel">
+            <p className="metric-label">Color scale</p>
+            <p className="heading" style={{ marginBottom: 8 }}>Low to high density</p>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <Tag tone="accent">Blue</Tag>
+              <Tag tone="amber">Yellow</Tag>
+              <Tag tone="red">Red</Tag>
             </div>
-            {!hasHeatmapData ? (
-              <p className="subtext" style={{ fontSize: "0.82rem", marginTop: 14 }}>
-                No tap data has been ingested yet. Once your SDK starts sending events, this view will populate automatically.
-              </p>
-            ) : null}
           </Card>
-
-          <Card>
-            <div className="heading" style={{ marginBottom: 10 }}>Data source</div>
-            <div className="list-row">
-              <div>
-                <div style={{ fontSize: "0.88rem", fontWeight: 600, color: "var(--text)" }}>Backend endpoint</div>
-                <div style={{ fontSize: "0.8rem", color: "var(--text-3)", fontFamily: "var(--font-mono)" }}>/heatmap?screen=...</div>
-              </div>
-              <Tag>Live</Tag>
-            </div>
-            <div className="list-row">
-              <div>
-                <div style={{ fontSize: "0.88rem", fontWeight: 600, color: "var(--text)" }}>Coordinate model</div>
-                <div style={{ fontSize: "0.8rem", color: "var(--text-3)" }}>Normalized x/y with raw screen bounds stored per tap.</div>
-              </div>
-            </div>
+          <Card className="kpi-panel">
+            <p className="metric-label">Source</p>
+            <p className="heading" style={{ marginBottom: 8 }}>/heatmap?screen=...</p>
+            <p className="panel-copy">Normalized tap coordinates returned directly from the backend.</p>
+          </Card>
+          <Card className="kpi-panel">
+            <p className="metric-label">Screenshot overlay</p>
+            <p className="heading" style={{ marginBottom: 8 }}>Latest captured frame</p>
+            <p className="panel-copy">The explorer overlays the freshest screenshot available for the selected screen.</p>
+          </Card>
+          <Card className="kpi-panel">
+            <p className="metric-label">Data status</p>
+            <p className="heading" style={{ marginBottom: 8 }}>
+              {hasHeatmapData ? "Ready for inspection" : "Waiting for tap data"}
+            </p>
+            <p className="panel-copy">
+              {hasHeatmapData
+                ? "Expand the view or inspect individual hotspot rows."
+                : "Once SDK traffic arrives, this view fills automatically."}
+            </p>
           </Card>
         </div>
       </div>

@@ -10,18 +10,18 @@ export function Brand({
   sidebar?: boolean;
   href?: string;
 }) {
-  const height = sidebar ? 32 : compact ? 40 : 54;
-  const width = sidebar ? 120 : compact ? 132 : 180;
+  const height = sidebar ? 28 : compact ? 36 : 42;
+  const width = Math.round((height * 1023) / 241);
+  const priority = !compact && !sidebar;
 
   return (
     <Link className="brand" href={href as "/" | "/dashboard"}>
       <Image
         alt="Maze logo"
-        priority
+        priority={priority}
         src="/logo.png"
         width={width}
         height={height}
-        style={{ width: "auto", height }}
       />
     </Link>
   );
