@@ -151,12 +151,13 @@ The masking rule is now applied during event ingestion before metadata is stored
 Configure with:
 
 ```kotlin
-UXTracker.configure(
+Maze.configure(
     MazeConfig(
         apiKey = "mz_live_...",
         deviceId = "android-device-001",
         endpoint = "http://10.0.2.2:8000/events",
-        appVersion = "1.0.0"
+        appVersion = "1.0.0",
+        sessionCaptureEnabled = false
     )
 )
 ```
@@ -171,12 +172,13 @@ Notes:
 Configure with:
 
 ```swift
-UXTracker.shared.configure(
+Maze.configure(
     MazeConfig(
         apiKey: "mz_live_...",
         deviceId: "ios-device-001",
         endpoint: URL(string: "http://127.0.0.1:8000/events")!,
-        appVersion: "1.0.0"
+        appVersion: "1.0.0",
+        sessionCaptureEnabled: false
     )
 )
 ```

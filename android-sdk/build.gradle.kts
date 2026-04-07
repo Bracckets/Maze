@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "com.maze.uxtracker"
+    namespace = "com.maze.sdk"
     compileSdk = 35
 
     defaultConfig {
