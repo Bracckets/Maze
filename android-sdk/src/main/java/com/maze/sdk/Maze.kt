@@ -1,4 +1,4 @@
-package com.maze.uxtracker
+package com.maze.sdk
 
 import android.app.Activity
 import android.app.Application
@@ -6,25 +6,35 @@ import android.content.res.Resources
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Matrix
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.MultipartBody
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.asRequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
+import java.io.ByteArrayOutputStream
+import java.io.File
+import java.lang.ref.WeakReference
 import java.time.Instant
 import java.util.UUID
 import java.util.concurrent.ConcurrentLinkedQueue
-import java.lang.ref.WeakReference
-import kotlinx.coroutines.withContext
-import java.io.File
 
-data class UXEvent(
+private val recommendedBlockedCaptureScreens: Set<String> = setOf(
+    "login",
+    "signup",
+    "otp_verification",
+    "password_reset",
+    "payment",
+    "kyc_id_upload",
+)
+
+data class MazeEvent(
     val event_id: String,
     val session_id: String,
     val device_id: String,
@@ -41,7 +51,7 @@ data class UXEvent(
     val metadata: Map<String, String>
 )
 
-object SessionManager {
+object MazeSession {
     private var sessionId: String = UUID.randomUUID().toString()
 
     fun currentSessionId(): String = sessionId
@@ -61,7 +71,7 @@ private class NetworkClient(
         return raw.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n")
     }
 
-    fun send(events: List<UXEvent>) {
+    fun send(events: List<MazeEvent>) {
         val jsonEvents = events.joinToString(separator = ",") { event ->
             """
             {
@@ -142,10 +152,10 @@ private class EventQueue(
     private val networkClient: NetworkClient,
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.IO)
 ) {
-    private val buffer = ConcurrentLinkedQueue<UXEvent>()
+    private val buffer = ConcurrentLinkedQueue<MazeEvent>()
     private var scheduledFlush: Job? = null
 
-    fun enqueue(event: UXEvent) {
+    fun enqueue(event: MazeEvent) {
         buffer.add(event)
         if (buffer.size >= 20) {
             flush()
@@ -160,7 +170,7 @@ private class EventQueue(
     }
 
     fun flush() {
-        val events = mutableListOf<UXEvent>()
+        val events = mutableListOf<MazeEvent>()
         while (true) {
             val event = buffer.poll() ?: break
             events.add(event)
@@ -189,11 +199,15 @@ data class MazeConfig(
     val deviceId: String,
     val endpoint: String = "http://10.0.2.2:8000/events",
     val appVersion: String? = null,
-    val screenshotCaptureEnabled: Boolean = true,
+    val sessionCaptureEnabled: Boolean = false,
     val screenshotQuality: Int = 72,
     val screenshotMaxDimension: Int = 1280,
     val screenshotEndpoint: String = endpoint.replace("/events", "/screenshots"),
-    val application: Application? = null
+    val application: Application? = null,
+    val captureAllowedScreens: Set<String>? = null,
+    val captureBlockedScreens: Set<String> = recommendedBlockedCaptureScreens,
+    val captureStatusListener: ((Boolean) -> Unit)? = null,
+    val captureEvaluator: ((String?) -> Boolean)? = null,
 )
 
 object ActivityTracker : Application.ActivityLifecycleCallbacks {
@@ -222,70 +236,88 @@ object ActivityTracker : Application.ActivityLifecycleCallbacks {
     override fun onActivityDestroyed(activity: Activity) {}
 }
 
-object UXTracker {
+object Maze {
     private var currentScreen: String? = null
     private var config: MazeConfig? = null
     private var queue: EventQueue? = null
     private var networkClient: NetworkClient? = null
     private val workerScope = CoroutineScope(Dispatchers.IO)
 
+    @Volatile private var sessionCaptureEnabled: Boolean = false
+    @Volatile private var captureAllowedScreens: Set<String>? = null
+    @Volatile private var captureBlockedScreens: Set<String> = emptySet()
+    @Volatile private var captureStatusListener: ((Boolean) -> Unit)? = null
+    @Volatile private var captureEvaluator: ((String?) -> Boolean)? = null
+
     fun configure(config: MazeConfig) {
+        validateEndpoint(config.endpoint)
         this.config = config
-        if (config.screenshotCaptureEnabled) {
-            config.application?.let { ActivityTracker.attach(it) }
+        sessionCaptureEnabled = config.sessionCaptureEnabled
+        captureAllowedScreens = config.captureAllowedScreens
+        captureBlockedScreens = config.captureBlockedScreens
+        captureStatusListener = config.captureStatusListener
+        captureEvaluator = config.captureEvaluator
+        if (config.application != null) {
+            ActivityTracker.attach(config.application)
         }
-        this.networkClient = NetworkClient(config.endpoint, config.screenshotEndpoint, config.apiKey)
-        this.queue = EventQueue(requireNotNull(networkClient))
+        networkClient = NetworkClient(config.endpoint, config.screenshotEndpoint, config.apiKey)
+        queue = EventQueue(requireNotNull(networkClient))
+        captureStatusListener?.invoke(sessionCaptureEnabled)
+    }
+
+    fun setSessionCaptureEnabled(enabled: Boolean) {
+        sessionCaptureEnabled = enabled
+        captureStatusListener?.invoke(enabled)
+    }
+
+    fun setCaptureAllowedScreens(screens: Set<String>?) {
+        captureAllowedScreens = screens
+    }
+
+    fun setCaptureBlockedScreens(screens: Set<String>) {
+        captureBlockedScreens = screens
+    }
+
+    fun setScreenCaptureEnabled(enabled: Boolean, screen: String) {
+        captureBlockedScreens = if (enabled) captureBlockedScreens - screen else captureBlockedScreens + screen
     }
 
     fun screen(name: String) {
         currentScreen = name
-        val activeConfig = requireNotNull(config) { "Call UXTracker.configure(MazeConfig) before tracking events." }
+        val activeConfig = requireNotNull(config) { "Call Maze.configure(MazeConfig) before tracking events." }
         val activeQueue = requireNotNull(queue) { "Tracker queue is not initialized." }
         val client = requireNotNull(networkClient) { "Network client is not initialized." }
         workerScope.launch {
-            val screenshotId = if (activeConfig.screenshotCaptureEnabled) {
+            val screenshotId = if (shouldCapture(name)) {
                 runCatching { captureAndUploadScreenshot(activeConfig, client, name) }.getOrNull()
             } else {
                 null
             }
-            enqueueEvent(
-                activeConfig = activeConfig,
-                activeQueue = activeQueue,
-                event = "screen_view",
-                screen = name,
-                elementId = null,
-                metadata = emptyMap(),
-                x = null,
-                y = null,
-                screenshotId = screenshotId
-            )
+            enqueueEvent(activeConfig, activeQueue, "screen_view", name, null, emptyMap(), null, null, screenshotId)
         }
     }
 
     fun track(
         event: String,
         screen: String? = null,
-        elementId: String?,
-        metadata: Map<String, String>,
+        elementId: String? = null,
+        metadata: Map<String, String> = emptyMap(),
         x: Float? = null,
         y: Float? = null
     ) {
-        val activeConfig = requireNotNull(config) { "Call UXTracker.configure(MazeConfig) before tracking events." }
+        val activeConfig = requireNotNull(config) { "Call Maze.configure(MazeConfig) before tracking events." }
         val activeQueue = requireNotNull(queue) { "Tracker queue is not initialized." }
         workerScope.launch {
-            enqueueEvent(
-                activeConfig = activeConfig,
-                activeQueue = activeQueue,
-                event = event,
-                screen = screen ?: currentScreen,
-                elementId = elementId,
-                metadata = metadata,
-                x = x,
-                y = y,
-                screenshotId = null
-            )
+            enqueueEvent(activeConfig, activeQueue, event, screen ?: currentScreen, elementId, metadata, x, y, null)
         }
+    }
+
+    private fun shouldCapture(screen: String?): Boolean {
+        if (!sessionCaptureEnabled) return false
+        if (captureEvaluator?.invoke(screen) == false) return false
+        if (screen != null && captureBlockedScreens.contains(screen)) return false
+        val allowed = captureAllowedScreens
+        return allowed == null || (screen != null && allowed.contains(screen))
     }
 
     private suspend fun enqueueEvent(
@@ -299,21 +331,19 @@ object UXTracker {
         y: Float?,
         screenshotId: String?
     ) {
-        val safeMetadata = metadata.mapValues { (_, value) ->
-            if (value.length > 24) "***" else value
-        }
+        val safeMetadata = metadata.mapValues { (_, value) -> if (value.length > 24) "***" else value }
         val displayMetrics = Resources.getSystem().displayMetrics
         val normalizedX = x?.let { (it / displayMetrics.widthPixels).coerceIn(0f, 1f) }
         val normalizedY = y?.let { (it / displayMetrics.heightPixels).coerceIn(0f, 1f) }
 
         activeQueue.enqueue(
-            UXEvent(
+            MazeEvent(
                 event_id = UUID.randomUUID().toString(),
-                session_id = SessionManager.currentSessionId(),
+                session_id = MazeSession.currentSessionId(),
                 device_id = activeConfig.deviceId,
                 occurred_at = Instant.now().toString(),
                 event = event,
-                screen = screen ?: currentScreen,
+                screen = screen,
                 element_id = elementId,
                 x = normalizedX,
                 y = normalizedY,
@@ -334,31 +364,26 @@ object UXTracker {
         val capture = withContext(Dispatchers.Main) {
             val activity = ActivityTracker.current() ?: return@withContext null
             val root = activity.window?.decorView?.rootView ?: return@withContext null
-            if (root.width <= 0 || root.height <= 0) {
-                return@withContext null
-            }
+            if (root.width <= 0 || root.height <= 0) return@withContext null
             val bitmap = Bitmap.createBitmap(root.width, root.height, Bitmap.Config.RGB_565)
             val canvas = Canvas(bitmap)
             root.draw(canvas)
             val resized = resizeBitmap(bitmap, activeConfig.screenshotMaxDimension)
-            val output = java.io.ByteArrayOutputStream()
+            val output = ByteArrayOutputStream()
             resized.compress(Bitmap.CompressFormat.JPEG, activeConfig.screenshotQuality.coerceIn(35, 90), output)
             val bytes = output.toByteArray()
             output.close()
             val width = resized.width
             val height = resized.height
-            if (resized != bitmap) {
-                resized.recycle()
-            }
+            if (resized != bitmap) resized.recycle()
             bitmap.recycle()
             Triple(bytes, width, height)
         } ?: return null
 
-        val sessionId = SessionManager.currentSessionId()
         val screenshotId = client.uploadScreenshot(
             imageBytes = capture.first,
             screen = screenName,
-            sessionId = sessionId,
+            sessionId = MazeSession.currentSessionId(),
             width = capture.second,
             height = capture.third
         )
@@ -367,11 +392,15 @@ object UXTracker {
 
     private fun resizeBitmap(source: Bitmap, maxDimension: Int): Bitmap {
         val maxSide = maxOf(source.width, source.height)
-        if (maxSide <= maxDimension || maxDimension <= 0) {
-            return source
-        }
+        if (maxSide <= maxDimension || maxDimension <= 0) return source
         val scale = maxDimension.toFloat() / maxSide.toFloat()
         val matrix = Matrix().apply { postScale(scale, scale) }
         return Bitmap.createBitmap(source, 0, 0, source.width, source.height, matrix, true)
+    }
+
+    private fun validateEndpoint(endpoint: String) {
+        val isSecure = endpoint.startsWith("https://")
+        val isLocal = endpoint.startsWith("http://127.0.0.1") || endpoint.startsWith("http://10.0.2.2") || endpoint.startsWith("http://localhost")
+        check(isSecure || isLocal) { "Maze requires HTTPS for production endpoints." }
     }
 }

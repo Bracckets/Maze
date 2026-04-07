@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import { useI18n } from "@/components/locale-provider";
+
 type ApiKey = {
   id: string;
   name: string;
@@ -12,8 +14,9 @@ type ApiKey = {
 };
 
 export function ApiKeyManager() {
+  const { locale } = useI18n();
   const [keys, setKeys] = useState<ApiKey[]>([]);
-  const [name, setName] = useState("Backend ingestion key");
+  const [name, setName] = useState(locale === "ar" ? "مفتاح إدخال الخلفية" : "Backend ingestion key");
   const [environment, setEnvironment] = useState<"test" | "live">("live");
   const [status, setStatus] = useState<{ text: string; ok: boolean } | null>(null);
   const [loading, setLoading] = useState(true);
@@ -58,7 +61,7 @@ export function ApiKeyManager() {
   }, [isEnvironmentOpen]);
 
   async function createKey(formData: FormData) {
-    setStatus({ text: "Generating...", ok: true });
+      setStatus({ text: locale === "ar" ? "جارٍ الإنشاء..." : "Generating...", ok: true });
 
     const response = await fetch("/api/workspace/api-keys", {
       method: "POST",
@@ -72,9 +75,9 @@ export function ApiKeyManager() {
     const data = await response.json();
     if (response.ok) {
       setKeys((current) => [data.key, ...current]);
-      setStatus({ text: `Key created: ${data.key.token}`, ok: true });
+      setStatus({ text: locale === "ar" ? `تم إنشاء المفتاح: ${data.key.token}` : `Key created: ${data.key.token}`, ok: true });
     } else {
-      setStatus({ text: data.error ?? "Unable to generate key.", ok: false });
+      setStatus({ text: data.error ?? (locale === "ar" ? "تعذر إنشاء المفتاح." : "Unable to generate key."), ok: false });
     }
   }
 
@@ -83,11 +86,11 @@ export function ApiKeyManager() {
       <form action={createKey} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         <div className="api-key-form-grid">
           <div className="field">
-            <label htmlFor="key-name">Key name</label>
+            <label htmlFor="key-name">{locale === "ar" ? "اسم المفتاح" : "Key name"}</label>
             <input id="key-name" name="name" value={name} onChange={(e) => setName(e.target.value)} />
           </div>
           <div className="field api-key-environment-field">
-            <label htmlFor="key-env">Environment</label>
+            <label htmlFor="key-env">{locale === "ar" ? "البيئة" : "Environment"}</label>
             <input id="key-env" name="environment" type="hidden" value={environment} />
             <div className="surface-select" ref={environmentRef}>
               <button
@@ -98,7 +101,7 @@ export function ApiKeyManager() {
                 onClick={() => setIsEnvironmentOpen((open) => !open)}
               >
                 <span className="surface-select-value">
-                  {environment === "live" ? "Live" : "Test"}
+                  {environment === "live" ? (locale === "ar" ? "حي" : "Live") : (locale === "ar" ? "اختبار" : "Test")}
                 </span>
                 <span className="surface-select-chevron" aria-hidden="true">
                   ▾
@@ -108,8 +111,8 @@ export function ApiKeyManager() {
               {isEnvironmentOpen ? (
                 <div className="surface-select-popover" role="menu">
                   {[
-                    { value: "live" as const, label: "Live" },
-                    { value: "test" as const, label: "Test" },
+                    { value: "live" as const, label: locale === "ar" ? "حي" : "Live" },
+                    { value: "test" as const, label: locale === "ar" ? "اختبار" : "Test" },
                   ].map((option) => (
                     <button
                       className={`surface-select-option ${option.value === environment ? "active" : ""}`}
@@ -122,7 +125,7 @@ export function ApiKeyManager() {
                       }}
                     >
                       <span>{option.label}</span>
-                      {option.value === environment ? <strong>Current</strong> : null}
+                      {option.value === environment ? <strong>{locale === "ar" ? "الحالي" : "Current"}</strong> : null}
                     </button>
                   ))}
                 </div>
@@ -131,7 +134,7 @@ export function ApiKeyManager() {
           </div>
         </div>
         <button className="btn btn-primary api-key-submit" type="submit">
-          Generate key
+          {locale === "ar" ? "إنشاء مفتاح" : "Generate key"}
         </button>
       </form>
 
@@ -154,7 +157,7 @@ export function ApiKeyManager() {
 
       <div>
         <p style={{ fontSize: "0.78rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--text-3)", marginBottom: 10 }}>
-          {loading ? "Loading..." : `${keys.length} key${keys.length !== 1 ? "s" : ""}`}
+          {loading ? (locale === "ar" ? "جارٍ التحميل..." : "Loading...") : locale === "ar" ? `${keys.length} مفتاح` : `${keys.length} key${keys.length !== 1 ? "s" : ""}`}
         </p>
         {keys.map((key) => (
           <div
@@ -176,13 +179,13 @@ export function ApiKeyManager() {
             </div>
             <div style={{ fontSize: "0.78rem", color: "var(--text-3)", whiteSpace: "nowrap" }}>
               {key.lastUsedAt
-                ? `Used ${new Date(key.lastUsedAt).toLocaleDateString()}`
-                : `Created ${new Date(key.createdAt).toLocaleDateString()}`}
+                ? locale === "ar" ? `استُخدم ${new Date(key.lastUsedAt).toLocaleDateString()}` : `Used ${new Date(key.lastUsedAt).toLocaleDateString()}`
+                : locale === "ar" ? `أُنشئ ${new Date(key.createdAt).toLocaleDateString()}` : `Created ${new Date(key.createdAt).toLocaleDateString()}`}
             </div>
           </div>
         ))}
         {!loading && keys.length === 0 && (
-          <p style={{ fontSize: "0.85rem", color: "var(--text-3)" }}>No keys yet. Generate one above.</p>
+          <p style={{ fontSize: "0.85rem", color: "var(--text-3)" }}>{locale === "ar" ? "لا توجد مفاتيح بعد. أنشئ واحداً أعلاه." : "No keys yet. Generate one above."}</p>
         )}
       </div>
     </div>

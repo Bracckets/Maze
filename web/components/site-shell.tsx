@@ -2,8 +2,10 @@ import Link from "next/link";
 import { ReactNode } from "react";
 
 import { Brand } from "@/components/brand";
+import { LocaleSwitcher } from "@/components/locale-switcher";
 import { MobileNavMenu } from "@/components/mobile-nav-menu";
-import { navLinks } from "@/lib/site-data";
+import { getMessages } from "@/lib/i18n";
+import { getRequestLocale } from "@/lib/i18n-server";
 import { getCurrentUser } from "@/lib/service-gateway";
 
 export async function SiteShell({
@@ -13,8 +15,18 @@ export async function SiteShell({
   children: ReactNode;
   eyebrow?: string;
 }) {
+  const locale = await getRequestLocale();
+  const messages = getMessages(locale);
   const currentUser = await getCurrentUser();
   const user = "user" in currentUser.data ? currentUser.data.user : null;
+  const navLinks = [
+    { href: "/dashboard", label: messages.nav.dashboard, public: false },
+    { href: "/usage", label: messages.nav.usage, public: false },
+    { href: "/heatmap", label: messages.nav.heatmap, public: false },
+    { href: "/pricing", label: messages.nav.pricing, public: true },
+    { href: "/docs", label: messages.nav.docs, public: true },
+    { href: "/profile", label: messages.nav.profile, public: false },
+  ] as const;
 
   return (
     <div className="site-frame">
@@ -31,17 +43,16 @@ export async function SiteShell({
           <Link
             className="btn btn-ghost btn-sm"
             href={user ? "/profile" : "/signin"}
-            style={{ marginLeft: 4 }}
           >
-            {user ? "Profile" : "Sign in"}
+            {user ? messages.auth.profile : messages.auth.signIn}
           </Link>
           <Link
             className="btn btn-primary btn-sm"
             href={user ? "/dashboard" : "/signup"}
-            style={{ marginLeft: 4 }}
           >
-            {user ? "Dashboard" : "Sign up"}
+            {user ? messages.auth.dashboard : messages.auth.signUp}
           </Link>
+          <LocaleSwitcher />
         </nav>
         <MobileNavMenu
           brandHref={user ? "/dashboard" : "/"}
@@ -53,8 +64,8 @@ export async function SiteShell({
             },
             {
               items: [
-                { href: user ? "/profile" : "/signin", label: user ? "Profile" : "Sign in" },
-                { href: user ? "/dashboard" : "/signup", label: user ? "Dashboard" : "Sign up", tone: "primary" },
+                { href: user ? "/profile" : "/signin", label: user ? messages.auth.profile : messages.auth.signIn },
+                { href: user ? "/dashboard" : "/signup", label: user ? messages.auth.dashboard : messages.auth.signUp, tone: "primary" },
               ],
             },
           ]}
@@ -66,14 +77,14 @@ export async function SiteShell({
         <div>
           <Brand compact href={user ? "/dashboard" : "/"} />
           <p className="footer-copy" style={{ marginTop: 8 }}>
-            Observe. Infer. Act.
+            {messages.nav.footerTagline}
           </p>
         </div>
         <nav className="footer-links">
-          <Link href="/pricing">Pricing</Link>
-          <Link href="/docs">Docs</Link>
-          <Link href="/privacy">Privacy</Link>
-          <Link href="/terms">Terms</Link>
+          <Link href="/pricing">{messages.nav.pricing}</Link>
+          <Link href="/docs">{messages.nav.docs}</Link>
+          <Link href="/privacy">{locale === "ar" ? "الخصوصية" : "Privacy"}</Link>
+          <Link href="/terms">{locale === "ar" ? "الشروط" : "Terms"}</Link>
         </nav>
       </footer>
     </div>
@@ -90,17 +101,19 @@ export async function DashboardShell({
   aside?: ReactNode;
   children: ReactNode;
 }) {
+  const locale = await getRequestLocale();
+  const messages = getMessages(locale);
   const navItems = [
-    { href: "/dashboard", label: "Dashboard" },
-    { href: "/usage", label: "Usage" },
-    { href: "/heatmap", label: "Heatmap" },
-    { href: "/settings", label: "Settings" },
-    { href: "/profile", label: "Profile" },
+    { href: "/dashboard", label: messages.nav.dashboard },
+    { href: "/usage", label: messages.nav.usage },
+    { href: "/heatmap", label: messages.nav.heatmap },
+    { href: "/settings", label: messages.nav.settings },
+    { href: "/profile", label: messages.nav.profile },
   ] as const;
 
   const marketingItems = [
-    { href: "/pricing", label: "Pricing" },
-    { href: "/docs", label: "Docs" },
+    { href: "/pricing", label: messages.nav.pricing },
+    { href: "/docs", label: messages.nav.docs },
   ] as const;
 
   const currentUser = await getCurrentUser();
@@ -115,14 +128,14 @@ export async function DashboardShell({
         </div>
 
         <nav className="sidebar-nav">
-          <p className="sidebar-label">Product</p>
+          <p className="sidebar-label">{messages.nav.product}</p>
           {navItems.map((item) => (
             <Link key={item.href} href={item.href} className="sidebar-link">
               {item.label}
             </Link>
           ))}
 
-          <p className="sidebar-label">Resources</p>
+          <p className="sidebar-label">{messages.nav.resources}</p>
           {marketingItems.map((item) => (
             <Link key={item.href} href={item.href} className="sidebar-link">
               {item.label}
@@ -165,16 +178,16 @@ export async function DashboardShell({
         <MobileNavMenu
           brandHref="/dashboard"
           summary={{
-            title: user?.workspace_name ?? "Workspace",
-            subtitle: user?.plan_name ?? "Maze workspace",
+            title: user?.workspace_name ?? (locale === "ar" ? "مساحة العمل" : "Workspace"),
+            subtitle: user?.plan_name ?? (locale === "ar" ? "مساحة Maze" : "Maze workspace"),
           }}
           sections={[
             {
-              title: "Product",
+              title: messages.nav.product,
               items: navItems.map((item) => ({ href: item.href, label: item.label })),
             },
             {
-              title: "Resources",
+              title: messages.nav.resources,
               items: marketingItems.map((item) => ({ href: item.href, label: item.label })),
             },
           ]}

@@ -3,12 +3,15 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { useI18n } from "@/components/locale-provider";
+
 type Props = {
   months: { value: string; label: string }[];
   selected: string;
 };
 
 export function MonthSelector({ months, selected }: Props) {
+  const { locale } = useI18n();
   const router = useRouter();
   const menuRef = useRef<HTMLDivElement | null>(null);
   const [isOpen, setIsOpen] = useState(false);
@@ -52,7 +55,7 @@ export function MonthSelector({ months, selected }: Props) {
         type="button"
         onClick={() => setIsOpen((open) => !open)}
       >
-        <span className="surface-select-value">{selectedMonth?.label ?? "Select month"}</span>
+        <span className="surface-select-value">{selectedMonth?.label ?? (locale === "ar" ? "اختر شهراً" : "Select month")}</span>
         <span className="surface-select-chevron" aria-hidden="true">
           ▾
         </span>
@@ -72,7 +75,7 @@ export function MonthSelector({ months, selected }: Props) {
               }}
             >
               <span>{month.label}</span>
-              {month.value === selected ? <strong>Current</strong> : null}
+              {month.value === selected ? <strong>{locale === "ar" ? "الحالي" : "Current"}</strong> : null}
             </button>
           ))}
         </div>

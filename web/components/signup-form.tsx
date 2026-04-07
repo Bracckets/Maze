@@ -4,7 +4,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import { useI18n } from "@/components/locale-provider";
+
 export function SignUpForm() {
+  const { locale } = useI18n();
   const router = useRouter();
   const [workspaceName, setWorkspaceName] = useState("");
   const [email, setEmail] = useState("");
@@ -33,16 +36,16 @@ export function SignUpForm() {
 
       const data = await response.json();
       if (response.ok) {
-        setMessage(`Workspace created for ${data.user.email}`);
+        setMessage(locale === "ar" ? `تم إنشاء مساحة العمل لـ ${data.user.email}` : `Workspace created for ${data.user.email}`);
         router.push("/dashboard");
         router.refresh();
       } else {
         setIsError(true);
-        setMessage(data.error ?? "Sign up failed. Please try again.");
+        setMessage(data.error ?? (locale === "ar" ? "فشل إنشاء الحساب. حاول مرة أخرى." : "Sign up failed. Please try again."));
       }
     } catch {
       setIsError(true);
-      setMessage("Something went wrong. Check your connection.");
+      setMessage(locale === "ar" ? "حدث خطأ ما. تحقق من الاتصال." : "Something went wrong. Check your connection.");
     } finally {
       setIsSubmitting(false);
     }
@@ -54,7 +57,7 @@ export function SignUpForm() {
       style={{ display: "flex", flexDirection: "column", gap: 14 }}
     >
       <div className="field">
-        <label htmlFor="workspace_name">Workspace name</label>
+        <label htmlFor="workspace_name">{locale === "ar" ? "اسم مساحة العمل" : "Workspace name"}</label>
         <input
           id="workspace_name"
           name="workspace_name"
@@ -62,11 +65,11 @@ export function SignUpForm() {
           required
           value={workspaceName}
           onChange={(e) => setWorkspaceName(e.target.value)}
-          placeholder="Acme Growth"
+          placeholder={locale === "ar" ? "Acme Growth" : "Acme Growth"}
         />
       </div>
       <div className="field">
-        <label htmlFor="email">Email address</label>
+        <label htmlFor="email">{locale === "ar" ? "البريد الإلكتروني" : "Email address"}</label>
         <input
           id="email"
           name="email"
@@ -79,7 +82,7 @@ export function SignUpForm() {
         />
       </div>
       <div className="field">
-        <label htmlFor="password">Password</label>
+        <label htmlFor="password">{locale === "ar" ? "كلمة المرور" : "Password"}</label>
         <input
           id="password"
           name="password"
@@ -88,7 +91,7 @@ export function SignUpForm() {
           required
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          placeholder="Use at least 8 characters"
+          placeholder={locale === "ar" ? "استخدم 8 أحرف على الأقل" : "Use at least 8 characters"}
         />
       </div>
 
@@ -98,7 +101,7 @@ export function SignUpForm() {
         disabled={isSubmitting}
         type="submit"
       >
-        {isSubmitting ? "Creating account..." : "Create account"}
+        {isSubmitting ? (locale === "ar" ? "جارٍ إنشاء الحساب..." : "Creating account...") : (locale === "ar" ? "إنشاء الحساب" : "Create account")}
       </button>
 
       {message && (
@@ -124,9 +127,9 @@ export function SignUpForm() {
           textAlign: "center",
         }}
       >
-        Already have an account?{" "}
+        {locale === "ar" ? "لديك حساب بالفعل؟ " : "Already have an account? "}
         <Link href="/signin" style={{ color: "var(--text)" }}>
-          Sign in
+          {locale === "ar" ? "سجّل الدخول" : "Sign in"}
         </Link>
       </p>
     </form>

@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { Brand } from "@/components/brand";
+import { useI18n } from "@/components/locale-provider";
+import { LocaleSwitcher } from "@/components/locale-switcher";
 
 type MobileMenuItem = {
   href: string;
@@ -30,6 +32,7 @@ export function MobileNavMenu({
   summary,
   sections,
 }: MobileMenuProps) {
+  const { messages } = useI18n();
   const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
@@ -60,7 +63,7 @@ export function MobileNavMenu({
         <button
           aria-controls="mobile-navigation-drawer"
           aria-expanded={isOpen}
-          aria-label={isOpen ? "Close navigation menu" : "Open navigation menu"}
+          aria-label={isOpen ? messages.auth.closeMenu : messages.auth.openMenu}
           className="mobile-menu-toggle"
           type="button"
           onClick={() => setIsOpen((open) => !open)}
@@ -86,7 +89,7 @@ export function MobileNavMenu({
             type="button"
             onClick={() => setIsOpen(false)}
           >
-            Close
+            {messages.auth.close}
           </button>
 
           <div className="mobile-drawer-brand">
@@ -98,6 +101,8 @@ export function MobileNavMenu({
               </div>
             ) : null}
           </div>
+
+          <LocaleSwitcher compact />
 
           <nav className="mobile-drawer-sections">
             {sections.map((section) => (

@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "framer-motion": "^12.38.0",
     "heatmap.js": "^2.0.5",
     "next": "^15.3.8",
     "react": "19.0.0",

@@ -1,16 +1,30 @@
 import { Brand } from "@/components/brand";
+import { LocaleSwitcher } from "@/components/locale-switcher";
 import { SignInForm } from "@/components/signin-form";
+import { getRequestLocale } from "@/lib/i18n-server";
 
-const stats = [
+const defaultStats = [
   { label: "Sessions analyzed", value: "4.2M" },
   { label: "Avg. time to insight", value: "6 min" },
   { label: "Drop-offs recovered", value: "31%" },
   { label: "Delivery uptime", value: "99.8%" },
 ];
 
-export default function SignInPage() {
+export default async function SignInPage() {
+  const locale = await getRequestLocale();
+  const stats = locale === "ar"
+    ? [
+        { label: "الجلسات المحللة", value: "4.2M" },
+        { label: "متوسط الوصول للرؤية", value: "6 دقائق" },
+        { label: "الانسحابات المستعادة", value: "31%" },
+        { label: "توفر الخدمة", value: "99.8%" },
+      ]
+    : defaultStats;
   return (
     <main className="signin-shell">
+      <div className="auth-locale-bar">
+        <LocaleSwitcher />
+      </div>
       <div className="signin-card">
         {/* Left panel */}
         <div className="signin-left">
@@ -27,14 +41,15 @@ export default function SignInPage() {
                 maxWidth: 340,
               }}
             >
-              Understand why users stop before they finish.
+              {locale === "ar" ? "افهم لماذا يتوقف المستخدمون قبل أن يكملوا." : "Understand why users stop before they finish."}
             </p>
             <p
               className="subtext"
               style={{ marginTop: 14, fontSize: "0.9rem", maxWidth: 360 }}
             >
-              Maze watches every session and surfaces the friction your team
-              doesn't know is there.
+              {locale === "ar"
+                ? "يراقب Maze كل جلسة ويكشف الاحتكاك الذي لا يعرف فريقك بوجوده."
+                : "Maze watches every session and surfaces the friction your team doesn't know is there."}
             </p>
           </div>
 
@@ -54,10 +69,10 @@ export default function SignInPage() {
         <div className="signin-right">
           <div>
             <div className="heading" style={{ marginBottom: 4 }}>
-              Sign in to Maze
+              {locale === "ar" ? "سجّل الدخول إلى Maze" : "Sign in to Maze"}
             </div>
             <p className="subtext" style={{ fontSize: "0.86rem" }}>
-              Enter your workspace credentials to continue.
+              {locale === "ar" ? "أدخل بيانات مساحة العمل للمتابعة." : "Enter your workspace credentials to continue."}
             </p>
           </div>
 
@@ -70,15 +85,15 @@ export default function SignInPage() {
               textAlign: "center",
             }}
           >
-            By signing in you agree to our{" "}
+            {locale === "ar" ? "بتسجيل الدخول فإنك توافق على " : "By signing in you agree to our "}
             <a href="/terms" style={{ color: "var(--text-2)" }}>
-              Terms
+              {locale === "ar" ? "الشروط" : "Terms"}
             </a>{" "}
-            and{" "}
+            {locale === "ar" ? "و" : "and "}
             <a href="/privacy" style={{ color: "var(--text-2)" }}>
-              Privacy Policy
+              {locale === "ar" ? "سياسة الخصوصية" : "Privacy Policy"}
             </a>
-            .
+            {locale === "ar" ? "." : "."}
           </p>
         </div>
       </div>

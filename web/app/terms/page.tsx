@@ -1,5 +1,6 @@
 import { SiteShell } from "@/components/site-shell";
 import { Card } from "@/components/ui";
+import { getRequestLocale } from "@/lib/i18n-server";
 
 const sections = [
   {
@@ -36,17 +37,19 @@ const sections = [
   },
 ];
 
-export default function TermsPage() {
+export default async function TermsPage() {
+  const locale = await getRequestLocale();
   return (
     <SiteShell>
       <section style={{ padding: "52px 0 40px", maxWidth: 640 }}>
-        <p className="eyebrow">Terms of service</p>
+        <p className="eyebrow">{locale === "ar" ? "شروط الخدمة" : "Terms of service"}</p>
         <h1 className="display-sm" style={{ marginBottom: 14 }}>
-          Straightforward terms<br />for teams moving fast.
+          {locale === "ar" ? "شروط واضحة" : "Straightforward terms"}<br />{locale === "ar" ? "لفرق تعمل بسرعة." : "for teams moving fast."}
         </h1>
         <p className="subtext" style={{ fontSize: "0.95rem" }}>
-          These terms cover how you access and use Maze, what you're responsible for,
-          and how we handle billing and data. No legal jargon beyond what's necessary.
+          {locale === "ar"
+            ? "تغطي هذه الشروط كيفية الوصول إلى Maze واستخدامه، وما تقع مسؤوليته عليك، وكيف نتعامل مع الفوترة والبيانات."
+            : "These terms cover how you access and use Maze, what you're responsible for, and how we handle billing and data. No legal jargon beyond what's necessary."}
         </p>
       </section>
 

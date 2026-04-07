@@ -2,14 +2,24 @@
 import PackageDescription
 
 let package = Package(
-    name: "UXTracker",
+    name: "Maze",
     platforms: [
         .iOS(.v15)
     ],
     products: [
+        .library(name: "Maze", targets: ["Maze"]),
         .library(name: "UXTracker", targets: ["UXTracker"])
     ],
     targets: [
-        .target(name: "UXTracker")
+        .target(
+            name: "Maze",
+            resources: [
+                .process("Resources")
+            ]
+        ),
+        .target(
+            name: "UXTracker",
+            dependencies: ["Maze"]
+        )
     ]
 )
