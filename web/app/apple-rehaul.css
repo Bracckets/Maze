@@ -224,6 +224,31 @@ body::after {
   min-width: 0;
 }
 
+.panel-head,
+.overlay-head,
+.heatmap-topbar {
+  align-items: flex-start;
+}
+
+.panel-head > :first-child,
+.overlay-head > :first-child,
+.heatmap-topbar > :first-child {
+  min-width: 0;
+  flex: 1;
+}
+
+.panel-actions,
+.heatmap-controls,
+.integration-state,
+.heatmap-title-block {
+  flex-wrap: nowrap;
+}
+
+.panel-actions .btn,
+.heatmap-controls .btn {
+  flex-shrink: 0;
+}
+
 .page-header {
   padding: 28px 30px;
   border-radius: 30px;
