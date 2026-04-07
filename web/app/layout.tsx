@@ -1,6 +1,11 @@
 import "./globals.css";
+import "./apple-rehaul.css";
 import type { Metadata } from "next";
 import { ReactNode } from "react";
+
+import { LocaleProvider } from "@/components/locale-provider";
+import { getDirection, getMessages } from "@/lib/i18n";
+import { getRequestLocale } from "@/lib/i18n-server";
 
 export const metadata: Metadata = {
   title: "Maze — Mobile UX Intelligence",
@@ -12,10 +17,17 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  const locale = await getRequestLocale();
+  const messages = getMessages(locale);
+
   return (
-    <html lang="en">
-      <body>{children}</body>
+    <html dir={getDirection(locale)} lang={locale}>
+      <body className={`locale-${locale}`}>
+        <LocaleProvider locale={locale} messages={messages}>
+          {children}
+        </LocaleProvider>
+      </body>
     </html>
   );
 }

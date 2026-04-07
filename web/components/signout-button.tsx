@@ -3,7 +3,10 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import { useI18n } from "@/components/locale-provider";
+
 export function SignOutButton() {
+  const { locale } = useI18n();
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -17,14 +20,14 @@ export function SignOutButton() {
         method: "POST",
       });
       if (!response.ok) {
-        setMessage("Unable to sign out right now.");
+        setMessage(locale === "ar" ? "تعذر تسجيل الخروج حالياً." : "Unable to sign out right now.");
         setIsSubmitting(false);
         return;
       }
       router.push("/signin");
       router.refresh();
     } catch {
-      setMessage("Unable to sign out right now.");
+      setMessage(locale === "ar" ? "تعذر تسجيل الخروج حالياً." : "Unable to sign out right now.");
       setIsSubmitting(false);
     }
   }
@@ -32,7 +35,7 @@ export function SignOutButton() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
       <button className="btn btn-ghost" type="button" onClick={handleSignOut} disabled={isSubmitting}>
-        {isSubmitting ? "Signing out..." : "Sign out"}
+        {isSubmitting ? (locale === "ar" ? "جارٍ تسجيل الخروج..." : "Signing out...") : (locale === "ar" ? "تسجيل الخروج" : "Sign out")}
       </button>
       {message ? <p style={{ fontSize: "0.8rem", color: "var(--red)" }}>{message}</p> : null}
     </div>

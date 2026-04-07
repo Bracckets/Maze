@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { SiteShell } from "@/components/site-shell";
 import { Card } from "@/components/ui";
+import { getRequestLocale } from "@/lib/i18n-server";
 import { getCurrentUser } from "@/lib/service-gateway";
 import { pricingPlans } from "@/lib/site-data";
 
@@ -19,6 +20,7 @@ const included = [
 ];
 
 export default async function PricingPage() {
+  const locale = await getRequestLocale();
   const currentUser = await getCurrentUser();
   const user = "user" in currentUser.data ? currentUser.data.user : null;
   const primaryHref = user ? "/dashboard" : "/signup";
@@ -27,14 +29,17 @@ export default async function PricingPage() {
   return (
     <SiteShell>
       <section className="marketing-hero" style={{ paddingBottom: 40 }}>
-        <p className="eyebrow">Simple pricing</p>
+        <p className="eyebrow">{locale === "ar" ? "تسعير بسيط" : "Simple pricing"}</p>
         <h1 className="display" style={{ marginBottom: 16 }}>
-          Start free.<br />
-          <span className="gradient-text">Scale when you're ready.</span>
+          {locale === "ar" ? "ابدأ مجاناً." : "Start free."}<br />
+          <span className="gradient-text">{locale === "ar" ? "وتوسع عندما تكون جاهزاً." : "Scale when you're ready."}</span>
         </h1>
         <p className="subtext" style={{ fontSize: "1rem", maxWidth: 480 }}>
-          Every plan includes session capture, funnel analysis, and friction detection.
-          Upgrade for higher volume and team features.
+          {locale === "ar"
+            ? "كل باقة تشمل التقاط الجلسات وتحليل المسار واكتشاف الاحتكاك."
+            : "Every plan includes session capture, funnel analysis, and friction detection."}
+          {" "}
+          {locale === "ar" ? "قم بالترقية عندما تحتاج حجماً أكبر وميزات للفريق." : "Upgrade for higher volume and team features."}
         </p>
       </section>
 

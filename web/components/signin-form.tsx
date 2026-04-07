@@ -4,7 +4,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import { useI18n } from "@/components/locale-provider";
+
 export function SignInForm() {
+  const { locale } = useI18n();
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -31,7 +34,7 @@ export function SignInForm() {
 
       const data = await response.json();
       if (response.ok) {
-        setMessage(`Welcome back, ${data.user.email}`);
+        setMessage(locale === "ar" ? `مرحباً بعودتك، ${data.user.email}` : `Welcome back, ${data.user.email}`);
         router.push("/dashboard");
         router.refresh();
       } else {
@@ -39,19 +42,16 @@ export function SignInForm() {
         const errorData = data.error;
 
         if (Array.isArray(errorData)) {
-          // If it's an array of errors, take the first one's message
-          setMessage(errorData[0]?.msg || "Invalid input");
+          setMessage(errorData[0]?.msg || (locale === "ar" ? "إدخال غير صالح" : "Invalid input"));
         } else if (typeof errorData === "object" && errorData !== null) {
-          // If it's a single error object {type, loc, msg...}
-          setMessage(errorData.msg || "An error occurred");
+          setMessage(errorData.msg || (locale === "ar" ? "حدث خطأ" : "An error occurred"));
         } else {
-          // Fallback if it's already a string
-          setMessage(errorData ?? "Sign in failed. Please try again.");
+          setMessage(errorData ?? (locale === "ar" ? "فشل تسجيل الدخول. حاول مرة أخرى." : "Sign in failed. Please try again."));
         }
       }
     } catch {
       setIsError(true);
-      setMessage("Something went wrong. Check your connection.");
+      setMessage(locale === "ar" ? "حدث خطأ ما. تحقق من الاتصال." : "Something went wrong. Check your connection.");
     } finally {
       setIsSubmitting(false);
     }
@@ -63,7 +63,7 @@ export function SignInForm() {
       style={{ display: "flex", flexDirection: "column", gap: 14 }}
     >
       <div className="field">
-        <label htmlFor="email">Email address</label>
+        <label htmlFor="email">{locale === "ar" ? "البريد الإلكتروني" : "Email address"}</label>
         <input
           id="email"
           name="email"
@@ -72,11 +72,11 @@ export function SignInForm() {
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          placeholder="you@company.com"
+          placeholder={locale === "ar" ? "you@company.com" : "you@company.com"}
         />
       </div>
       <div className="field">
-        <label htmlFor="password">Password</label>
+        <label htmlFor="password">{locale === "ar" ? "كلمة المرور" : "Password"}</label>
         <input
           id="password"
           name="password"
@@ -85,7 +85,7 @@ export function SignInForm() {
           required
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          placeholder="Enter your password"
+          placeholder={locale === "ar" ? "أدخل كلمة المرور" : "Enter your password"}
         />
       </div>
 
@@ -95,7 +95,7 @@ export function SignInForm() {
         disabled={isSubmitting}
         type="submit"
       >
-        {isSubmitting ? "Signing in..." : "Sign in"}
+        {isSubmitting ? (locale === "ar" ? "جارٍ تسجيل الدخول..." : "Signing in...") : (locale === "ar" ? "تسجيل الدخول" : "Sign in")}
       </button>
 
       {message && (
@@ -121,9 +121,9 @@ export function SignInForm() {
           textAlign: "center",
         }}
       >
-        Need an account?{" "}
+        {locale === "ar" ? "تحتاج إلى حساب؟ " : "Need an account? "}
         <Link href="/signup" style={{ color: "var(--text)" }}>
-          Create one
+          {locale === "ar" ? "أنشئ حساباً" : "Create one"}
         </Link>
       </p>
     </form>

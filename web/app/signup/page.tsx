@@ -1,52 +1,88 @@
-import { Brand } from "@/components/brand";
-import { SignUpForm } from "@/components/signup-form";
+import Link from "next/link";
 
-const highlights = [
+import { Brand } from "@/components/brand";
+import { LocaleSwitcher } from "@/components/locale-switcher";
+import { SignUpForm } from "@/components/signup-form";
+import { getRequestLocale } from "@/lib/i18n-server";
+
+const defaultHighlights = [
   { label: "Setup time", value: "10 min" },
   { label: "SDKs included", value: "iOS + Android" },
-  { label: "Insights generated", value: "Live" },
   { label: "Billing model", value: "Workspace" },
 ];
 
-export default function SignUpPage() {
+export default async function SignUpPage() {
+  const locale = await getRequestLocale();
+  const isArabic = locale === "ar";
+  const highlights = isArabic
+    ? [
+        { label: "زمن الإعداد", value: "10 دقائق" },
+        { label: "الحزم المتاحة", value: "iOS + Android" },
+        { label: "نموذج الفوترة", value: "لكل مساحة" },
+      ]
+    : defaultHighlights;
+
   return (
-    <main className="signin-shell">
-      <div className="signin-card">
-        <div className="signin-left">
-          <div>
-            <Brand />
-            <p style={{ marginTop: 32, fontSize: "1.5rem", fontWeight: 600, letterSpacing: "-0.03em", lineHeight: 1.2, color: "var(--text)", maxWidth: 340 }}>
-              Create a workspace and start capturing mobile friction.
-            </p>
-            <p className="subtext" style={{ marginTop: 14, fontSize: "0.9rem", maxWidth: 360 }}>
-              Maze provisions your workspace, issues API keys, and lets your team move from SDK install to live insight quickly.
+    <main className="apple-auth-shell">
+      <div className="auth-locale-bar">
+        <LocaleSwitcher />
+      </div>
+      <div className="apple-auth-card">
+        <aside className="apple-auth-aside">
+          <Brand />
+          <div className="mt-10 max-w-xl space-y-4">
+            <p className="eyebrow">{isArabic ? "إطلاق سريع" : "Fast launch"}</p>
+            <h1 className="text-4xl font-semibold tracking-[-0.05em] text-foreground md:text-5xl">
+              {isArabic
+                ? "أنشئ مساحة العمل وابدأ جمع الإشارة."
+                : "Create the workspace and start collecting signal."}
+            </h1>
+            <p className="subtext text-base leading-8">
+              {isArabic
+                ? "الهدف هنا أن تبدأ بسرعة، من دون فوضى بصرية أو خطوات متزاحمة."
+                : "The goal in this branch is focus: fewer visual obstacles, gentler hierarchy, and a clearer setup path."}
             </p>
           </div>
 
-          <div className="signin-stats">
+          <div className="apple-auth-stats">
             {highlights.map((item) => (
-              <div className="signin-stat" key={item.label}>
+              <div className="apple-auth-stat" key={item.label}>
                 <p className="metric-label">{item.label}</p>
-                <p className="metric-num" style={{ fontSize: "1.5rem" }}>{item.value}</p>
+                <p className="metric-num mt-3">{item.value}</p>
               </div>
             ))}
           </div>
-        </div>
+        </aside>
 
-        <div className="signin-right">
-          <div>
-            <div className="heading" style={{ marginBottom: 4 }}>Create your Maze workspace</div>
-            <p className="subtext" style={{ fontSize: "0.86rem" }}>We&apos;ll sign you in right after the workspace is created.</p>
+        <section className="apple-auth-main">
+          <div className="space-y-3">
+            <p className="eyebrow">{isArabic ? "إنشاء مساحة عمل" : "Create workspace"}</p>
+            <h2 className="text-3xl font-semibold tracking-[-0.05em] text-foreground">
+              {isArabic ? "ابدأ مساحة Maze الجديدة" : "Start your Maze workspace"}
+            </h2>
+            <p className="subtext max-w-md">
+              {isArabic
+                ? "سننشئ الحساب وننقلك مباشرة إلى مركز التحكم."
+                : "We create the account, provision the workspace, and route you straight into the command center."}
+            </p>
           </div>
 
-          <SignUpForm />
+          <div className="mt-8">
+            <SignUpForm />
+          </div>
 
-          <p style={{ fontSize: "0.8rem", color: "var(--text-3)", textAlign: "center" }}>
-            By creating an account you agree to our{" "}
-            <a href="/terms" style={{ color: "var(--text-2)" }}>Terms</a> and{" "}
-            <a href="/privacy" style={{ color: "var(--text-2)" }}>Privacy Policy</a>.
+          <p className="mt-8 text-center text-sm text-muted-foreground">
+            {isArabic ? "بإنشاء الحساب فإنك توافق على " : "By creating an account you agree to our "}
+            <Link href="/terms" style={{ color: "var(--text)" }}>
+              {isArabic ? "الشروط" : "Terms"}
+            </Link>{" "}
+            {isArabic ? "و" : "and "}
+            <Link href="/privacy" style={{ color: "var(--text)" }}>
+              {isArabic ? "سياسة الخصوصية" : "Privacy Policy"}
+            </Link>
+            .
           </p>
-        </div>
+        </section>
       </div>
     </main>
   );

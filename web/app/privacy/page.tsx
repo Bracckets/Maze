@@ -1,5 +1,6 @@
 import { SiteShell } from "@/components/site-shell";
 import { Card } from "@/components/ui";
+import { getRequestLocale } from "@/lib/i18n-server";
 
 const sections = [
   {
@@ -28,17 +29,19 @@ const sections = [
   },
 ];
 
-export default function PrivacyPage() {
+export default async function PrivacyPage() {
+  const locale = await getRequestLocale();
   return (
     <SiteShell>
       <section style={{ padding: "52px 0 40px", maxWidth: 640 }}>
-        <p className="eyebrow">Privacy policy</p>
+        <p className="eyebrow">{locale === "ar" ? "سياسة الخصوصية" : "Privacy policy"}</p>
         <h1 className="display-sm" style={{ marginBottom: 14 }}>
-          Built to observe behavior,<br />not expose identity.
+          {locale === "ar" ? "مصمم لمراقبة السلوك،" : "Built to observe behavior,"}<br />{locale === "ar" ? "لا لكشف الهوية." : "not expose identity."}
         </h1>
         <p className="subtext" style={{ fontSize: "0.95rem" }}>
-          Maze captures friction signals to help product teams improve their apps.
-          We are not designed to collect credentials, financial data, or personally identifiable information.
+          {locale === "ar"
+            ? "يلتقط Maze إشارات الاحتكاك لمساعدة فرق المنتج على تحسين تطبيقاتهم. لم يُصمم لجمع بيانات الاعتماد أو البيانات المالية أو المعلومات الشخصية."
+            : "Maze captures friction signals to help product teams improve their apps. We are not designed to collect credentials, financial data, or personally identifiable information."}
         </p>
       </section>
 

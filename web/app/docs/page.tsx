@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { SiteShell } from "@/components/site-shell";
 import { Card, Tag } from "@/components/ui";
+import { getRequestLocale } from "@/lib/i18n-server";
 
 const sections = [
   {
@@ -119,22 +120,24 @@ const envVars = [
   { name: "MAZE_INTEGRATIONS_SERVICE_URL", example: "https://integrations.yourapp.com", description: "Integration status backend." },
 ];
 
-export default function DocsPage() {
+export default async function DocsPage() {
+  const locale = await getRequestLocale();
   return (
     <SiteShell>
       <section className="marketing-hero" style={{ paddingBottom: 36 }}>
-        <p className="eyebrow">Documentation</p>
+        <p className="eyebrow">{locale === "ar" ? "التوثيق" : "Documentation"}</p>
         <h1 className="display" style={{ marginBottom: 16 }}>
-          Get up and running<br />
-          <span className="gradient-text">in under 10 minutes.</span>
+          {locale === "ar" ? "انطلق بسرعة" : "Get up and running"}<br />
+          <span className="gradient-text">{locale === "ar" ? "في أقل من 10 دقائق." : "in under 10 minutes."}</span>
         </h1>
         <p className="subtext" style={{ fontSize: "1rem", maxWidth: 480, marginBottom: 24 }}>
-          Maze is designed to be integrated by a human or a coding agent. The full integration guide
-          lives in MAZE_INTEGRATION.md in the repo.
+          {locale === "ar"
+            ? "تم تصميم Maze ليتم دمجه بواسطة شخص أو وكيل برمجي. دليل الدمج الكامل موجود في ملف MAZE_INTEGRATION.md داخل المستودع."
+            : "Maze is designed to be integrated by a human or a coding agent. The full integration guide lives in MAZE_INTEGRATION.md in the repo."}
         </p>
         <div style={{ display: "flex", gap: 10 }}>
-          <Link className="btn btn-primary btn-lg" href="/signin">Open workspace</Link>
-          <Link className="btn btn-ghost btn-lg" href="/pricing">See plans</Link>
+          <Link className="btn btn-primary btn-lg" href="/signin">{locale === "ar" ? "افتح مساحة العمل" : "Open workspace"}</Link>
+          <Link className="btn btn-ghost btn-lg" href="/pricing">{locale === "ar" ? "شاهد الباقات" : "See plans"}</Link>
         </div>
       </section>
 
@@ -142,12 +145,12 @@ export default function DocsPage() {
         {/* Sidebar nav */}
         <nav className="docs-nav">
           <p style={{ fontSize: "0.72rem", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-3)", padding: "0 10px", marginBottom: 8 }}>
-            On this page
+            {locale === "ar" ? "في هذه الصفحة" : "On this page"}
           </p>
           {sections.map((s) => (
             <a key={s.id} href={`#${s.id}`} className="docs-nav-link">{s.title}</a>
           ))}
-          <a href="#env" className="docs-nav-link">Environment vars</a>
+          <a href="#env" className="docs-nav-link">{locale === "ar" ? "متغيرات البيئة" : "Environment vars"}</a>
         </nav>
 
         {/* Main content */}
@@ -167,8 +170,8 @@ export default function DocsPage() {
 
           {/* Env vars table */}
           <div className="docs-section" id="env">
-            <h2>Environment variables</h2>
-            <p>Set these in your <code>.env.local</code> (web) or <code>.env</code> (backend). Copy from the <code>.env.example</code> files in each directory.</p>
+            <h2>{locale === "ar" ? "متغيرات البيئة" : "Environment variables"}</h2>
+            <p>{locale === "ar" ? "اضبط هذه القيم في " : "Set these in your "}<code>.env.local</code> (web) {locale === "ar" ? "أو" : "or"} <code>.env</code> (backend). {locale === "ar" ? "انسخها من ملفات" : "Copy from the"} <code>.env.example</code> {locale === "ar" ? "في كل مجلد." : "files in each directory."}</p>
             <Card style={{ marginTop: 14 }}>
               {envVars.map((v, i) => (
                 <div

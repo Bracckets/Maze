@@ -2,6 +2,7 @@ import { ApiKeyManager } from "@/components/api-key-manager";
 import { DashboardShell } from "@/components/site-shell";
 import { Card, StatusDot, Tag } from "@/components/ui";
 import { WorkspaceSettingsEditor } from "@/components/workspace-settings-editor";
+import { getRequestLocale } from "@/lib/i18n-server";
 import { getIntegrationStatus, getWorkspaceSettings } from "@/lib/service-gateway";
 
 const integrationToneMap: Record<string, "online" | "degraded" | "offline"> = {
@@ -23,6 +24,7 @@ const integrationTagToneMap: Record<string, "green" | "amber" | "red" | "default
 };
 
 export default async function SettingsPage() {
+  const locale = await getRequestLocale();
   const settings = await getWorkspaceSettings();
   const integrations = await getIntegrationStatus();
   const workspaceSettings = "detail" in settings
@@ -37,23 +39,23 @@ export default async function SettingsPage() {
         planId?: string | null;
         planName?: string | null;
       });
-  const apiBaseUrl = workspaceSettings?.apiBaseUrl ?? "Sign in to load settings";
+  const apiBaseUrl = workspaceSettings?.apiBaseUrl ?? (locale === "ar" ? "سجّل الدخول لتحميل الإعدادات" : "Sign in to load settings");
 
   return (
     <DashboardShell
-      title="Settings"
-      subtitle="Manage your SDK configuration, API keys, and service connections."
+      title={locale === "ar" ? "الإعدادات" : "Settings"}
+      subtitle={locale === "ar" ? "أدر إعدادات الحزمة ومفاتيح API واتصالات الخدمات." : "Manage your SDK configuration, API keys, and service connections."}
     >
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--gap)" }}>
         <div style={{ display: "flex", flexDirection: "column", gap: "var(--gap)" }}>
           <Card>
-            <div className="heading" style={{ marginBottom: 4 }}>SDK configuration</div>
+            <div className="heading" style={{ marginBottom: 4 }}>{locale === "ar" ? "إعدادات الحزمة" : "SDK configuration"}</div>
             <p className="subtext" style={{ fontSize: "0.85rem", marginBottom: 20 }}>
-              Use these values when initializing the Maze SDK in your mobile app.
+              {locale === "ar" ? "استخدم هذه القيم عند تهيئة حزمة Maze داخل تطبيق الجوال." : "Use these values when initializing the Maze SDK in your mobile app."}
             </p>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 18 }}>
-              <Tag tone="green">{workspaceSettings?.planName ?? "No active plan"}</Tag>
-              <Tag>{workspaceSettings?.workspaceName ?? "Workspace"}</Tag>
+              <Tag tone="green">{workspaceSettings?.planName ?? (locale === "ar" ? "لا توجد باقة نشطة" : "No active plan")}</Tag>
+              <Tag>{workspaceSettings?.workspaceName ?? (locale === "ar" ? "مساحة العمل" : "Workspace")}</Tag>
             </div>
 
             <WorkspaceSettingsEditor
@@ -70,18 +72,18 @@ export default async function SettingsPage() {
               }}
             />
             <div className="field">
-              <label>Workspace key</label>
-              <input readOnly value="Use a generated API key below" />
+              <label>{locale === "ar" ? "مفتاح مساحة العمل" : "Workspace key"}</label>
+              <input readOnly value={locale === "ar" ? "استخدم مفتاح API المولد أدناه" : "Use a generated API key below"} />
               <p className="field-hint" style={{ fontSize: "0.78rem", color: "var(--text-3)", marginTop: 4 }}>
-                Generate a key in the API Keys section and use it in your SDK initialization.
+                {locale === "ar" ? "ولّد مفتاحاً في قسم مفاتيح API واستخدمه في تهيئة الحزمة." : "Generate a key in the API Keys section and use it in your SDK initialization."}
               </p>
             </div>
           </Card>
 
           <Card>
-            <div className="heading" style={{ marginBottom: 4 }}>Service connections</div>
+            <div className="heading" style={{ marginBottom: 4 }}>{locale === "ar" ? "اتصالات الخدمات" : "Service connections"}</div>
             <p className="subtext" style={{ fontSize: "0.85rem", marginBottom: 18 }}>
-              These routes are backed by your Maze backend and current workspace session.
+              {locale === "ar" ? "هذه المسارات تعتمد على خلفية Maze والجلسة الحالية لمساحة العمل." : "These routes are backed by your Maze backend and current workspace session."}
             </p>
 
             {integrations.services.map((service) => (
@@ -104,8 +106,7 @@ export default async function SettingsPage() {
         <Card accent>
           <div className="heading" style={{ marginBottom: 4 }}>API keys</div>
           <p className="subtext" style={{ fontSize: "0.85rem", marginBottom: 20 }}>
-            Generate keys to authenticate your mobile SDK and backend integrations.
-            Keys are shown once, so store them securely.
+            {locale === "ar" ? "ولّد مفاتيح لمصادقة حزمة الجوال وتكاملات الخلفية. تُعرض المفاتيح مرة واحدة فقط، لذا خزّنها بأمان." : "Generate keys to authenticate your mobile SDK and backend integrations. Keys are shown once, so store them securely."}
           </p>
           <ApiKeyManager />
         </Card>

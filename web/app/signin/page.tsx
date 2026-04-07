@@ -1,86 +1,88 @@
-import { Brand } from "@/components/brand";
-import { SignInForm } from "@/components/signin-form";
+import Link from "next/link";
 
-const stats = [
+import { Brand } from "@/components/brand";
+import { LocaleSwitcher } from "@/components/locale-switcher";
+import { SignInForm } from "@/components/signin-form";
+import { getRequestLocale } from "@/lib/i18n-server";
+
+const defaultStats = [
   { label: "Sessions analyzed", value: "4.2M" },
-  { label: "Avg. time to insight", value: "6 min" },
-  { label: "Drop-offs recovered", value: "31%" },
-  { label: "Delivery uptime", value: "99.8%" },
+  { label: "Time to first insight", value: "6 min" },
+  { label: "Recovered drop-offs", value: "31%" },
 ];
 
-export default function SignInPage() {
+export default async function SignInPage() {
+  const locale = await getRequestLocale();
+  const isArabic = locale === "ar";
+  const stats = isArabic
+    ? [
+        { label: "الجلسات المحللة", value: "4.2M" },
+        { label: "الوصول لأول رؤية", value: "6 دقائق" },
+        { label: "الانسحابات المستعادة", value: "31%" },
+      ]
+    : defaultStats;
+
   return (
-    <main className="signin-shell">
-      <div className="signin-card">
-        {/* Left panel */}
-        <div className="signin-left">
-          <div>
-            <Brand />
-            <p
-              style={{
-                marginTop: 32,
-                fontSize: "1.5rem",
-                fontWeight: 600,
-                letterSpacing: "-0.03em",
-                lineHeight: 1.2,
-                color: "var(--text)",
-                maxWidth: 340,
-              }}
-            >
-              Understand why users stop before they finish.
-            </p>
-            <p
-              className="subtext"
-              style={{ marginTop: 14, fontSize: "0.9rem", maxWidth: 360 }}
-            >
-              Maze watches every session and surfaces the friction your team
-              doesn't know is there.
+    <main className="apple-auth-shell">
+      <div className="auth-locale-bar">
+        <LocaleSwitcher />
+      </div>
+      <div className="apple-auth-card">
+        <aside className="apple-auth-aside">
+          <Brand />
+          <div className="mt-10 max-w-xl space-y-4">
+            <p className="eyebrow">{isArabic ? "عودة إلى العمل" : "Back to the workspace"}</p>
+            <h1 className="text-4xl font-semibold tracking-[-0.05em] text-foreground md:text-5xl">
+              {isArabic
+                ? "سجّل الدخول إلى سطح قراءة السلوك."
+                : "Sign back into the product behavior surface."}
+            </h1>
+            <p className="subtext text-base leading-8">
+              {isArabic
+                ? "الخرائط الحرارية، الجلسات، والتكاملات جاهزة. هذه النسخة تبقي الطريق إلى الإشارة أبسط وأهدأ."
+                : "Heatmaps, session streams, and integration health are ready when you are. This branch keeps the path to signal lighter and easier to trust."}
             </p>
           </div>
 
-          <div className="signin-stats">
-            {stats.map((s) => (
-              <div className="signin-stat" key={s.label}>
-                <p className="metric-label">{s.label}</p>
-                <p className="metric-num" style={{ fontSize: "1.5rem" }}>
-                  {s.value}
-                </p>
+          <div className="apple-auth-stats">
+            {stats.map((item) => (
+              <div className="apple-auth-stat" key={item.label}>
+                <p className="metric-label">{item.label}</p>
+                <p className="metric-num mt-3">{item.value}</p>
               </div>
             ))}
           </div>
-        </div>
+        </aside>
 
-        {/* Right panel */}
-        <div className="signin-right">
-          <div>
-            <div className="heading" style={{ marginBottom: 4 }}>
-              Sign in to Maze
-            </div>
-            <p className="subtext" style={{ fontSize: "0.86rem" }}>
-              Enter your workspace credentials to continue.
+        <section className="apple-auth-main">
+          <div className="space-y-3">
+            <p className="eyebrow">{isArabic ? "تسجيل الدخول" : "Sign in"}</p>
+            <h2 className="text-3xl font-semibold tracking-[-0.05em] text-foreground">
+              {isArabic ? "ادخل إلى مساحة Maze" : "Enter your Maze workspace"}
+            </h2>
+            <p className="subtext max-w-md">
+              {isArabic
+                ? "استخدم بيانات مساحة العمل للعودة إلى مركز التحكم."
+                : "Use your workspace credentials to return to the command center."}
             </p>
           </div>
 
-          <SignInForm />
+          <div className="mt-8">
+            <SignInForm />
+          </div>
 
-          <p
-            style={{
-              fontSize: "0.8rem",
-              color: "var(--text-3)",
-              textAlign: "center",
-            }}
-          >
-            By signing in you agree to our{" "}
-            <a href="/terms" style={{ color: "var(--text-2)" }}>
-              Terms
-            </a>{" "}
-            and{" "}
-            <a href="/privacy" style={{ color: "var(--text-2)" }}>
-              Privacy Policy
-            </a>
+          <p className="mt-8 text-center text-sm text-muted-foreground">
+            {isArabic ? "بتسجيل الدخول فإنك توافق على " : "By signing in you agree to our "}
+            <Link href="/terms" style={{ color: "var(--text)" }}>
+              {isArabic ? "الشروط" : "Terms"}
+            </Link>{" "}
+            {isArabic ? "و" : "and "}
+            <Link href="/privacy" style={{ color: "var(--text)" }}>
+              {isArabic ? "سياسة الخصوصية" : "Privacy Policy"}
+            </Link>
             .
           </p>
-        </div>
+        </section>
       </div>
     </main>
   );
