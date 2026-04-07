@@ -10,7 +10,7 @@ export function Brand({
   sidebar?: boolean;
   href?: string;
 }) {
-  const height = sidebar ? 28 : compact ? 36 : 42;
+  const height = sidebar ? 28 : compact ? 36 : 34;
   const width = Math.round((height * 1023) / 241);
   const priority = !compact && !sidebar;
 
