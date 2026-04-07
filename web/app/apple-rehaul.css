@@ -41,6 +41,7 @@ body {
     radial-gradient(circle at top center, rgba(94, 162, 255, 0.08), transparent 24%),
     linear-gradient(180deg, #07090d 0%, #0b1018 55%, #111827 100%);
   color: var(--text);
+  padding-inline: 20px;
 }
 
 body::before {
@@ -55,7 +56,8 @@ body::after {
 }
 
 .site-frame {
-  width: min(1280px, calc(100% - 40px));
+  width: min(1280px, 100%);
+  margin: 0 auto;
   padding-bottom: 80px;
 }
 
@@ -161,14 +163,16 @@ body::after {
   display: grid;
   grid-template-columns: 280px minmax(0, 1fr);
   gap: 18px;
-  align-items: start;
+  align-items: stretch;
   margin-top: 18px;
+  min-height: calc(100dvh - 36px);
 }
 
 .sidebar {
   position: sticky;
-  top: 18px;
-  height: auto;
+  top: 0;
+  height: calc(100dvh - 36px);
+  min-height: calc(100dvh - 36px);
   padding: 22px;
   border-radius: 30px;
   background: rgba(11, 15, 22, 0.78);
@@ -176,6 +180,8 @@ body::after {
   box-shadow: 0 30px 80px -55px rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(16px);
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .sidebar-brand {
@@ -188,6 +194,8 @@ body::after {
   padding: 0;
   display: grid;
   gap: 8px;
+  flex: 1;
+  align-content: start;
 }
 
 .sidebar-label {
@@ -212,6 +220,8 @@ body::after {
 
 .main-content {
   padding: 0;
+  background: transparent;
+  min-width: 0;
 }
 
 .page-header {
@@ -521,12 +531,18 @@ body::after {
 
   .sidebar {
     position: static;
+    height: auto;
+    min-height: 0;
   }
 }
 
 @media (max-width: 768px) {
+  body {
+    padding-inline: 10px;
+  }
+
   .site-frame {
-    width: calc(100% - 20px);
+    width: 100%;
   }
 
   .topbar {
