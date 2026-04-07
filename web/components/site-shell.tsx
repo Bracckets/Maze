@@ -40,18 +40,16 @@ export async function SiteShell({
                 {item.label}
               </Link>
             ))}
-          <Link
-            className="btn btn-ghost btn-sm"
-            href={user ? "/profile" : "/signin"}
-          >
-            {user ? messages.auth.profile : messages.auth.signIn}
-          </Link>
-          <Link
-            className="btn btn-primary btn-sm"
-            href={user ? "/dashboard" : "/signup"}
-          >
-            {user ? messages.auth.dashboard : messages.auth.signUp}
-          </Link>
+          {!user ? (
+            <>
+              <Link className="btn btn-ghost btn-sm" href="/signin">
+                {messages.auth.signIn}
+              </Link>
+              <Link className="btn btn-primary btn-sm" href="/signup">
+                {messages.auth.signUp}
+              </Link>
+            </>
+          ) : null}
           <LocaleSwitcher />
         </nav>
         <MobileNavMenu
