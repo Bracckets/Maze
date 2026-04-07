@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import type { Insight, Issue, SessionSummary } from "@/lib/site-data";
 
@@ -52,6 +52,25 @@ const integrationTagToneMap: Record<
   offline: "red",
 };
 
+const expandedPanelMeta = {
+  sessions: {
+    title: "All Sessions",
+    description: "Review every captured session in one calmer workspace and inspect the details only when needed.",
+  },
+  issues: {
+    title: "All Friction Issues",
+    description: "Scan the full issue list, then open any row for the specific context behind the signal.",
+  },
+  insights: {
+    title: "All Insights",
+    description: "Browse the highest-signal explanations from your workspace in a lighter, easier-to-scan sheet.",
+  },
+  integrations: {
+    title: "All Integrations",
+    description: "Check connected services, paths, and current status without leaving the dashboard surface.",
+  },
+} as const;
+
 function toCsv(headers: string[], rows: string[][]) {
   const escape = (value: string) => `"${value.replace(/"/g, '""')}"`;
   return [headers, ...rows].map((row) => row.map(escape).join(",")).join("\n");
@@ -101,6 +120,29 @@ export function DashboardWorkbench({
     sessions.map((session) => session.last_screen).filter(Boolean),
   ).size;
   const topIssue = issues[0];
+  const expandedMeta = expandedPanel ? expandedPanelMeta[expandedPanel] : null;
+
+  useEffect(() => {
+    if (!expandedPanel && !inspectRow) {
+      return;
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key !== "Escape") {
+        return;
+      }
+
+      if (inspectRow) {
+        setInspectRow(null);
+        return;
+      }
+
+      setExpandedPanel(null);
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [expandedPanel, inspectRow]);
 
   const sessionCsv = useMemo(
     () =>
@@ -470,18 +512,29 @@ export function DashboardWorkbench({
 
       {expandedPanel ? (
         <div className="overlay-shell" onClick={() => setExpandedPanel(null)}>
-          <div className="overlay-panel overlay-wide" onClick={(event) => event.stopPropagation()}>
+          <div
+            aria-describedby="expanded-panel-copy"
+            aria-labelledby="expanded-panel-title"
+            aria-modal="true"
+            className="overlay-panel overlay-wide"
+            onClick={(event) => event.stopPropagation()}
+            role="dialog"
+          >
             <div className="overlay-head">
               <div>
-                <div className="heading">
-                  {expandedPanel === "sessions" && "All sessions"}
-                  {expandedPanel === "issues" && "All friction issues"}
-                  {expandedPanel === "insights" && "All insights"}
-                  {expandedPanel === "integrations" && "All integrations"}
+                <div className="heading" id="expanded-panel-title">
+                  {expandedMeta?.title}
                 </div>
-                <p className="panel-copy">Inspect rows directly from the expanded workspace view.</p>
+                <p className="panel-copy" id="expanded-panel-copy">
+                  {expandedMeta?.description}
+                </p>
               </div>
-              <button className="btn btn-ghost btn-sm" onClick={() => setExpandedPanel(null)}>
+              <button
+                aria-label={`Close ${expandedMeta?.title ?? "expanded panel"}`}
+                className="btn btn-ghost btn-sm"
+                onClick={() => setExpandedPanel(null)}
+                type="button"
+              >
                 Close
               </button>
             </div>
@@ -643,10 +696,23 @@ export function DashboardWorkbench({
 
       {inspectRow ? (
         <div className="overlay-shell" onClick={() => setInspectRow(null)}>
-          <div className="overlay-panel overlay-narrow" onClick={(event) => event.stopPropagation()}>
+          <div
+            aria-labelledby="inspect-row-title"
+            aria-modal="true"
+            className="overlay-panel overlay-narrow"
+            onClick={(event) => event.stopPropagation()}
+            role="dialog"
+          >
             <div className="overlay-head">
-              <div className="heading">{inspectRow.title}</div>
-              <button className="btn btn-ghost btn-sm" onClick={() => setInspectRow(null)}>
+              <div className="heading" id="inspect-row-title">
+                {inspectRow.title}
+              </div>
+              <button
+                aria-label={`Close details for ${inspectRow.title}`}
+                className="btn btn-ghost btn-sm"
+                onClick={() => setInspectRow(null)}
+                type="button"
+              >
                 Close
               </button>
             </div>
