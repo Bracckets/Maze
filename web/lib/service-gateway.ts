@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 
-type HttpMethod = "GET" | "POST" | "PUT";
+type HttpMethod = "GET" | "POST" | "PUT" | "DELETE";
 
 type BackendResult<T> = {
   ok: boolean;
@@ -67,6 +67,212 @@ export type CurrentUserPayload = {
     plan_id?: string | null;
     plan_name?: string | null;
   };
+};
+
+export type LiquidContentPayload = {
+  text: string;
+  icon?: string | null;
+  visibility: "visible" | "hidden";
+  emphasis: "low" | "medium" | "high";
+  ordering: number;
+};
+
+export type LiquidCondition = {
+  field: string;
+  operator: string;
+  value: unknown;
+};
+
+export type LiquidConditionGroup = {
+  all: LiquidCondition[];
+  any: LiquidCondition[];
+};
+
+export type LiquidVariant = {
+  id: string;
+  stage: "draft" | "published";
+  locale?: string | null;
+  content: LiquidContentPayload;
+  segmentId?: string | null;
+  segmentKey?: string | null;
+  ruleId?: string | null;
+  ruleKey?: string | null;
+  experimentId?: string | null;
+  experimentKey?: string | null;
+  experimentArm?: string | null;
+  trafficPercentage: number;
+  priority: number;
+  isDefault: boolean;
+  enabled: boolean;
+  updatedAt: string;
+};
+
+export type LiquidKeySummary = {
+  id: string;
+  key: string;
+  label: string;
+  description?: string | null;
+  namespace?: string | null;
+  defaultLocale: string;
+  enabled: boolean;
+  draftVariantCount: number;
+  publishedVariantCount: number;
+  bundleCount: number;
+  publishedRevision: number;
+  publishedAt?: string | null;
+  updatedAt: string;
+};
+
+export type LiquidKeyDetail = {
+  id: string;
+  key: string;
+  label: string;
+  description?: string | null;
+  namespace?: string | null;
+  defaultLocale: string;
+  enabled: boolean;
+  publishedRevision: number;
+  publishedAt?: string | null;
+  draftUpdatedAt: string;
+  variants: LiquidVariant[];
+  bundles: Array<{
+    id: string;
+    screenKey: string;
+    label: string;
+    orderIndex: number;
+    enabled: boolean;
+  }>;
+};
+
+export type LiquidSegment = {
+  id: string;
+  segmentKey: string;
+  name: string;
+  description?: string | null;
+  conditions: LiquidConditionGroup;
+  enabled: boolean;
+  updatedAt: string;
+};
+
+export type LiquidTraitDefinition = {
+  id: string;
+  traitKey: string;
+  label: string;
+  description?: string | null;
+  valueType: "text" | "int" | "range" | "boolean" | "select";
+  enabled: boolean;
+  updatedAt: string;
+};
+
+export type LiquidProfileTrait = {
+  traitId?: string | null;
+  traitKey: string;
+  label: string;
+  value: string;
+};
+
+export type LiquidProfile = {
+  id: string;
+  profileKey: string;
+  name: string;
+  description?: string | null;
+  traits: LiquidProfileTrait[];
+  enabled: boolean;
+  updatedAt: string;
+};
+
+export type LiquidRule = {
+  id: string;
+  ruleKey: string;
+  name: string;
+  description?: string | null;
+  conditions: LiquidConditionGroup;
+  priority: number;
+  enabled: boolean;
+  updatedAt: string;
+};
+
+export type LiquidExperiment = {
+  id: string;
+  experimentKey: string;
+  name: string;
+  description?: string | null;
+  status: "draft" | "active" | "paused" | "completed";
+  trafficAllocation: number;
+  seed: string;
+  updatedAt: string;
+};
+
+export type LiquidBundleSummary = {
+  id: string;
+  screenKey: string;
+  label: string;
+  description?: string | null;
+  enabled: boolean;
+  draftKeyCount: number;
+  publishedKeyCount: number;
+  publishedRevision: number;
+  publishedAt?: string | null;
+  updatedAt: string;
+};
+
+export type LiquidBundleDetail = {
+  id: string;
+  screenKey: string;
+  label: string;
+  description?: string | null;
+  enabled: boolean;
+  publishedRevision: number;
+  publishedAt?: string | null;
+  draftItems: Array<{
+    keyId: string;
+    key: string;
+    label: string;
+    orderIndex: number;
+    enabled: boolean;
+  }>;
+  publishedItems: Array<{
+    keyId: string;
+    key: string;
+    label: string;
+    orderIndex: number;
+    enabled: boolean;
+  }>;
+  updatedAt: string;
+};
+
+export type LiquidOverview = {
+  keyCount: number;
+  bundleCount: number;
+  publishedKeyCount: number;
+  publishedBundleCount: number;
+  segmentCount: number;
+  activeExperimentCount: number;
+  runtimePath: string;
+  cachePolicy: string;
+};
+
+export type LiquidBundleResolve = {
+  screenKey: string;
+  stage: "draft" | "published";
+  revision: number;
+  etag: string;
+  ttlSeconds: number;
+  generatedAt: string;
+  items: Array<{
+    key: string;
+    text: string;
+    icon?: string | null;
+    visibility: "visible" | "hidden";
+    emphasis: "low" | "medium" | "high";
+    ordering: number;
+    locale: string;
+    source: "experiment" | "rule" | "segment" | "default" | "safe_fallback";
+    experiment?: {
+      experimentKey: string;
+      arm: string;
+    } | null;
+  }>;
 };
 
 const backendBaseUrl = (process.env.MAZE_BACKEND_URL ?? process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000").replace(/\/$/, "");
@@ -196,6 +402,99 @@ export async function getScreenshots(params?: { screen?: string; session_id?: st
   }
   const suffix = query.toString() ? `?${query.toString()}` : "";
   return backendRequest<ScreenshotRef[] | { detail?: string }>(`/screenshots${suffix}`, "GET");
+}
+
+export async function getLiquidOverview(): Promise<LiquidOverview> {
+  const result = await backendRequest<LiquidOverview | { detail?: string }>("/liquid/overview", "GET");
+  const data = result.data;
+  if (!result.ok || (typeof data === "object" && data !== null && "detail" in data)) {
+    return {
+      keyCount: 0,
+      bundleCount: 0,
+      publishedKeyCount: 0,
+      publishedBundleCount: 0,
+      segmentCount: 0,
+      activeExperimentCount: 0,
+      runtimePath: "/liquid/runtime/bundles/resolve",
+      cachePolicy: "private, max-age=60, stale-while-revalidate=300",
+    };
+  }
+  return data as LiquidOverview;
+}
+
+export async function getLiquidKeys(query?: string): Promise<LiquidKeySummary[]> {
+  const suffix = query ? `?q=${encodeURIComponent(query)}` : "";
+  const result = await backendRequest<LiquidKeySummary[] | { detail?: string }>(`/liquid/keys${suffix}`, "GET");
+  if (!result.ok || !Array.isArray(result.data)) {
+    return [];
+  }
+  return result.data;
+}
+
+export async function getLiquidKeyDetail(keyId: string): Promise<LiquidKeyDetail | null> {
+  const result = await backendRequest<LiquidKeyDetail | { detail?: string }>(`/liquid/keys/${keyId}`, "GET");
+  const data = result.data;
+  if (!result.ok || (typeof data === "object" && data !== null && "detail" in data)) {
+    return null;
+  }
+  return data as LiquidKeyDetail;
+}
+
+export async function getLiquidSegments(): Promise<LiquidSegment[]> {
+  const result = await backendRequest<LiquidSegment[] | { detail?: string }>("/liquid/segments", "GET");
+  if (!result.ok || !Array.isArray(result.data)) {
+    return [];
+  }
+  return result.data;
+}
+
+export async function getLiquidRules(): Promise<LiquidRule[]> {
+  const result = await backendRequest<LiquidRule[] | { detail?: string }>("/liquid/rules", "GET");
+  if (!result.ok || !Array.isArray(result.data)) {
+    return [];
+  }
+  return result.data;
+}
+
+export async function getLiquidTraits(): Promise<LiquidTraitDefinition[]> {
+  const result = await backendRequest<LiquidTraitDefinition[] | { detail?: string }>("/liquid/traits", "GET");
+  if (!result.ok || !Array.isArray(result.data)) {
+    return [];
+  }
+  return result.data;
+}
+
+export async function getLiquidProfiles(): Promise<LiquidProfile[]> {
+  const result = await backendRequest<LiquidProfile[] | { detail?: string }>("/liquid/profiles", "GET");
+  if (!result.ok || !Array.isArray(result.data)) {
+    return [];
+  }
+  return result.data;
+}
+
+export async function getLiquidExperiments(): Promise<LiquidExperiment[]> {
+  const result = await backendRequest<LiquidExperiment[] | { detail?: string }>("/liquid/experiments", "GET");
+  if (!result.ok || !Array.isArray(result.data)) {
+    return [];
+  }
+  return result.data;
+}
+
+export async function getLiquidBundles(): Promise<LiquidBundleSummary[]> {
+  const result = await backendRequest<LiquidBundleSummary[] | { detail?: string }>("/liquid/bundles", "GET");
+  if (!result.ok || !Array.isArray(result.data)) {
+    return [];
+  }
+  return result.data;
+}
+
+export async function getLiquidBundleDetail(bundleId: string): Promise<LiquidBundleDetail | null> {
+  const result = await backendRequest<LiquidBundleDetail | { detail?: string }>(`/liquid/bundles/${bundleId}`, "GET");
+  const data = result.data;
+  if (!result.ok || (typeof data === "object" && data !== null && "detail" in data)) {
+    return null;
+  }
+  return data as LiquidBundleDetail;
 }
 
 export { backendBaseUrl };

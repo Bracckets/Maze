@@ -1,6 +1,7 @@
 from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.orm import sessionmaker
 
+from app.liquid.storage import ensure_liquid_schema
 from app.settings import settings
 
 DATABASE_URL = settings.database_url
@@ -102,3 +103,4 @@ def ensure_runtime_schema() -> None:
         )
         connection.execute(text("CREATE INDEX IF NOT EXISTS idx_screenshot_assets_workspace ON screenshot_assets(workspace_id, uploaded_at DESC)"))
         connection.execute(text("CREATE INDEX IF NOT EXISTS idx_screenshot_assets_screen ON screenshot_assets(workspace_id, screen, uploaded_at DESC)"))
+        ensure_liquid_schema(connection)

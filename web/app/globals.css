@@ -8,6 +8,427 @@
   font-display: swap;
 }
 
+.liquid-engine {
+  display: grid;
+  gap: 18px;
+}
+
+.liquid-engine-hero,
+.liquid-engine-workbench {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 332px;
+  gap: 16px;
+}
+
+.liquid-engine-hero-main,
+.liquid-engine-kpi-panel,
+.liquid-engine-stage,
+.liquid-engine-context,
+.liquid-engine-table-frame,
+.liquid-engine-inline-card,
+.liquid-engine-subpanel {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0)),
+    rgba(12, 16, 28, 0.84);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 24px;
+}
+
+.liquid-engine-hero-main,
+.liquid-engine-kpi-panel,
+.liquid-engine-context {
+  padding: 22px;
+}
+
+.liquid-engine-stage {
+  padding: 18px;
+}
+
+.liquid-engine-table-frame,
+.liquid-engine-inline-card,
+.liquid-engine-subpanel {
+  padding: 18px;
+}
+
+.liquid-engine-summary-head,
+.liquid-engine-stage-head,
+.liquid-engine-toolbar,
+.liquid-engine-inline-head,
+.liquid-engine-context-topline,
+.liquid-engine-context-actions,
+.liquid-engine-kpi-legend {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+}
+
+.liquid-engine-summary-grid,
+.liquid-engine-analytics-strip,
+.liquid-engine-analytics-grid,
+.liquid-engine-preview-compare,
+.liquid-engine-context-meta,
+.liquid-engine-form-strip {
+  display: grid;
+  gap: 12px;
+}
+
+.liquid-engine-summary-grid {
+  grid-template-columns: 1.15fr repeat(3, minmax(0, 1fr));
+}
+
+.liquid-engine-summary-card-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.liquid-engine-stat-card {
+  padding: 18px;
+  min-height: 118px;
+}
+
+.liquid-engine-stat-value {
+  font-size: clamp(1.8rem, 3vw, 2.75rem);
+  font-weight: 800;
+  letter-spacing: -0.06em;
+  line-height: 1;
+}
+
+.liquid-engine-kpi-panel {
+  gap: 18px;
+}
+
+.liquid-engine-kpi-chart {
+  position: relative;
+  min-height: 136px;
+}
+
+.liquid-engine-sparkline {
+  width: 100%;
+  height: 110px;
+}
+
+.liquid-engine-kpi-badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  min-width: 92px;
+  padding: 18px 16px;
+  border-radius: 20px;
+  background: linear-gradient(180deg, rgba(123, 111, 255, 0.18), rgba(123, 111, 255, 0.08));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  text-align: center;
+}
+
+.liquid-engine-kpi-badge strong {
+  display: block;
+  font-size: 2.2rem;
+  line-height: 1;
+  letter-spacing: -0.06em;
+}
+
+.liquid-engine-kpi-badge span,
+.liquid-engine-kpi-legend span:last-child {
+  color: var(--text-2);
+  font-size: 0.8rem;
+}
+
+.liquid-engine-kpi-swatch {
+  width: 22px;
+  height: 3px;
+  border-radius: 999px;
+  background: #85f3cd;
+}
+
+.liquid-engine-context-column {
+  position: sticky;
+  top: 20px;
+}
+
+.liquid-engine-tabs {
+  display: flex;
+  gap: 26px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  flex-wrap: wrap;
+}
+
+.liquid-engine-tab {
+  padding: 0 0 14px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--text-2);
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.liquid-engine-tab.active {
+  color: var(--text);
+  border-bottom-color: #8ab9ff;
+}
+
+.liquid-engine-panel-stack {
+  display: grid;
+  gap: 16px;
+}
+
+.liquid-engine-search {
+  min-width: min(420px, 100%);
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 42px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--text-3);
+}
+
+.liquid-engine-search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--text);
+}
+
+.liquid-engine-form-strip {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.liquid-engine-form-strip-compact {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.liquid-engine-inline-card-muted {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0)),
+    rgba(15, 18, 30, 0.92);
+}
+
+.liquid-engine-table {
+  min-width: 780px;
+}
+
+.liquid-engine-row {
+  cursor: pointer;
+}
+
+.liquid-engine-row.active td {
+  background: rgba(123, 111, 255, 0.08);
+}
+
+.liquid-engine-cell-stack {
+  display: grid;
+  gap: 5px;
+}
+
+.liquid-engine-copy-cell {
+  max-width: 220px;
+  white-space: normal;
+}
+
+.liquid-engine-copy-cell,
+.liquid-engine-compare-card p:last-child,
+.liquid-engine-context-block p:last-child {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.liquid-engine-dot-row,
+.liquid-engine-chip-row,
+.liquid-engine-context-tools {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.liquid-engine-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.liquid-engine-dot.active {
+  background: #aab7ff;
+}
+
+.liquid-engine-icon-button {
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-2);
+}
+
+.liquid-engine-empty-state {
+  padding: 18px;
+  border-radius: 20px;
+  border: 1px dashed rgba(123, 111, 255, 0.28);
+  background: rgba(123, 111, 255, 0.06);
+}
+
+.liquid-engine-context,
+.liquid-engine-context-stack,
+.liquid-engine-profile-card,
+.liquid-engine-context-block,
+.liquid-engine-compare-card,
+.liquid-engine-ranked-row {
+  display: grid;
+  gap: 14px;
+}
+
+.liquid-engine-context-spotlight,
+.liquid-engine-context-block,
+.liquid-engine-profile-card,
+.liquid-engine-compare-card,
+.liquid-engine-ranked-row {
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.liquid-engine-context-key {
+  font-size: 0.78rem;
+}
+
+.liquid-engine-before-after-inline {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.liquid-engine-arrow-pill {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: rgba(123, 111, 255, 0.15);
+  color: var(--accent-2);
+}
+
+.liquid-engine-profile-head {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.liquid-engine-profile-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, rgba(123, 111, 255, 0.9), rgba(88, 170, 255, 0.9));
+  color: white;
+  font-weight: 700;
+}
+
+.liquid-engine-context-meta {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.liquid-engine-context-meta-analytics {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.liquid-engine-preview-compare,
+.liquid-engine-analytics-strip,
+.liquid-engine-analytics-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.liquid-engine-preview-compare-stack {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.liquid-engine-ranked-list {
+  display: grid;
+  gap: 10px;
+}
+
+.liquid-engine-ranked-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.liquid-engine-positive {
+  color: var(--green);
+}
+
+.liquid-engine-negative {
+  color: var(--red);
+}
+
+@media (max-width: 1180px) {
+  .liquid-engine-hero,
+  .liquid-engine-workbench,
+  .liquid-engine-summary-grid,
+  .liquid-engine-context-meta,
+  .liquid-engine-context-meta-analytics,
+  .liquid-engine-preview-compare,
+  .liquid-engine-preview-compare-stack,
+  .liquid-engine-analytics-strip,
+  .liquid-engine-analytics-grid,
+  .liquid-engine-form-strip,
+  .liquid-engine-form-strip-compact {
+    grid-template-columns: 1fr;
+  }
+
+  .liquid-engine-context-column {
+    position: static;
+  }
+}
+
+@media (max-width: 760px) {
+  .liquid-engine-stage-head,
+  .liquid-engine-summary-head,
+  .liquid-engine-inline-head,
+  .liquid-engine-toolbar,
+  .liquid-engine-context-topline,
+  .liquid-engine-context-actions,
+  .liquid-engine-kpi-legend {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .liquid-engine-search {
+    min-width: 0;
+    width: 100%;
+  }
+}
+
+.liquid-engine-summary-grid {
+  grid-template-columns: 1.15fr repeat(3, minmax(0, 1fr));
+}
+
+.liquid-engine-table {
+  min-width: 780px;
+}
+
+.liquid-engine-copy-cell {
+  max-width: 220px;
+}
+
 @font-face {
   font-family: 'Year of Handicrafts';
   src: url('/fonts/year-of-handicrafts/TheYearofHandicrafts-Medium.otf') format('opentype');
@@ -457,9 +878,10 @@ code, .mono {
 .main-content { padding: 32px 36px; background: var(--bg); position: relative; z-index: 1; }
 
 /* ── Page header ────────────────────────────────────────── */
-.page-header { margin-bottom: 28px; }
+.page-header { margin-bottom: 28px; display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; }
 .page-title { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.04em; color: var(--text); margin-bottom: 4px; }
 .page-subtitle { color: var(--text-2); font-size: 0.88rem; }
+.page-header-action { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
 
 /* ── KPI strip ──────────────────────────────────────────── */
 .kpi-strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--gap); margin-bottom: 24px; }
@@ -1645,6 +2067,605 @@ code, .mono {
   border-radius: 28px;
 }
 
+.liquid-shell {
+  display: grid;
+  grid-template-columns: minmax(220px, 240px) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.liquid-tab-nav {
+  display: grid;
+  gap: 10px;
+  position: sticky;
+  top: 16px;
+}
+
+.liquid-tab-button {
+  width: 100%;
+  text-align: left;
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--text-2);
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s, transform 0.2s;
+}
+
+.liquid-tab-button strong {
+  color: var(--text);
+  letter-spacing: -0.02em;
+}
+
+.liquid-tab-button span {
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.liquid-tab-button:hover {
+  border-color: rgba(123, 111, 255, 0.22);
+  background: rgba(123, 111, 255, 0.06);
+  transform: translateY(-1px);
+}
+
+.liquid-tab-button.active {
+  border-color: rgba(123, 111, 255, 0.3);
+  background: rgba(123, 111, 255, 0.1);
+}
+
+.liquid-tab-step {
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+.liquid-mini-tabs {
+  display: inline-flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.liquid-mini-tab {
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.025);
+  color: var(--text-2);
+  cursor: pointer;
+}
+
+.liquid-mini-tab.active {
+  border-color: rgba(123, 111, 255, 0.28);
+  background: rgba(123, 111, 255, 0.1);
+  color: var(--text);
+}
+
+.liquid-search-toolbar {
+  margin-left: auto;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  min-width: 0;
+}
+
+.liquid-search-shell {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  align-items: center;
+  overflow: hidden;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.025);
+  transition:
+    width 0.24s cubic-bezier(0.2, 0.8, 0.2, 1),
+    border-color 0.2s ease,
+    background 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.liquid-search-shell:hover,
+.liquid-search-shell.open {
+  border-color: rgba(123, 111, 255, 0.22);
+  background: rgba(123, 111, 255, 0.08);
+}
+
+.liquid-search-shell.open {
+  width: min(320px, 100%);
+  box-shadow: 0 14px 32px rgba(7, 10, 18, 0.28);
+}
+
+.liquid-search-toggle {
+  width: 42px;
+  height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  color: var(--text-2);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.liquid-search-toggle:hover,
+.liquid-search-shell.open .liquid-search-toggle {
+  color: var(--text);
+}
+
+.liquid-search-input {
+  width: 100%;
+  min-width: 0;
+  height: 42px;
+  padding: 0 14px 0 2px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  outline: 0;
+  opacity: 0;
+  transform: translateX(8px);
+  pointer-events: none;
+  transition:
+    opacity 0.16s ease,
+    transform 0.24s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.liquid-search-input::placeholder {
+  color: var(--text-3);
+}
+
+.liquid-search-shell.open .liquid-search-input {
+  opacity: 1;
+  transform: translateX(0);
+  pointer-events: auto;
+}
+
+.liquid-subsection,
+.liquid-empty-state {
+  padding: 14px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.liquid-list-item {
+  width: 100%;
+  text-align: left;
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.02);
+  cursor: pointer;
+}
+
+.liquid-list-item strong {
+  color: var(--text);
+  letter-spacing: -0.02em;
+}
+
+.liquid-list-item.active {
+  border-color: rgba(123, 111, 255, 0.28);
+  background: rgba(123, 111, 255, 0.08);
+}
+
+.liquid-status {
+  display: block;
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(123, 111, 255, 0.18);
+  background: rgba(123, 111, 255, 0.08);
+  color: var(--text);
+  line-height: 1.5;
+}
+
+.liquid-status.error {
+  border-color: rgba(255, 107, 107, 0.28);
+  background: rgba(255, 107, 107, 0.1);
+}
+
+.liquid-status.success {
+  border-color: rgba(123, 111, 255, 0.22);
+}
+
+.liquid-engine {
+  display: grid;
+  gap: 18px;
+}
+
+.liquid-engine-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 16px;
+  align-items: stretch;
+}
+
+.liquid-engine-hero-main,
+.liquid-engine-kpi-panel,
+.liquid-engine-stage,
+.liquid-engine-context,
+.liquid-engine-preview-config,
+.liquid-engine-preview-output,
+.liquid-engine-subpanel,
+.liquid-engine-mini-kpi,
+.liquid-engine-table-frame {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0)),
+    rgba(13, 16, 26, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 24px;
+}
+
+.liquid-engine-hero-main,
+.liquid-engine-kpi-panel,
+.liquid-engine-context {
+  padding: 24px;
+}
+
+.liquid-engine-stage {
+  padding: 20px;
+}
+
+.liquid-engine-preview-config,
+.liquid-engine-preview-output,
+.liquid-engine-subpanel,
+.liquid-engine-mini-kpi,
+.liquid-engine-table-frame {
+  padding: 18px;
+}
+
+.liquid-engine-summary-head,
+.liquid-engine-kpi-topline,
+.liquid-engine-stage-head,
+.liquid-engine-toolbar,
+.liquid-engine-section-head,
+.liquid-engine-context-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.liquid-engine-summary-head {
+  margin-bottom: 18px;
+}
+
+.liquid-engine-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.liquid-engine-stat-card {
+  padding: 18px;
+  min-height: 124px;
+}
+
+.liquid-engine-stat-value,
+.liquid-engine-kpi-value {
+  font-size: clamp(1.8rem, 3vw, 2.9rem);
+  font-weight: 800;
+  letter-spacing: -0.06em;
+  line-height: 1;
+  color: var(--text);
+}
+
+.liquid-engine-kpi-panel {
+  display: grid;
+  gap: 18px;
+}
+
+.liquid-engine-sparkline {
+  width: 100%;
+  height: 94px;
+}
+
+.liquid-engine-kpi-footer {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.liquid-engine-workbench {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 16px;
+  align-items: start;
+}
+
+.liquid-engine-context-column {
+  position: sticky;
+  top: 20px;
+}
+
+.liquid-engine-tabs {
+  display: flex;
+  gap: 26px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.liquid-engine-tab {
+  display: grid;
+  gap: 4px;
+  padding: 0 0 14px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--text-3);
+  cursor: pointer;
+  text-align: left;
+}
+
+.liquid-engine-tab span {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--text-2);
+}
+
+.liquid-engine-tab small {
+  font-size: 0.76rem;
+  color: var(--text-3);
+}
+
+.liquid-engine-tab.active {
+  border-bottom-color: var(--accent);
+}
+
+.liquid-engine-tab.active span {
+  color: var(--text);
+}
+
+.liquid-engine-tab.active small {
+  color: var(--text-2);
+}
+
+.liquid-engine-tab-body {
+  display: grid;
+  gap: 16px;
+}
+
+.liquid-engine-search {
+  min-width: min(440px, 100%);
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px;
+  min-height: 42px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--text-3);
+}
+
+.liquid-engine-search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  outline: none;
+}
+
+.liquid-engine-table {
+  min-width: 980px;
+}
+
+.liquid-engine-row {
+  cursor: pointer;
+}
+
+.liquid-engine-row.active td {
+  background: rgba(123, 111, 255, 0.08);
+}
+
+.liquid-engine-cell-stack {
+  display: grid;
+  gap: 5px;
+}
+
+.liquid-engine-copy-cell {
+  max-width: 280px;
+  white-space: normal;
+}
+
+.liquid-engine-copy-cell,
+.liquid-engine-preview-row p,
+.liquid-engine-compare-card p:last-child,
+.liquid-engine-context-block p:last-child {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.liquid-engine-row-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.liquid-engine-context {
+  display: grid;
+  gap: 16px;
+}
+
+.liquid-engine-context-stack {
+  display: grid;
+  gap: 16px;
+}
+
+.liquid-engine-context-block,
+.liquid-engine-compare-card,
+.liquid-engine-ranked-row,
+.liquid-engine-preview-row {
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.liquid-engine-chip-row,
+.liquid-engine-context-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.liquid-engine-empty-state {
+  padding: 18px;
+  border-radius: 20px;
+  border: 1px dashed rgba(123, 111, 255, 0.28);
+  background: rgba(123, 111, 255, 0.06);
+}
+
+.liquid-engine-preview-layout,
+.liquid-engine-side-by-side {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.liquid-engine-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.liquid-engine-wide-field {
+  grid-column: 1 / -1;
+}
+
+.liquid-engine-preview-list,
+.liquid-engine-ranked-list {
+  display: grid;
+  gap: 10px;
+}
+
+.liquid-engine-preview-row {
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+}
+
+.liquid-engine-preview-row.active {
+  border-color: rgba(123, 111, 255, 0.28);
+  background: rgba(123, 111, 255, 0.1);
+}
+
+.liquid-engine-preview-row-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+
+.liquid-engine-compare-grid,
+.liquid-engine-before-after,
+.liquid-engine-analytics-stats,
+.liquid-engine-analytics-strip {
+  display: grid;
+  gap: 12px;
+}
+
+.liquid-engine-compare-grid,
+.liquid-engine-before-after,
+.liquid-engine-analytics-stats {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.liquid-engine-compare-card.accent {
+  border-color: rgba(123, 111, 255, 0.22);
+  background: rgba(123, 111, 255, 0.08);
+}
+
+.liquid-engine-analytics-note {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.liquid-engine-analytics-strip {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.liquid-engine-mini-kpi {
+  display: grid;
+  gap: 8px;
+}
+
+.liquid-engine-ranked-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.liquid-engine-positive {
+  color: var(--green);
+}
+
+.liquid-engine-negative {
+  color: var(--red);
+}
+
+@media (max-width: 1180px) {
+  .liquid-engine-hero,
+  .liquid-engine-workbench,
+  .liquid-engine-preview-layout,
+  .liquid-engine-side-by-side,
+  .liquid-engine-compare-grid,
+  .liquid-engine-before-after,
+  .liquid-engine-analytics-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .liquid-engine-summary-grid,
+  .liquid-engine-analytics-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .liquid-engine-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .liquid-engine-context-column {
+    position: static;
+  }
+}
+
+@media (max-width: 760px) {
+  .liquid-engine-summary-grid,
+  .liquid-engine-analytics-strip,
+  .liquid-engine-kpi-footer {
+    grid-template-columns: 1fr;
+  }
+
+  .liquid-engine-search {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .liquid-engine-row-actions,
+  .liquid-engine-toolbar,
+  .liquid-engine-section-head,
+  .liquid-engine-summary-head,
+  .liquid-engine-kpi-topline,
+  .liquid-engine-context-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
 .ops-panel-accent {
   background:
     radial-gradient(circle at top right, rgba(123, 111, 255, 0.12), transparent 34%),
@@ -2013,6 +3034,542 @@ code, .mono {
   font-size: 0.8rem;
 }
 
+.liquid-ops-shell {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 24px;
+}
+
+.liquid-ops-main,
+.liquid-ops-stage,
+.liquid-ops-stack,
+.liquid-ops-form,
+.liquid-ops-legend,
+.liquid-ops-ranked-list,
+.liquid-ops-inspector {
+  display: grid;
+  gap: 16px;
+}
+
+.liquid-ops-tabs {
+  display: flex;
+  gap: 28px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.liquid-ops-tabs button,
+.liquid-ops-subtabs button {
+  border: 0;
+  background: transparent;
+  color: var(--text-2);
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.liquid-ops-tabs button {
+  padding: 0 0 14px;
+  border-bottom: 2px solid transparent;
+}
+
+.liquid-ops-tabs button.active,
+.liquid-ops-subtabs button.active {
+  color: var(--text);
+}
+
+.liquid-ops-tabs button.active {
+  border-bottom-color: #8ab9ff;
+}
+
+.liquid-ops-stage {
+  margin-top: 8px;
+}
+
+.liquid-ops-toolbar,
+.liquid-ops-stage-row-top,
+.liquid-ops-row-actions,
+.liquid-ops-toolbar-actions,
+.liquid-ops-pie-wrap,
+.liquid-ops-inspector-actions,
+.liquid-ops-editor-head {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.liquid-ops-toolbar-actions,
+.liquid-ops-row-actions,
+.liquid-ops-inspector-actions {
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.liquid-ops-search {
+  min-width: 280px;
+}
+
+.liquid-ops-search input,
+.liquid-ops-input,
+.liquid-ops-inline-field select {
+  width: 100%;
+  min-height: 42px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text);
+  padding: 0 14px;
+}
+
+.liquid-ops-textarea {
+  min-height: 112px;
+  padding: 12px 14px;
+  resize: vertical;
+}
+
+.liquid-ops-inline-field {
+  display: grid;
+  gap: 8px;
+  min-width: 220px;
+}
+
+.liquid-ops-inline-field span,
+.liquid-ops-field span,
+.liquid-ops-inspector-meta span,
+.liquid-ops-section-title span:first-child {
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-3);
+}
+
+.liquid-ops-surface,
+.liquid-ops-inspector,
+.liquid-ops-stage-row,
+.liquid-ops-note {
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.025), rgba(255, 255, 255, 0)),
+    rgba(11, 15, 26, 0.82);
+}
+
+.liquid-ops-surface,
+.liquid-ops-inspector,
+.liquid-ops-stage-row {
+  padding: 18px;
+}
+
+.liquid-ops-note {
+  padding: 14px 16px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  color: var(--text-2);
+}
+
+.liquid-ops-table {
+  min-width: 760px;
+}
+
+.liquid-ops-row-active td {
+  background: rgba(127, 182, 255, 0.08);
+}
+
+.liquid-ops-inline-editor-row td {
+  padding-top: 10px;
+  padding-bottom: 12px;
+  vertical-align: top;
+  background: rgba(127, 182, 255, 0.03);
+  animation: liquid-inline-drop 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.liquid-ops-table-input {
+  min-height: 40px;
+  border-radius: 12px;
+  padding: 0 12px;
+  font-size: 0.92rem;
+}
+
+.liquid-ops-inline-meta {
+  display: grid;
+  gap: 4px;
+  padding-top: 8px;
+}
+
+.liquid-ops-inline-meta strong {
+  font-size: 0.88rem;
+}
+
+.liquid-ops-inline-meta span {
+  font-size: 0.78rem;
+  color: var(--text-2);
+}
+
+.liquid-ops-inline-create-card {
+  display: grid;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.liquid-ops-inline-create-card-tall {
+  gap: 12px;
+}
+
+.liquid-ops-inline-create-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.liquid-ops-inline-create-copy {
+  display: grid;
+  gap: 2px;
+}
+
+.liquid-ops-inline-create-copy strong {
+  font-size: 0.92rem;
+  letter-spacing: -0.02em;
+}
+
+.liquid-ops-inline-create-copy span {
+  font-size: 0.78rem;
+  color: var(--text-2);
+}
+
+.liquid-ops-inline-create-field {
+  display: grid;
+  gap: 6px;
+}
+
+.liquid-ops-inline-create-field span {
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-3);
+}
+
+.liquid-ops-inline-create-grid {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.35fr) minmax(180px, 1.1fr) minmax(260px, 1.7fr) 92px 120px auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.liquid-ops-rules-create-grid-profiles {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.2fr) minmax(180px, 1.1fr) minmax(260px, 1.6fr) 120px;
+  gap: 10px;
+}
+
+.liquid-ops-rules-create-grid-traits {
+  display: grid;
+  grid-template-columns: minmax(160px, 1fr) minmax(160px, 1fr) 120px minmax(220px, 1.5fr) 120px auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.liquid-ops-rules-create-grid-variants {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.2fr) minmax(180px, 1.2fr) minmax(260px, 1.8fr) 92px 120px auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.liquid-ops-inline-stack,
+.liquid-ops-inline-trait-builder {
+  display: grid;
+  gap: 8px;
+}
+
+.liquid-ops-inline-trait-row {
+  display: grid;
+  grid-template-columns: minmax(140px, 1fr) minmax(140px, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.liquid-ops-toolbar-inline {
+  align-items: end;
+}
+
+.liquid-ops-inline-row-actions {
+  gap: 8px;
+  padding-top: 2px;
+}
+
+.liquid-ops-cell {
+  display: grid;
+  gap: 4px;
+}
+
+.liquid-ops-cell span,
+.liquid-ops-ranked-row span {
+  color: var(--text-2);
+  font-size: 0.82rem;
+}
+
+.liquid-ops-copy-cell {
+  max-width: 260px;
+  white-space: normal;
+}
+
+.liquid-ops-empty {
+  padding: 22px;
+  border-radius: 24px;
+  border: 1px dashed rgba(127, 182, 255, 0.22);
+  background: rgba(127, 182, 255, 0.05);
+}
+
+.liquid-ops-empty-action {
+  margin-top: 14px;
+}
+
+.liquid-ops-chip-grid,
+.liquid-ops-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.liquid-ops-chip-card {
+  min-width: 180px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.025);
+  text-align: left;
+  cursor: pointer;
+  display: grid;
+  gap: 4px;
+}
+
+.liquid-ops-chip-card.active {
+  border-color: rgba(127, 182, 255, 0.34);
+  background: rgba(127, 182, 255, 0.08);
+}
+
+.liquid-ops-chip-card span,
+.liquid-ops-muted {
+  color: var(--text-2);
+  font-size: 0.82rem;
+}
+
+.liquid-ops-stage-grid,
+.liquid-ops-analytics-grid,
+.liquid-ops-inspector-meta,
+.liquid-ops-form-split {
+  display: grid;
+  gap: 12px;
+}
+
+.liquid-ops-stage-grid,
+.liquid-ops-inspector-meta,
+.liquid-ops-form-split {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.liquid-ops-analytics-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.liquid-ops-context-block,
+.liquid-ops-ranked-row {
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.liquid-ops-context-block {
+  display: grid;
+  gap: 6px;
+}
+
+.liquid-ops-ranked-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: center;
+}
+
+.liquid-ops-pie-wrap {
+  align-items: center;
+}
+
+.liquid-ops-pie {
+  width: 168px;
+  height: 168px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 12px rgba(8, 12, 22, 0.55);
+  flex: 0 0 auto;
+}
+
+.liquid-ops-legend {
+  flex: 1;
+}
+
+.liquid-ops-legend-row {
+  display: grid;
+  grid-template-columns: 10px 1fr auto;
+  gap: 10px;
+  align-items: center;
+  color: var(--text-2);
+}
+
+.liquid-ops-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.liquid-ops-banner {
+  padding: 12px 14px;
+  border-radius: 16px;
+  font-size: 0.92rem;
+}
+
+.liquid-ops-banner.success {
+  background: rgba(110, 242, 192, 0.08);
+  border: 1px solid rgba(110, 242, 192, 0.2);
+  color: #bcffe8;
+}
+
+.liquid-ops-banner.error {
+  background: rgba(255, 112, 128, 0.08);
+  border: 1px solid rgba(255, 112, 128, 0.2);
+  color: #ffced5;
+}
+
+.liquid-ops-editor-zone {
+  display: grid;
+  gap: 14px;
+  padding: 10px 0 2px;
+}
+
+.liquid-ops-editor-head {
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 6px;
+  flex-direction: column;
+}
+
+.liquid-ops-editor-head span {
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-3);
+}
+
+.liquid-ops-editor-head .panel-copy {
+  max-width: 52ch;
+  margin: 0;
+  color: var(--text-2);
+}
+
+.liquid-ops-editor-zone .liquid-ops-inspector {
+  box-shadow: 0 10px 28px rgba(4, 7, 13, 0.18);
+  border-color: rgba(127, 182, 255, 0.12);
+}
+
+.liquid-ops-subtabs {
+  display: inline-flex;
+  gap: 8px;
+  padding: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.liquid-ops-subtabs button {
+  min-height: 34px;
+  padding: 0 14px;
+  border-radius: 999px;
+}
+
+.liquid-ops-subtabs button.active {
+  background: rgba(127, 182, 255, 0.12);
+}
+
+.liquid-ops-section-title .panel-copy {
+  max-width: 64ch;
+}
+
+@keyframes liquid-inline-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.liquid-ops-positive {
+  color: var(--green);
+}
+
+.liquid-ops-negative {
+  color: var(--red);
+}
+
+@media (max-width: 1180px) {
+  .liquid-ops-shell,
+  .liquid-ops-analytics-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .liquid-ops-toolbar,
+  .liquid-ops-toolbar-actions,
+  .liquid-ops-stage-row-top,
+  .liquid-ops-pie-wrap,
+  .liquid-ops-inspector-actions,
+  .liquid-ops-editor-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .liquid-ops-editor-zone {
+    padding-top: 8px;
+  }
+
+  .liquid-ops-search,
+  .liquid-ops-inline-field {
+    min-width: 0;
+  }
+
+  .liquid-ops-stage-grid,
+  .liquid-ops-inspector-meta,
+  .liquid-ops-form-split {
+    grid-template-columns: 1fr;
+  }
+
+  .liquid-ops-inline-create-head {
+    align-items: stretch;
+  }
+
+  .liquid-ops-inline-create-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .liquid-ops-rules-create-grid-profiles,
+  .liquid-ops-rules-create-grid-traits,
+  .liquid-ops-rules-create-grid-variants,
+  .liquid-ops-inline-trait-row {
+    grid-template-columns: 1fr;
+  }
+
+  .liquid-ops-inline-editor-row td {
+    padding-top: 8px;
+    padding-bottom: 10px;
+  }
+  }
+
 .heatmap-inspector {
   padding: 18px;
   border-radius: 24px;
@@ -2037,7 +3594,8 @@ code, .mono {
   .story-board,
   .dashboard-grid,
   .heatmap-workspace,
-  .ops-hero {
+  .ops-hero,
+  .liquid-shell {
     grid-template-columns: 1fr;
   }
 
@@ -2087,6 +3645,7 @@ code, .mono {
 
   .topbar,
   .final-band,
+  .page-header,
   .panel-head,
   .overlay-head,
   .heatmap-topbar {
@@ -2187,6 +3746,14 @@ code, .mono {
     grid-template-columns: 1fr;
   }
 
+  .liquid-tab-nav {
+    position: static;
+  }
+
+  .liquid-search-shell.open {
+    width: min(100%, 280px);
+  }
+
   .main-content {
     padding: 20px 14px;
   }
@@ -2282,3 +3849,413 @@ code, .mono {
     width: 100%;
   }
 }
+
+.liquid-engine {
+  display: grid;
+  gap: 18px;
+}
+
+.liquid-engine-hero,
+.liquid-engine-workbench {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 332px;
+  gap: 16px;
+}
+
+.liquid-engine-hero-main,
+.liquid-engine-kpi-panel,
+.liquid-engine-stage,
+.liquid-engine-context,
+.liquid-engine-table-frame,
+.liquid-engine-inline-card,
+.liquid-engine-subpanel {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0)),
+    rgba(12, 16, 28, 0.84);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 24px;
+}
+
+.liquid-engine-hero-main,
+.liquid-engine-kpi-panel,
+.liquid-engine-context {
+  padding: 22px;
+}
+
+.liquid-engine-stage {
+  padding: 18px;
+}
+
+.liquid-engine-table-frame,
+.liquid-engine-inline-card,
+.liquid-engine-subpanel {
+  padding: 18px;
+}
+
+.liquid-engine-summary-head,
+.liquid-engine-stage-head,
+.liquid-engine-toolbar,
+.liquid-engine-inline-head,
+.liquid-engine-context-topline,
+.liquid-engine-context-actions,
+.liquid-engine-kpi-legend {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+}
+
+.liquid-engine-summary-grid,
+.liquid-engine-analytics-strip,
+.liquid-engine-analytics-grid,
+.liquid-engine-preview-compare,
+.liquid-engine-context-meta,
+.liquid-engine-form-strip {
+  display: grid;
+  gap: 12px;
+}
+
+.liquid-engine-summary-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.liquid-engine-summary-card-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.liquid-engine-stat-card {
+  padding: 18px;
+  min-height: 118px;
+}
+
+.liquid-engine-stat-value {
+  font-size: clamp(1.8rem, 3vw, 2.75rem);
+  font-weight: 800;
+  letter-spacing: -0.06em;
+  line-height: 1;
+}
+
+.liquid-engine-kpi-panel {
+  gap: 18px;
+}
+
+.liquid-engine-kpi-chart {
+  position: relative;
+  min-height: 136px;
+}
+
+.liquid-engine-sparkline {
+  width: 100%;
+  height: 110px;
+}
+
+.liquid-engine-kpi-badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  min-width: 92px;
+  padding: 18px 16px;
+  border-radius: 20px;
+  background: linear-gradient(180deg, rgba(123, 111, 255, 0.18), rgba(123, 111, 255, 0.08));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  text-align: center;
+}
+
+.liquid-engine-kpi-badge strong {
+  display: block;
+  font-size: 2.2rem;
+  line-height: 1;
+  letter-spacing: -0.06em;
+}
+
+.liquid-engine-kpi-badge span,
+.liquid-engine-kpi-legend span:last-child {
+  color: var(--text-2);
+  font-size: 0.8rem;
+}
+
+.liquid-engine-kpi-swatch {
+  width: 22px;
+  height: 3px;
+  border-radius: 999px;
+  background: #85f3cd;
+}
+
+.liquid-engine-context-column {
+  position: sticky;
+  top: 20px;
+}
+
+.liquid-engine-tabs {
+  display: flex;
+  gap: 26px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  flex-wrap: wrap;
+}
+
+.liquid-engine-tab {
+  padding: 0 0 14px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--text-2);
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.liquid-engine-tab.active {
+  color: var(--text);
+  border-bottom-color: #8ab9ff;
+}
+
+.liquid-engine-panel-stack {
+  display: grid;
+  gap: 16px;
+}
+
+.liquid-engine-search {
+  min-width: min(420px, 100%);
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 42px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--text-3);
+}
+
+.liquid-engine-search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--text);
+}
+
+.liquid-engine-form-strip {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.liquid-engine-form-strip-compact {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.liquid-engine-inline-card-muted {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0)),
+    rgba(15, 18, 30, 0.92);
+}
+
+.liquid-engine-table {
+  min-width: 920px;
+}
+
+.liquid-engine-row {
+  cursor: pointer;
+}
+
+.liquid-engine-row.active td {
+  background: rgba(123, 111, 255, 0.08);
+}
+
+.liquid-engine-cell-stack {
+  display: grid;
+  gap: 5px;
+}
+
+.liquid-engine-copy-cell {
+  max-width: 290px;
+  white-space: normal;
+}
+
+.liquid-engine-copy-cell,
+.liquid-engine-compare-card p:last-child,
+.liquid-engine-context-block p:last-child {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.liquid-engine-dot-row,
+.liquid-engine-chip-row,
+.liquid-engine-context-tools {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.liquid-engine-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.liquid-engine-dot.active {
+  background: #aab7ff;
+}
+
+.liquid-engine-icon-button {
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-2);
+}
+
+.liquid-engine-empty-state {
+  padding: 18px;
+  border-radius: 20px;
+  border: 1px dashed rgba(123, 111, 255, 0.28);
+  background: rgba(123, 111, 255, 0.06);
+}
+
+.liquid-engine-context,
+.liquid-engine-context-stack,
+.liquid-engine-profile-card,
+.liquid-engine-context-block,
+.liquid-engine-compare-card,
+.liquid-engine-ranked-row {
+  display: grid;
+  gap: 14px;
+}
+
+.liquid-engine-context-spotlight,
+.liquid-engine-context-block,
+.liquid-engine-profile-card,
+.liquid-engine-compare-card,
+.liquid-engine-ranked-row {
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.liquid-engine-context-key {
+  font-size: 0.78rem;
+}
+
+.liquid-engine-before-after-inline {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.liquid-engine-arrow-pill {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: rgba(123, 111, 255, 0.15);
+  color: var(--accent-2);
+}
+
+.liquid-engine-profile-head {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.liquid-engine-profile-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, rgba(123, 111, 255, 0.9), rgba(88, 170, 255, 0.9));
+  color: white;
+  font-weight: 700;
+}
+
+.liquid-engine-context-meta {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.liquid-engine-context-meta-analytics {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.liquid-engine-preview-compare,
+.liquid-engine-analytics-strip,
+.liquid-engine-analytics-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.liquid-engine-preview-compare-stack {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.liquid-engine-ranked-list {
+  display: grid;
+  gap: 10px;
+}
+
+.liquid-engine-ranked-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.liquid-engine-positive {
+  color: var(--green);
+}
+
+.liquid-engine-negative {
+  color: var(--red);
+}
+
+@media (max-width: 1180px) {
+  .liquid-engine-hero,
+  .liquid-engine-workbench,
+  .liquid-engine-summary-grid,
+  .liquid-engine-context-meta,
+  .liquid-engine-context-meta-analytics,
+  .liquid-engine-preview-compare,
+  .liquid-engine-preview-compare-stack,
+  .liquid-engine-analytics-strip,
+  .liquid-engine-analytics-grid,
+  .liquid-engine-form-strip,
+  .liquid-engine-form-strip-compact {
+    grid-template-columns: 1fr;
+  }
+
+  .liquid-engine-context-column {
+    position: static;
+  }
+}
+
+@media (max-width: 760px) {
+  .liquid-engine-stage-head,
+  .liquid-engine-summary-head,
+  .liquid-engine-inline-head,
+  .liquid-engine-toolbar,
+  .liquid-engine-context-topline,
+  .liquid-engine-context-actions,
+  .liquid-engine-kpi-legend {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .liquid-engine-search {
+    min-width: 0;
+    width: 100%;
+  }
+}
+

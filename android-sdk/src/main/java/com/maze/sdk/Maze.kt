@@ -24,6 +24,9 @@ import java.lang.ref.WeakReference
 import java.time.Instant
 import java.util.UUID
 import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.ConcurrentHashMap
+import org.json.JSONArray
+import org.json.JSONObject
 
 private val recommendedBlockedCaptureScreens: Set<String> = setOf(
     "login",
@@ -51,6 +54,48 @@ data class MazeEvent(
     val metadata: Map<String, String>
 )
 
+data class MazeLiquidRequest(
+    val screenKey: String,
+    val locale: String? = null,
+    val subjectId: String? = null,
+    val platform: String = "android",
+    val appVersion: String? = null,
+    val country: String? = null,
+    val traits: Map<String, String> = emptyMap()
+)
+
+data class MazeLiquidExperimentAssignment(
+    val experimentKey: String,
+    val arm: String
+)
+
+data class MazeLiquidResolvedItem(
+    val key: String,
+    val text: String,
+    val icon: String?,
+    val visibility: String,
+    val emphasis: String,
+    val ordering: Int,
+    val locale: String,
+    val source: String,
+    val experiment: MazeLiquidExperimentAssignment?
+)
+
+data class MazeLiquidBundle(
+    val screenKey: String,
+    val stage: String,
+    val revision: Int,
+    val etag: String,
+    val ttlSeconds: Int,
+    val generatedAt: String,
+    val items: List<MazeLiquidResolvedItem>
+)
+
+private data class CachedLiquidBundle(
+    val bundle: MazeLiquidBundle,
+    val expiresAtMillis: Long
+)
+
 object MazeSession {
     private var sessionId: String = UUID.randomUUID().toString()
 
@@ -64,6 +109,7 @@ object MazeSession {
 private class NetworkClient(
     private val endpoint: String,
     private val screenshotEndpoint: String,
+    private val liquidEndpoint: String,
     private val apiKey: String,
     private val client: OkHttpClient = OkHttpClient()
 ) {
@@ -146,6 +192,65 @@ private class NetworkClient(
             tempFile.delete()
         }
     }
+
+    fun resolveLiquidBundle(requestPayload: MazeLiquidRequest): MazeLiquidBundle {
+        val requestJson = JSONObject().apply {
+            put("screenKey", requestPayload.screenKey)
+            put("locale", requestPayload.locale)
+            put("subjectId", requestPayload.subjectId)
+            put("platform", requestPayload.platform)
+            put("appVersion", requestPayload.appVersion)
+            put("country", requestPayload.country)
+            put(
+                "traits",
+                JSONObject().apply {
+                    requestPayload.traits.forEach { (key, value) -> put(key, value) }
+                }
+            )
+        }
+
+        val request = Request.Builder()
+            .url(liquidEndpoint)
+            .addHeader("X-API-Key", apiKey)
+            .post(requestJson.toString().toRequestBody("application/json".toMediaType()))
+            .build()
+
+        client.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) {
+                error("Failed to resolve Liquid bundle: ${response.code}")
+            }
+            val payload = JSONObject(response.body?.string().orEmpty())
+            val items = payload.optJSONArray("items") ?: JSONArray()
+            return MazeLiquidBundle(
+                screenKey = payload.optString("screenKey"),
+                stage = payload.optString("stage"),
+                revision = payload.optInt("revision"),
+                etag = payload.optString("etag"),
+                ttlSeconds = payload.optInt("ttlSeconds"),
+                generatedAt = payload.optString("generatedAt"),
+                items = (0 until items.length()).map { index ->
+                    val item = items.getJSONObject(index)
+                    val experimentPayload = item.optJSONObject("experiment")
+                    MazeLiquidResolvedItem(
+                        key = item.optString("key"),
+                        text = item.optString("text"),
+                        icon = item.optString("icon").takeIf { it.isNotBlank() },
+                        visibility = item.optString("visibility", "visible"),
+                        emphasis = item.optString("emphasis", "medium"),
+                        ordering = item.optInt("ordering"),
+                        locale = item.optString("locale"),
+                        source = item.optString("source"),
+                        experiment = experimentPayload?.let {
+                            MazeLiquidExperimentAssignment(
+                                experimentKey = it.optString("experimentKey"),
+                                arm = it.optString("arm")
+                            )
+                        }
+                    )
+                }
+            )
+        }
+    }
 }
 
 private class EventQueue(
@@ -198,6 +303,7 @@ data class MazeConfig(
     val apiKey: String,
     val deviceId: String,
     val endpoint: String = "http://10.0.2.2:8000/events",
+    val liquidEndpoint: String = endpoint.replace("/events", "/liquid/runtime/bundles/resolve"),
     val appVersion: String? = null,
     val sessionCaptureEnabled: Boolean = false,
     val screenshotQuality: Int = 72,
@@ -208,6 +314,7 @@ data class MazeConfig(
     val captureBlockedScreens: Set<String> = recommendedBlockedCaptureScreens,
     val captureStatusListener: ((Boolean) -> Unit)? = null,
     val captureEvaluator: ((String?) -> Boolean)? = null,
+    val liquidCacheTtlSeconds: Long = 60,
 )
 
 object ActivityTracker : Application.ActivityLifecycleCallbacks {
@@ -242,6 +349,7 @@ object Maze {
     private var queue: EventQueue? = null
     private var networkClient: NetworkClient? = null
     private val workerScope = CoroutineScope(Dispatchers.IO)
+    private val liquidCache = ConcurrentHashMap<String, CachedLiquidBundle>()
 
     @Volatile private var sessionCaptureEnabled: Boolean = false
     @Volatile private var captureAllowedScreens: Set<String>? = null
@@ -260,7 +368,7 @@ object Maze {
         if (config.application != null) {
             ActivityTracker.attach(config.application)
         }
-        networkClient = NetworkClient(config.endpoint, config.screenshotEndpoint, config.apiKey)
+        networkClient = NetworkClient(config.endpoint, config.screenshotEndpoint, config.liquidEndpoint, config.apiKey)
         queue = EventQueue(requireNotNull(networkClient))
         captureStatusListener?.invoke(sessionCaptureEnabled)
     }
@@ -310,6 +418,53 @@ object Maze {
         workerScope.launch {
             enqueueEvent(activeConfig, activeQueue, event, screen ?: currentScreen, elementId, metadata, x, y, null)
         }
+    }
+
+    fun resolveLiquidBundle(
+        screen: String,
+        locale: String? = null,
+        subjectId: String? = null,
+        country: String? = null,
+        traits: Map<String, String> = emptyMap(),
+        onComplete: (Result<MazeLiquidBundle>) -> Unit
+    ) {
+        val activeConfig = requireNotNull(config) { "Call Maze.configure(MazeConfig) before resolving Liquid bundles." }
+        val client = requireNotNull(networkClient) { "Network client is not initialized." }
+        val cacheKey = listOf(screen, locale.orEmpty(), subjectId.orEmpty(), country.orEmpty(), traits.entries.sortedBy { it.key }.joinToString("|") { "${it.key}=${it.value}" }).joinToString("::")
+        val now = System.currentTimeMillis()
+        liquidCache[cacheKey]?.takeIf { it.expiresAtMillis > now }?.let {
+            onComplete(Result.success(it.bundle))
+            return
+        }
+
+        workerScope.launch {
+            val result = runCatching {
+                client.resolveLiquidBundle(
+                    MazeLiquidRequest(
+                        screenKey = screen,
+                        locale = locale,
+                        subjectId = subjectId,
+                        platform = "android",
+                        appVersion = activeConfig.appVersion,
+                        country = country,
+                        traits = traits
+                    )
+                )
+            }
+            withContext(Dispatchers.Main) {
+                result.onSuccess { bundle ->
+                    val ttlSeconds = if (bundle.ttlSeconds > 0) bundle.ttlSeconds.toLong() else activeConfig.liquidCacheTtlSeconds
+                    liquidCache[cacheKey] = CachedLiquidBundle(bundle, System.currentTimeMillis() + (ttlSeconds * 1000))
+                    onComplete(Result.success(bundle))
+                }.onFailure {
+                    onComplete(Result.failure(it))
+                }
+            }
+        }
+    }
+
+    fun clearLiquidCache() {
+        liquidCache.clear()
     }
 
     private fun shouldCapture(screen: String?): Boolean {

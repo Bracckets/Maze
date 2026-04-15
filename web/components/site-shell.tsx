@@ -22,6 +22,7 @@ export async function SiteShell({
   const navLinks = [
     { href: "/dashboard", label: messages.nav.dashboard, public: false },
     { href: "/usage", label: messages.nav.usage, public: false },
+    { href: "/liquid", label: messages.nav.liquid, public: false },
     { href: "/heatmap", label: messages.nav.heatmap, public: false },
     { href: "/pricing", label: messages.nav.pricing, public: true },
     { href: "/docs", label: messages.nav.docs, public: true },
@@ -92,10 +93,12 @@ export async function SiteShell({
 export async function DashboardShell({
   title,
   subtitle,
+  headerAction,
   children,
 }: {
   title: string;
   subtitle: string;
+  headerAction?: ReactNode;
   aside?: ReactNode;
   children: ReactNode;
 }) {
@@ -104,6 +107,7 @@ export async function DashboardShell({
   const navItems = [
     { href: "/dashboard", label: messages.nav.dashboard },
     { href: "/usage", label: messages.nav.usage },
+    { href: "/liquid", label: messages.nav.liquid },
     { href: "/heatmap", label: messages.nav.heatmap },
     { href: "/settings", label: messages.nav.settings },
     { href: "/profile", label: messages.nav.profile },
@@ -191,8 +195,11 @@ export async function DashboardShell({
           ]}
         />
         <div className="page-header">
-          <h1 className="page-title">{title}</h1>
-          <p className="page-subtitle">{subtitle}</p>
+          <div>
+            <h1 className="page-title">{title}</h1>
+            <p className="page-subtitle">{subtitle}</p>
+          </div>
+          {headerAction ? <div className="page-header-action">{headerAction}</div> : null}
         </div>
         {children}
       </main>

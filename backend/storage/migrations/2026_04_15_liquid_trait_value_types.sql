@@ -1,0 +1,6 @@
+BEGIN;
+
+ALTER TABLE liquid_profile_traits
+ADD COLUMN IF NOT EXISTS value_type TEXT NOT NULL DEFAULT 'text';
+
+COMMIT;

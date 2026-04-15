@@ -10,6 +10,7 @@ from app.routes.auth import router as auth_router
 from app.routes.events import router as events_router
 from app.routes.integrations import router as integrations_router
 from app.routes.insights import router as insights_router
+from app.routes.liquid import router as liquid_router
 from app.routes.screenshots import router as screenshots_router
 from app.routes.usage import router as usage_router
 from app.routes.workspace import router as workspace_router
@@ -38,6 +39,7 @@ app.include_router(events_router)
 app.include_router(insights_router)
 app.include_router(workspace_router)
 app.include_router(integrations_router)
+app.include_router(liquid_router)
 app.include_router(usage_router)
 app.include_router(screenshots_router)
 

@@ -26,6 +26,7 @@ public struct MazeConfig: Sendable {
     public let deviceId: String
     public let endpoint: URL
     public let screenshotEndpoint: URL
+    public let liquidEndpoint: URL
     public let appVersion: String?
     public let sessionCaptureEnabled: Bool
     public let screenshotQuality: CGFloat
@@ -34,11 +35,13 @@ public struct MazeConfig: Sendable {
     public let captureBlockedScreens: [String]
     public let captureStatusHandler: (@Sendable (Bool) -> Void)?
     public let captureEvaluator: (@Sendable (String?) -> Bool)?
+    public let liquidCacheTTLSeconds: TimeInterval
 
     public init(
         apiKey: String,
         deviceId: String,
         endpoint: URL = URL(string: "http://127.0.0.1:8000/events")!,
+        liquidEndpoint: URL? = nil,
         appVersion: String? = nil,
         sessionCaptureEnabled: Bool = false,
         screenshotQuality: CGFloat = 0.72,
@@ -46,12 +49,14 @@ public struct MazeConfig: Sendable {
         captureAllowedScreens: [String]? = nil,
         captureBlockedScreens: [String] = MazeConfig.recommendedBlockedScreens,
         captureStatusHandler: (@Sendable (Bool) -> Void)? = nil,
-        captureEvaluator: (@Sendable (String?) -> Bool)? = nil
+        captureEvaluator: (@Sendable (String?) -> Bool)? = nil,
+        liquidCacheTTLSeconds: TimeInterval = 60
     ) {
         self.apiKey = apiKey
         self.deviceId = deviceId
         self.endpoint = endpoint
         self.screenshotEndpoint = endpoint.deletingLastPathComponent().appendingPathComponent("screenshots")
+        self.liquidEndpoint = liquidEndpoint ?? endpoint.deletingLastPathComponent().appendingPathComponent("liquid/runtime/bundles/resolve")
         self.appVersion = appVersion
         self.sessionCaptureEnabled = sessionCaptureEnabled
         self.screenshotQuality = screenshotQuality
@@ -60,6 +65,7 @@ public struct MazeConfig: Sendable {
         self.captureBlockedScreens = captureBlockedScreens
         self.captureStatusHandler = captureStatusHandler
         self.captureEvaluator = captureEvaluator
+        self.liquidCacheTTLSeconds = liquidCacheTTLSeconds
     }
 }
 
@@ -95,6 +101,61 @@ public struct MazeEvent: Codable {
         case screenshotId = "screenshot_id"
         case metadata
     }
+}
+
+public struct MazeLiquidRequest: Encodable, Sendable {
+    public let screenKey: String
+    public let locale: String?
+    public let subjectId: String?
+    public let platform: String
+    public let appVersion: String?
+    public let country: String?
+    public let traits: [String: String]
+
+    public init(
+        screenKey: String,
+        locale: String? = nil,
+        subjectId: String? = nil,
+        platform: String = "ios",
+        appVersion: String? = nil,
+        country: String? = nil,
+        traits: [String: String] = [:]
+    ) {
+        self.screenKey = screenKey
+        self.locale = locale
+        self.subjectId = subjectId
+        self.platform = platform
+        self.appVersion = appVersion
+        self.country = country
+        self.traits = traits
+    }
+}
+
+public struct MazeLiquidExperimentAssignment: Codable, Sendable {
+    public let experimentKey: String
+    public let arm: String
+}
+
+public struct MazeLiquidResolvedItem: Codable, Sendable {
+    public let key: String
+    public let text: String
+    public let icon: String?
+    public let visibility: String
+    public let emphasis: String
+    public let ordering: Int
+    public let locale: String
+    public let source: String
+    public let experiment: MazeLiquidExperimentAssignment?
+}
+
+public struct MazeLiquidBundle: Codable, Sendable {
+    public let screenKey: String
+    public let stage: String
+    public let revision: Int
+    public let etag: String
+    public let ttlSeconds: Int
+    public let generatedAt: String
+    public let items: [MazeLiquidResolvedItem]
 }
 
 actor NetworkClient {
@@ -154,6 +215,16 @@ actor NetworkClient {
             return screenshotId
         }
         throw NSError(domain: "Maze", code: 1, userInfo: [NSLocalizedDescriptionKey: "screenshot_id missing in response"])
+    }
+
+    func resolveLiquidBundle(requestPayload: MazeLiquidRequest) async throws -> MazeLiquidBundle {
+        var request = URLRequest(url: config.liquidEndpoint)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(config.apiKey, forHTTPHeaderField: "X-API-Key")
+        request.httpBody = try JSONEncoder().encode(requestPayload)
+        let (data, _) = try await session.data(for: request)
+        return try JSONDecoder().decode(MazeLiquidBundle.self, from: data)
     }
 }
 
@@ -235,6 +306,7 @@ private final class MazeClient: @unchecked Sendable {
     private var captureBlockedScreens = Set<String>()
     private var captureEvaluator: (@Sendable (String?) -> Bool)?
     private var captureStatusHandler: (@Sendable (Bool) -> Void)?
+    private var liquidCache: [String: (expiresAt: Date, bundle: MazeLiquidBundle)] = [:]
 
     private init() {}
 
@@ -249,6 +321,7 @@ private final class MazeClient: @unchecked Sendable {
         captureBlockedScreens = Set(config.captureBlockedScreens)
         captureEvaluator = config.captureEvaluator
         captureStatusHandler = config.captureStatusHandler
+        liquidCache.removeAll()
         lock.unlock()
         config.captureStatusHandler?(config.sessionCaptureEnabled)
     }
@@ -339,12 +412,77 @@ private final class MazeClient: @unchecked Sendable {
         }
     }
 
+    func resolveLiquidBundle(
+        screen: String,
+        locale: String? = nil,
+        subjectId: String? = nil,
+        country: String? = nil,
+        traits: [String: String] = [:],
+        completion: @escaping @Sendable (Result<MazeLiquidBundle, Error>) -> Void
+    ) {
+        guard let snapshot = liquidSnapshot() else {
+            assertionFailure("Call Maze.configure(MazeConfig) before resolving Liquid bundles.")
+            return
+        }
+        let cacheKey = [
+            screen,
+            locale ?? "",
+            subjectId ?? "",
+            country ?? "",
+            traits.keys.sorted().map { "\($0)=\(traits[$0] ?? "")" }.joined(separator: "|"),
+        ].joined(separator: "::")
+
+        lock.lock()
+        if let cached = liquidCache[cacheKey], cached.expiresAt > Date() {
+            lock.unlock()
+            completion(.success(cached.bundle))
+            return
+        }
+        lock.unlock()
+
+        Task {
+            do {
+                let bundle = try await snapshot.client.resolveLiquidBundle(
+                    requestPayload: MazeLiquidRequest(
+                        screenKey: screen,
+                        locale: locale,
+                        subjectId: subjectId,
+                        platform: "ios",
+                        appVersion: snapshot.config.appVersion,
+                        country: country,
+                        traits: traits
+                    )
+                )
+                let ttl = bundle.ttlSeconds > 0 ? TimeInterval(bundle.ttlSeconds) : snapshot.config.liquidCacheTTLSeconds
+                lock.lock()
+                liquidCache[cacheKey] = (expiresAt: Date().addingTimeInterval(ttl), bundle: bundle)
+                lock.unlock()
+                completion(.success(bundle))
+            } catch {
+                completion(.failure(error))
+            }
+        }
+    }
+
+    func clearLiquidCache() {
+        lock.lock()
+        liquidCache.removeAll()
+        lock.unlock()
+    }
+
     private func snapshot(screenOverride: String?) -> (config: MazeConfig, queue: EventQueue, screen: String?, captureEnabled: Bool)? {
         lock.lock()
         defer { lock.unlock() }
         guard let config, let queue else { return nil }
         let activeScreen = screenOverride ?? currentScreen
         return (config, queue, activeScreen, shouldCapture(screen: activeScreen))
+    }
+
+    private func liquidSnapshot() -> (config: MazeConfig, client: NetworkClient)? {
+        lock.lock()
+        defer { lock.unlock() }
+        guard let config else { return nil }
+        return (config, NetworkClient(config: config))
     }
 
     private func shouldCapture(screen: String?) -> Bool {
@@ -460,5 +598,27 @@ public enum Maze {
 
     public static func setScreenCaptureEnabled(_ enabled: Bool, for screen: String) {
         MazeClient.shared.setScreenCaptureEnabled(enabled, for: screen)
+    }
+
+    public static func resolveLiquidBundle(
+        screen: String,
+        locale: String? = nil,
+        subjectId: String? = nil,
+        country: String? = nil,
+        traits: [String: String] = [:],
+        completion: @escaping @Sendable (Result<MazeLiquidBundle, Error>) -> Void
+    ) {
+        MazeClient.shared.resolveLiquidBundle(
+            screen: screen,
+            locale: locale,
+            subjectId: subjectId,
+            country: country,
+            traits: traits,
+            completion: completion
+        )
+    }
+
+    public static func clearLiquidCache() {
+        MazeClient.shared.clearLiquidCache()
     }
 }

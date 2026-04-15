@@ -63,6 +63,7 @@ export type SessionSummary = {
 export const navLinks = [
   { href: "/dashboard", label: "Dashboard", public: false },
   { href: "/usage", label: "Usage", public: false },
+  { href: "/liquid", label: "Liquid", public: false },
   { href: "/heatmap", label: "Heatmap", public: false },
   { href: "/pricing", label: "Pricing", public: true },
   { href: "/docs", label: "Docs", public: true },

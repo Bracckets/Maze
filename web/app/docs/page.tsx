@@ -6,12 +6,46 @@ import { getRequestLocale } from "@/lib/i18n-server";
 
 const sections = [
   {
+    id: "liquid-workflow",
+    title: "Liquid workflow",
+    content: [
+      {
+        type: "p",
+        text: "Liquid works best when you use it in this order: Summary, Message, Screen, Audience, then Go live.",
+      },
+      {
+        type: "p",
+        text: "1. Summary: check what already exists, what is selected, and what would be served if you published now.",
+      },
+      {
+        type: "p",
+        text: "2. Message: create one reusable piece of text, give it a stable ID, and add the versions your app can return. Start with the default version first.",
+      },
+      {
+        type: "p",
+        text: "3. Screen: add the messages that belong to one app screen. This is the set the client fetches together at runtime.",
+      },
+      {
+        type: "p",
+        text: "4. Audience: only use this when the message should change for a specific user group, app state, or test. Groups describe who, Rules describe when, and Tests split traffic.",
+      },
+      {
+        type: "p",
+        text: "5. Go live: run preview with realistic request data, inspect the exact response, then publish the message first and the screen second.",
+      },
+      {
+        type: "p",
+        text: "Practical tip: keep most messages simple. Use the Audience step sparingly so the live behavior stays easy to reason about.",
+      },
+    ],
+  },
+  {
     id: "quickstart",
     title: "Quick start",
     content: [
       {
         type: "p",
-        text: "The fastest way to get started: sign in, hand your coding agent the MAZE_INTEGRATION.md file from the repo, and it will instrument your app automatically.",
+        text: "The fastest way to get started: sign in, hand your coding agent the MAZE_INTEGRATION.md file from the repo, and it will wire Maze analytics plus Liquid runtime bundles through one integration path.",
       },
       {
         type: "code",
@@ -29,7 +63,7 @@ implementation("com.maze:sdk:1.0.0")`,
     content: [
       {
         type: "p",
-        text: "Initialize Maze once at app launch — in AppDelegate, your SwiftUI @main struct, or your Application subclass on Android. Use your workspace API key from the Settings page.",
+        text: "Initialize Maze once at app launch — in AppDelegate, your SwiftUI @main struct, or your Application subclass on Android. Use your workspace API key from the Settings page. Maze continues to handle telemetry, while Liquid rides on the same workspace key for runtime content.",
       },
       {
         type: "code",
@@ -39,6 +73,38 @@ Maze.initialize(apiKey: "YOUR_API_KEY")
 
 // Android
 Maze.initialize(context, "YOUR_API_KEY")`,
+      },
+    ],
+  },
+  {
+    id: "liquid-runtime",
+    title: "Liquid runtime bundles",
+    content: [
+      {
+        type: "p",
+        text: "Define stable keys and screen bundles in Maze, then resolve a bundle at runtime with one request. Liquid returns text plus safe attributes like icon, visibility, emphasis, and ordering.",
+      },
+      {
+        type: "code",
+        text: `// iOS
+Maze.resolveLiquidBundle(
+    screen: "checkout_paywall",
+    locale: "en-US",
+    subjectId: userId,
+    traits: ["plan": "growth"]
+) { result in
+    // render result.items
+}
+
+// Android
+Maze.resolveLiquidBundle(
+    screen = "checkout_paywall",
+    locale = "en-US",
+    subjectId = userId,
+    traits = mapOf("plan" to "growth")
+) { result ->
+    // render result.getOrNull()?.items
+}`,
       },
     ],
   },
@@ -101,12 +167,19 @@ Maze.track(event: "error_message", screen: "kyc_form", elementId: "email_field")
       },
       {
         type: "code",
-        text: `POST /events      # Ingest session events from SDKs
-GET  /insights    # AI-generated friction insights
-GET  /issues      # Detected UX issues
-GET  /sessions    # Session list with metadata
-GET  /health      # Liveness check
-GET  /ready       # Readiness check (includes DB connectivity)`,
+        text: `POST /events                         # Ingest session events from SDKs
+POST /liquid/runtime/bundles/resolve # Resolve a published Liquid bundle
+POST /liquid/preview/bundles/resolve # Preview a draft Liquid bundle
+GET  /liquid/keys                    # Manage content keys
+GET  /liquid/bundles                 # Manage screen bundles
+GET  /liquid/segments                # Audience segments
+GET  /liquid/rules                   # Request rules
+GET  /liquid/experiments             # Runtime experiments
+GET  /insights                       # Friction insights
+GET  /issues                         # Detected UX issues
+GET  /sessions                       # Session list with metadata
+GET  /health                         # Liveness check
+GET  /ready                          # Readiness check (includes DB connectivity)`,
       },
     ],
   },
