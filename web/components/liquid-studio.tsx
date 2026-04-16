@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, startTransition, useDeferredValue, useState, type ReactNode } from "react";
+import { Fragment, startTransition, useDeferredValue, useState, type CSSProperties, type ReactNode } from "react";
 
 import { Tag } from "@/components/ui";
 import type {
@@ -39,9 +39,16 @@ type TraitDraft = {
   enabled: boolean;
 };
 
+type TraitValueType = TraitDraft["valueType"];
+
 type ProfileDraftRow = {
   traitKey: string;
+  valueType: TraitValueType;
   value: string;
+  intValue: string;
+  minValue: string;
+  maxValue: string;
+  boolValue: "" | "true" | "false";
 };
 
 type ProfileDraft = {
@@ -80,6 +87,19 @@ type ProfileShare = {
   tone: string;
 };
 
+type TraitComposerState = {
+  targetProfileId: string | "create";
+  traitKey: string;
+  row: ProfileDraftRow;
+  replaceIndex: number | null;
+  originalRow: ProfileDraftRow | null;
+};
+
+type SelectOption = {
+  value: string;
+  label: string;
+};
+
 const TABS: Array<{ id: LiquidTab; label: string }> = [
   { id: "keys", label: "Keys" },
   { id: "rules", label: "Rules" },
@@ -88,12 +108,17 @@ const TABS: Array<{ id: LiquidTab; label: string }> = [
 ];
 
 const PROFILE_COLORS = ["#7fb6ff", "#6ef2c0", "#f9c56d", "#c6a8ff", "#ff8ba7"];
-const TRAIT_VALUE_TYPES: Array<{ value: TraitDraft["valueType"]; label: string }> = [
+const TRAIT_VALUE_TYPES: Array<{ value: TraitValueType; label: string }> = [
   { value: "text", label: "Text" },
   { value: "int", label: "Integer" },
   { value: "range", label: "Range" },
   { value: "boolean", label: "Boolean" },
   { value: "select", label: "Select" },
+];
+
+const BOOLEAN_OPTIONS: SelectOption[] = [
+  { value: "true", label: "True" },
+  { value: "false", label: "False" },
 ];
 
 function emptyKeyDraft(screenKey = ""): KeyDraft {
@@ -106,6 +131,10 @@ function emptyTraitDraft(): TraitDraft {
 
 function emptyProfileDraft(): ProfileDraft {
   return { id: null, profileKey: "", name: "", description: "", enabled: true, traits: [] };
+}
+
+function emptyProfileDraftRow(valueType: TraitValueType = "text"): ProfileDraftRow {
+  return { traitKey: "", valueType, value: "", intValue: "", minValue: "", maxValue: "", boolValue: "" };
 }
 
 function emptyVariantDraft(keyId = "", profileId = "", locale = "en"): VariantDraft {
@@ -271,7 +300,92 @@ function buildProfileDraft(profile: LiquidProfile | null): ProfileDraft {
     name: profile.name,
     description: profile.description ?? "",
     enabled: profile.enabled,
-    traits: profile.traits.map((trait) => ({ traitKey: trait.traitKey, value: trait.value })),
+    traits: profile.traits.map((trait) => ({
+      traitKey: trait.traitKey,
+      valueType: trait.valueType,
+      value: trait.value ?? "",
+      intValue: trait.intValue == null ? "" : String(trait.intValue),
+      minValue: trait.minValue == null ? "" : String(trait.minValue),
+      maxValue: trait.maxValue == null ? "" : String(trait.maxValue),
+      boolValue: trait.boolValue == null ? "" : trait.boolValue ? "true" : "false",
+    })),
+  };
+}
+
+function formatProfileTraitDisplayValue(trait: LiquidProfile["traits"][number]) {
+  return trait.displayValue || trait.value || "No value";
+}
+
+function hasDraftProfileTraitValue(row: ProfileDraftRow) {
+  return Boolean(
+    row.traitKey.trim() ||
+      row.value.trim() ||
+      row.intValue.trim() ||
+      row.minValue.trim() ||
+      row.maxValue.trim() ||
+      row.boolValue,
+  );
+}
+
+function buildProfileTraitRowForTrait(trait: LiquidTraitDefinition, existingRow?: ProfileDraftRow | null) {
+  return existingRow
+    ? { ...existingRow, traitKey: trait.traitKey, valueType: trait.valueType }
+    : { ...emptyProfileDraftRow(trait.valueType), traitKey: trait.traitKey, valueType: trait.valueType };
+}
+
+function normalizeKeyDraftValue(draft: KeyDraft) {
+  return {
+    id: draft.id,
+    key: draft.key.trim(),
+    screenKey: draft.screenKey,
+    defaultText: draft.defaultText,
+    locale: draft.locale.trim(),
+    enabled: draft.enabled,
+  };
+}
+
+function normalizeTraitDraftValue(draft: TraitDraft) {
+  return {
+    id: draft.id,
+    traitKey: draft.traitKey.trim(),
+    label: draft.label.trim(),
+    description: draft.description.trim(),
+    valueType: draft.valueType,
+    enabled: draft.enabled,
+  };
+}
+
+function normalizeProfileDraftRowValue(row: ProfileDraftRow) {
+  return {
+    traitKey: row.traitKey.trim(),
+    valueType: row.valueType,
+    value: row.value.trim(),
+    intValue: row.intValue.trim(),
+    minValue: row.minValue.trim(),
+    maxValue: row.maxValue.trim(),
+    boolValue: row.boolValue,
+  };
+}
+
+function normalizeProfileDraftValue(draft: ProfileDraft) {
+  return {
+    id: draft.id,
+    profileKey: draft.profileKey.trim(),
+    name: draft.name.trim(),
+    description: draft.description.trim(),
+    enabled: draft.enabled,
+    traits: draft.traits.map(normalizeProfileDraftRowValue),
+  };
+}
+
+function normalizeVariantDraftValue(draft: VariantDraft) {
+  return {
+    id: draft.id,
+    keyId: draft.keyId,
+    profileId: draft.profileId,
+    locale: draft.locale.trim(),
+    text: draft.text,
+    enabled: draft.enabled,
   };
 }
 
@@ -325,6 +439,14 @@ function profileShares(profiles: LiquidProfile[], details: Record<string, Liquid
   return values.map((item) => ({ ...item, value: Math.round((item.value / total) * 100) }));
 }
 
+function profileAccent(profileId: string) {
+  let hash = 0;
+  for (const character of profileId) {
+    hash = (hash * 31 + character.charCodeAt(0)) >>> 0;
+  }
+  return PROFILE_COLORS[hash % PROFILE_COLORS.length];
+}
+
 function PieChart({ shares }: { shares: ProfileShare[] }) {
   const stops: string[] = [];
   let current = 0;
@@ -356,6 +478,133 @@ function SectionTitle({ title, body, eyebrow }: { title: string; body?: string; 
   );
 }
 
+function LiquidSelect({
+  value,
+  options,
+  onChange,
+  placeholder = "Choose option",
+  disabled = false,
+  compact = false,
+}: {
+  value: string;
+  options: SelectOption[];
+  onChange: (value: string) => void;
+  placeholder?: string;
+  disabled?: boolean;
+  compact?: boolean;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const selected = options.find((option) => option.value === value) ?? null;
+
+  return (
+    <div
+      className={`surface-select liquid-ops-select ${compact ? "liquid-ops-select-compact" : ""}`.trim()}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+          setIsOpen(false);
+        }
+      }}
+    >
+      <button
+        aria-expanded={isOpen}
+        aria-haspopup="listbox"
+        className={`surface-select-trigger liquid-ops-select-trigger ${isOpen ? "open" : ""}`.trim()}
+        disabled={disabled}
+        type="button"
+        onClick={() => {
+          if (!disabled) setIsOpen((open) => !open);
+        }}
+      >
+        <span className="surface-select-value">{selected?.label ?? placeholder}</span>
+        <span className="surface-select-chevron" aria-hidden="true">▾</span>
+      </button>
+      {isOpen ? (
+        <div className="surface-select-popover liquid-ops-select-popover" role="listbox">
+          {options.map((option) => (
+            <button
+              key={option.value}
+              className={`surface-select-option ${option.value === value ? "active" : ""}`.trim()}
+              role="option"
+              type="button"
+              onClick={() => {
+                onChange(option.value);
+                setIsOpen(false);
+              }}
+            >
+              <span>{option.label}</span>
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function ProfileTraitValueInput({
+  row,
+  trait,
+  onChange,
+}: {
+  row: ProfileDraftRow;
+  trait: LiquidTraitDefinition | null;
+  onChange: (patch: Partial<ProfileDraftRow>) => void;
+}) {
+  const valueType = trait?.valueType ?? row.valueType;
+  if (!row.traitKey) {
+    return <input className="liquid-ops-input liquid-ops-table-input" placeholder="Choose a trait first" disabled />;
+  }
+  if (valueType === "range") {
+    return (
+      <div className="liquid-ops-inline-trait-range">
+        <input
+          className="liquid-ops-input liquid-ops-table-input"
+          inputMode="decimal"
+          value={row.minValue}
+          onChange={(event) => onChange({ minValue: event.target.value })}
+          placeholder="Min"
+        />
+        <input
+          className="liquid-ops-input liquid-ops-table-input"
+          inputMode="decimal"
+          value={row.maxValue}
+          onChange={(event) => onChange({ maxValue: event.target.value })}
+          placeholder="Max"
+        />
+      </div>
+    );
+  }
+  if (valueType === "boolean") {
+    return (
+      <LiquidSelect
+        compact
+        value={row.boolValue}
+        options={BOOLEAN_OPTIONS}
+        placeholder="True or false"
+        onChange={(nextValue) => onChange({ boolValue: nextValue as ProfileDraftRow["boolValue"] })}
+      />
+    );
+  }
+  if (valueType === "int") {
+    return (
+      <input
+        className="liquid-ops-input liquid-ops-table-input"
+        inputMode="numeric"
+        value={row.intValue}
+        onChange={(event) => onChange({ intValue: event.target.value })}
+        placeholder="42"
+      />
+    );
+  }
+  return (
+    <input
+      className="liquid-ops-input liquid-ops-table-input"
+      value={row.value}
+      onChange={(event) => onChange({ value: event.target.value })}
+      placeholder={valueType === "select" ? "Option value" : "Value"}
+    />
+  );
+}
+
 export function LiquidStudio({
   initialKeys,
   initialKeyDetails,
@@ -371,30 +620,33 @@ export function LiquidStudio({
   );
   const [profiles, setProfiles] = useState(initialProfiles);
   const [traits, setTraits] = useState(initialTraits);
-  const [selectedKeyId, setSelectedKeyId] = useState<string | null>(initialKeys[0]?.id ?? null);
-  const [selectedProfileId, setSelectedProfileId] = useState<string | null>(initialProfiles[0]?.id ?? null);
-  const [selectedTraitId, setSelectedTraitId] = useState<string | null>(initialTraits[0]?.id ?? null);
+  const [selectedKeyId, setSelectedKeyId] = useState<string | null>(null);
+  const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
+  const [selectedTraitId, setSelectedTraitId] = useState<string | null>(null);
   const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null);
   const [rulesTab, setRulesTab] = useState<RulesTab>("profiles");
-  const [keyMode, setKeyMode] = useState<"create" | "edit">(initialKeys[0] ? "edit" : "create");
-  const [traitMode, setTraitMode] = useState<"create" | "edit">(initialTraits[0] ? "edit" : "create");
-  const [profileMode, setProfileMode] = useState<"create" | "edit">(initialProfiles[0] ? "edit" : "create");
-  const [variantMode, setVariantMode] = useState<"create" | "edit">("create");
+  const [keyMode, setKeyMode] = useState<"create" | "edit">("edit");
+  const [traitMode, setTraitMode] = useState<"create" | "edit">("edit");
+  const [profileMode, setProfileMode] = useState<"create" | "edit">("edit");
+  const [variantMode, setVariantMode] = useState<"create" | "edit">("edit");
   const [keySearch, setKeySearch] = useState("");
   const [analyticsSearch, setAnalyticsSearch] = useState("");
-  const [keyDraft, setKeyDraft] = useState<KeyDraft>(buildKeyDraft(initialKeyDetails[0] ?? null, sortedObservedScreens));
-  const [traitDraft, setTraitDraft] = useState<TraitDraft>(buildTraitDraft(initialTraits[0] ?? null));
-  const [profileDraft, setProfileDraft] = useState<ProfileDraft>(buildProfileDraft(initialProfiles[0] ?? null));
-  const [variantDraft, setVariantDraft] = useState<VariantDraft>(buildVariantDraft(initialKeyDetails[0] ?? null, initialProfiles[0]?.id ?? null));
+  const [keyDraft, setKeyDraft] = useState<KeyDraft>(emptyKeyDraft(sortedObservedScreens[0] ?? ""));
+  const [traitDraft, setTraitDraft] = useState<TraitDraft>(emptyTraitDraft());
+  const [profileDraft, setProfileDraft] = useState<ProfileDraft>(emptyProfileDraft());
+  const [variantDraft, setVariantDraft] = useState<VariantDraft>(emptyVariantDraft("", "", initialKeyDetails[0]?.defaultLocale ?? "en"));
+  const [draggedTraitKey, setDraggedTraitKey] = useState<string | null>(null);
+  const [profileDropTarget, setProfileDropTarget] = useState<string | "create" | null>(null);
+  const [traitComposer, setTraitComposer] = useState<TraitComposerState | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const deferredKeySearch = useDeferredValue(keySearch);
   const deferredAnalyticsSearch = useDeferredValue(analyticsSearch);
 
-  const activeKeyId = selectedKeyId && keys.some((key) => key.id === selectedKeyId) ? selectedKeyId : keys[0]?.id ?? null;
-  const activeProfileId = selectedProfileId && profiles.some((profile) => profile.id === selectedProfileId) ? selectedProfileId : profiles[0]?.id ?? null;
-  const activeTraitId = selectedTraitId && traits.some((trait) => trait.id === selectedTraitId) ? selectedTraitId : traits[0]?.id ?? null;
+  const activeKeyId = selectedKeyId && keys.some((key) => key.id === selectedKeyId) ? selectedKeyId : null;
+  const activeProfileId = selectedProfileId && profiles.some((profile) => profile.id === selectedProfileId) ? selectedProfileId : null;
+  const activeTraitId = selectedTraitId && traits.some((trait) => trait.id === selectedTraitId) ? selectedTraitId : null;
 
   const selectedKeyDetail = activeKeyId ? detailsById[activeKeyId] ?? null : null;
   const selectedProfile = activeProfileId ? profiles.find((profile) => profile.id === activeProfileId) ?? null : null;
@@ -415,10 +667,60 @@ export function LiquidStudio({
   const shares = profileShares(profiles, detailsById);
   const winners = [...metricRows].sort((a, b) => b.lift - a.lift).slice(0, 3);
   const underperformers = [...metricRows].sort((a, b) => a.lift - b.lift).slice(0, 3);
+  const observedScreenOptions = sortedObservedScreens.map((screen) => ({ value: screen, label: screen }));
+  const keyStatusOptions: SelectOption[] = [
+    { value: "active", label: "Active" },
+    { value: "archived", label: "Archived" },
+  ];
+  const readyStatusOptions: SelectOption[] = [
+    { value: "ready", label: "Draft ready" },
+    { value: "paused", label: "Paused" },
+  ];
+  const activeStatusOptions: SelectOption[] = [
+    { value: "active", label: "Active" },
+    { value: "paused", label: "Paused" },
+  ];
+  const traitDefinitionByKey = new Map(traits.map((trait) => [trait.traitKey, trait]));
+  const keyOptions = keys.map((key) => ({ value: key.id, label: key.key }));
+  const profileOptions = profiles.map((profile) => ({ value: profile.id, label: profile.name }));
+  const keyDraftBaseline = keyMode === "create" ? emptyKeyDraft(sortedObservedScreens[0] ?? "") : buildKeyDraft(selectedKeyDetail, sortedObservedScreens);
+  const traitDraftBaseline = traitMode === "create" ? emptyTraitDraft() : buildTraitDraft(selectedTrait);
+  const profileDraftBaseline = profileMode === "create" ? emptyProfileDraft() : buildProfileDraft(selectedProfile);
+  const variantDraftBaseline =
+    variantMode === "create"
+      ? emptyVariantDraft(activeKeyId ?? "", activeProfileId ?? "", selectedKeyDetail?.defaultLocale ?? "en")
+      : buildVariantDraft(selectedKeyDetail, activeProfileId);
 
   function clearMessages() {
     setNotice(null);
     setError(null);
+  }
+
+  function isKeyDraftDirty() {
+    return JSON.stringify(normalizeKeyDraftValue(keyDraft)) !== JSON.stringify(normalizeKeyDraftValue(keyDraftBaseline));
+  }
+
+  function isTraitDraftDirty() {
+    return JSON.stringify(normalizeTraitDraftValue(traitDraft)) !== JSON.stringify(normalizeTraitDraftValue(traitDraftBaseline));
+  }
+
+  function isProfileDraftDirty(draft: ProfileDraft = profileDraft) {
+    return JSON.stringify(normalizeProfileDraftValue(draft)) !== JSON.stringify(normalizeProfileDraftValue(profileDraftBaseline));
+  }
+
+  function isVariantDraftDirty() {
+    return JSON.stringify(normalizeVariantDraftValue(variantDraft)) !== JSON.stringify(normalizeVariantDraftValue(variantDraftBaseline));
+  }
+
+  function isTraitComposerDirty() {
+    if (!traitComposer) return false;
+    if (!traitComposer.originalRow) return hasDraftProfileTraitValue(traitComposer.row);
+    return JSON.stringify(normalizeProfileDraftRowValue(traitComposer.row)) !== JSON.stringify(normalizeProfileDraftRowValue(traitComposer.originalRow));
+  }
+
+  function resetTraitDragState() {
+    setDraggedTraitKey(null);
+    setProfileDropTarget(null);
   }
 
   function selectKey(keyId: string | null, nextMode: "create" | "edit" = "edit") {
@@ -439,6 +741,103 @@ export function LiquidStudio({
     setProfileMode(profileId ? "edit" : "create");
     const profile = profileId ? profiles.find((item) => item.id === profileId) ?? null : null;
     setProfileDraft(buildProfileDraft(profile));
+    setTraitComposer(null);
+    resetTraitDragState();
+  }
+
+  function closeProfileEditor() {
+    setSelectedProfileId(null);
+    setProfileMode("edit");
+    setProfileDraft(emptyProfileDraft());
+    setTraitComposer(null);
+    resetTraitDragState();
+  }
+
+  function openTraitComposerForTarget(targetProfileId: string | "create", traitKey: string) {
+    const definition = traitDefinitionByKey.get(traitKey);
+    if (!definition) {
+      setError("Create the trait first before using it on a profile.");
+      resetTraitDragState();
+      return;
+    }
+    if (targetProfileId === "create") {
+      const createDraft = profileMode === "create" ? profileDraft : emptyProfileDraft();
+      const existingIndex = createDraft.traits.findIndex((item) => item.traitKey === traitKey);
+      setSelectedProfileId(null);
+      setProfileMode("create");
+      setProfileDraft(createDraft);
+      setTraitComposer({
+        targetProfileId,
+        traitKey,
+        row: buildProfileTraitRowForTrait(definition, existingIndex >= 0 ? createDraft.traits[existingIndex] : null),
+        replaceIndex: existingIndex >= 0 ? existingIndex : null,
+        originalRow: existingIndex >= 0 ? createDraft.traits[existingIndex] : null,
+      });
+      resetTraitDragState();
+      return;
+    }
+    const profile = profiles.find((item) => item.id === targetProfileId) ?? null;
+    if (!profile) {
+      setError("This profile could not be found.");
+      resetTraitDragState();
+      return;
+    }
+    const nextDraft = activeProfileId === profile.id && profileMode === "edit" ? profileDraft : buildProfileDraft(profile);
+    const existingIndex = nextDraft.traits.findIndex((item) => item.traitKey === traitKey);
+    setSelectedProfileId(profile.id);
+    setProfileMode("edit");
+    setProfileDraft(nextDraft);
+    setTraitComposer({
+      targetProfileId,
+      traitKey,
+      row: buildProfileTraitRowForTrait(definition, existingIndex >= 0 ? nextDraft.traits[existingIndex] : null),
+      replaceIndex: existingIndex >= 0 ? existingIndex : null,
+      originalRow: existingIndex >= 0 ? nextDraft.traits[existingIndex] : null,
+    });
+    resetTraitDragState();
+  }
+
+  function buildProfileDraftWithComposer(draft: ProfileDraft, composer: TraitComposerState, definition: LiquidTraitDefinition) {
+    const nextTraits = [...draft.traits];
+    const nextRow = buildProfileTraitRowForTrait(definition, composer.row);
+    if (composer.replaceIndex != null && nextTraits[composer.replaceIndex]) {
+      nextTraits[composer.replaceIndex] = nextRow;
+    } else {
+      const duplicateIndex = nextTraits.findIndex((item) => item.traitKey === composer.traitKey);
+      if (duplicateIndex >= 0) nextTraits[duplicateIndex] = nextRow;
+      else nextTraits.push(nextRow);
+    }
+    return { ...draft, traits: nextTraits };
+  }
+
+  function saveTraitComposer() {
+    if (!traitComposer) return profileDraft;
+    const definition = traitDefinitionByKey.get(traitComposer.traitKey);
+    if (!definition) {
+      setError("This trait is no longer available.");
+      return false;
+    }
+    try {
+      if (!isTraitComposerDirty()) {
+        setTraitComposer(null);
+        clearMessages();
+        return profileDraft;
+      }
+      buildProfileTraitPayload(traitComposer.row);
+      const nextDraft = buildProfileDraftWithComposer(profileDraft, traitComposer, definition);
+      setProfileDraft(nextDraft);
+      setTraitComposer(null);
+      clearMessages();
+      return nextDraft;
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : "Could not add this trait.");
+      return false;
+    }
+  }
+
+  function cancelTraitComposer() {
+    setTraitComposer(null);
+    resetTraitDragState();
   }
 
   function selectVariant(keyId: string | null, profileId: string | null, variantId: string | null = null) {
@@ -459,21 +858,71 @@ export function LiquidStudio({
       return current.map((item) => (item.id === detail.id ? nextSummary : item));
     });
     setSelectedKeyId(detail.id);
+    setKeyDraft(buildKeyDraft(detail, sortedObservedScreens));
+    setKeyMode("edit");
+  }
+
+  function buildProfileTraitPayload(row: ProfileDraftRow) {
+    const traitKey = row.traitKey.trim();
+    if (!traitKey) {
+      if (hasDraftProfileTraitValue(row)) {
+        throw new Error("Choose a trait before entering a profile value.");
+      }
+      return null;
+    }
+    const definition = traitDefinitionByKey.get(traitKey);
+    if (!definition) {
+      throw new Error(`Trait '${traitKey}' must be created before it can be used in a profile.`);
+    }
+    if (definition.valueType === "range") {
+      const minValue = row.minValue.trim();
+      const maxValue = row.maxValue.trim();
+      if (!minValue || !maxValue) {
+        throw new Error(`Trait '${definition.label}' needs both a minimum and maximum value.`);
+      }
+      const parsedMin = Number(minValue);
+      const parsedMax = Number(maxValue);
+      if (!Number.isFinite(parsedMin) || !Number.isFinite(parsedMax)) {
+        throw new Error(`Trait '${definition.label}' needs numeric range values.`);
+      }
+      if (parsedMin > parsedMax) {
+        throw new Error(`Trait '${definition.label}' must use a minimum that is less than or equal to the maximum.`);
+      }
+      return { traitKey, minValue: parsedMin, maxValue: parsedMax };
+    }
+    if (definition.valueType === "boolean") {
+      if (!row.boolValue) {
+        throw new Error(`Trait '${definition.label}' must be set to true or false.`);
+      }
+      return { traitKey, boolValue: row.boolValue === "true" };
+    }
+    if (definition.valueType === "int") {
+      const intValue = row.intValue.trim();
+      if (!/^-?\d+$/.test(intValue)) {
+        throw new Error(`Trait '${definition.label}' needs a whole number.`);
+      }
+      return { traitKey, intValue: Number(intValue) };
+    }
+    const value = row.value.trim();
+    if (!value) {
+      throw new Error(`Trait '${definition.label}' needs a value.`);
+    }
+    return { traitKey, value };
   }
 
   async function saveKey() {
     clearMessages();
     if (!keyDraft.key.trim()) {
       setError("Add a key name before saving.");
-      return;
+      return false;
     }
     if (sortedObservedScreens.length === 0) {
       setError("Liquid needs at least one observed Maze screen before you can create keys.");
-      return;
+      return false;
     }
     if (!keyDraft.screenKey) {
       setError("Choose an observed screen for this key.");
-      return;
+      return false;
     }
     setBusy("key");
     try {
@@ -521,8 +970,10 @@ export function LiquidStudio({
         upsertKeyDetail(updatedDetail);
         setNotice("Key details saved.");
       }
+      return true;
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : "Could not save this key.");
+      return false;
     } finally {
       setBusy(null);
     }
@@ -555,7 +1006,7 @@ export function LiquidStudio({
     clearMessages();
     if (!traitDraft.traitKey.trim() || !traitDraft.label.trim()) {
       setError("Add both a trait key and label.");
-      return;
+      return false;
     }
     setBusy("trait");
     try {
@@ -576,8 +1027,10 @@ export function LiquidStudio({
       setSelectedTraitId(trait.id);
       setTraitMode("edit");
       setNotice(traitDraft.id ? "Trait updated." : "Trait created.");
+      return true;
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : "Could not save this trait.");
+      return false;
     } finally {
       setBusy(null);
     }
@@ -601,25 +1054,29 @@ export function LiquidStudio({
     }
   }
 
-  async function saveProfile() {
+  async function saveProfile(draftOverride?: ProfileDraft) {
+    const nextDraft = draftOverride ?? profileDraft;
     clearMessages();
-    if (!profileDraft.profileKey.trim() || !profileDraft.name.trim()) {
+    if (!nextDraft.profileKey.trim() || !nextDraft.name.trim()) {
       setError("Add a profile key and profile name.");
-      return;
+      return false;
     }
     setBusy("profile");
     try {
+      const traits = nextDraft.traits.reduce<Array<Record<string, unknown>>>((items, trait) => {
+        const payload = buildProfileTraitPayload(trait);
+        if (payload) items.push(payload);
+        return items;
+      }, []);
       const payload = {
-        profileKey: profileDraft.profileKey.trim(),
-        name: profileDraft.name.trim(),
-        description: profileDraft.description.trim() || null,
-        enabled: profileDraft.enabled,
-        traits: profileDraft.traits
-          .filter((trait) => trait.traitKey.trim() && trait.value.trim())
-          .map((trait) => ({ traitKey: trait.traitKey.trim(), value: trait.value.trim() })),
+        profileKey: nextDraft.profileKey.trim(),
+        name: nextDraft.name.trim(),
+        description: nextDraft.description.trim() || null,
+        enabled: nextDraft.enabled,
+        traits,
       };
-      const profile = profileDraft.id
-        ? await requestJson<LiquidProfile>(`/api/liquid/profiles/${profileDraft.id}`, { method: "PUT", body: JSON.stringify(payload) })
+      const profile = nextDraft.id
+        ? await requestJson<LiquidProfile>(`/api/liquid/profiles/${nextDraft.id}`, { method: "PUT", body: JSON.stringify(payload) })
         : await requestJson<LiquidProfile>("/api/liquid/profiles", { method: "POST", body: JSON.stringify(payload) });
       setProfiles((current) => {
         const exists = current.some((item) => item.id === profile.id);
@@ -627,9 +1084,13 @@ export function LiquidStudio({
       });
       setSelectedProfileId(profile.id);
       setProfileMode("edit");
-      setNotice(profileDraft.id ? "Profile updated." : "Profile created.");
+      setTraitComposer(null);
+      resetTraitDragState();
+      setNotice(nextDraft.id ? "Profile updated." : "Profile created.");
+      return true;
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : "Could not save this profile.");
+      return false;
     } finally {
       setBusy(null);
     }
@@ -645,6 +1106,8 @@ export function LiquidStudio({
       setSelectedProfileId(null);
       setProfileMode("create");
       setProfileDraft(emptyProfileDraft());
+      setTraitComposer(null);
+      resetTraitDragState();
       setNotice("Profile removed.");
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : "Could not delete this profile.");
@@ -657,7 +1120,7 @@ export function LiquidStudio({
     clearMessages();
     if (!variantDraft.keyId || !variantDraft.profileId || !variantDraft.text.trim()) {
       setError("Choose a key and profile, then add the resolved copy.");
-      return;
+      return false;
     }
     setBusy("variant");
     try {
@@ -681,8 +1144,10 @@ export function LiquidStudio({
       setSelectedVariantId(nextVariant?.id ?? null);
       setVariantMode(nextVariant ? "edit" : "create");
       setNotice(variantDraft.id ? "Profile copy updated." : "Profile copy created.");
+      return true;
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : "Could not save this profile copy.");
+      return false;
     } finally {
       setBusy(null);
     }
@@ -742,12 +1207,96 @@ export function LiquidStudio({
     });
   }
 
-  function addProfileTraitRow() {
-    setProfileDraft((current) => ({ ...current, traits: [...current.traits, { traitKey: "", value: "" }] }));
-  }
-
   function removeProfileTraitRow(index: number) {
     setProfileDraft((current) => ({ ...current, traits: current.traits.filter((_, itemIndex) => itemIndex !== index) }));
+  }
+
+  async function persistKeyEditor() {
+    if (!isKeyDraftDirty()) return true;
+    return saveKey();
+  }
+
+  async function persistTraitEditor() {
+    if (!isTraitDraftDirty()) return true;
+    return saveTrait();
+  }
+
+  async function persistProfileEditor() {
+    let nextDraft = profileDraft;
+    if (traitComposer) {
+      const composed = saveTraitComposer();
+      if (composed === false) return false;
+      nextDraft = composed;
+    }
+    if (!isProfileDraftDirty(nextDraft)) return true;
+    return saveProfile(nextDraft);
+  }
+
+  async function persistVariantEditor() {
+    if (!isVariantDraftDirty()) return true;
+    return saveVariant();
+  }
+
+  async function persistActiveWorkspace() {
+    if (activeTab === "keys") return persistKeyEditor();
+    if (activeTab === "rules") {
+      if (rulesTab === "traits") return persistTraitEditor();
+      if (rulesTab === "profiles") return persistProfileEditor();
+      if (rulesTab === "variants") return persistVariantEditor();
+    }
+    return true;
+  }
+
+  async function requestActiveTabChange(nextTab: LiquidTab) {
+    if (nextTab === activeTab) return;
+    const didPersist = await persistActiveWorkspace();
+    if (!didPersist) return;
+    startTransition(() => setActiveTab(nextTab));
+  }
+
+  async function requestRulesTabChange(nextTab: RulesTab) {
+    if (nextTab === rulesTab) return;
+    const didPersist = await persistActiveWorkspace();
+    if (!didPersist) return;
+    setRulesTab(nextTab);
+  }
+
+  async function requestSelectKey(keyId: string | null, nextMode: "create" | "edit" = "edit") {
+    const didPersist = await persistKeyEditor();
+    if (!didPersist) return;
+    selectKey(keyId, nextMode);
+  }
+
+  async function requestSelectTrait(traitId: string | null) {
+    const didPersist = await persistTraitEditor();
+    if (!didPersist) return;
+    selectTrait(traitId);
+  }
+
+  async function requestSelectProfile(profileId: string | null) {
+    const didPersist = await persistProfileEditor();
+    if (!didPersist) return;
+    selectProfile(profileId);
+  }
+
+  async function requestSelectVariant(keyId: string | null, profileId: string | null, variantId: string | null = null) {
+    const didPersist = await persistVariantEditor();
+    if (!didPersist) return;
+    selectVariant(keyId, profileId, variantId);
+  }
+
+  async function requestCloseKeyEditor() {
+    const didPersist = await persistKeyEditor();
+    if (!didPersist) return;
+    setSelectedKeyId(null);
+    setKeyMode("edit");
+    setKeyDraft(emptyKeyDraft(sortedObservedScreens[0] ?? ""));
+  }
+
+  async function requestCloseProfileEditor() {
+    const didPersist = await persistProfileEditor();
+    if (!didPersist) return;
+    closeProfileEditor();
   }
 
   function draftProfileVariantRows() {
@@ -760,6 +1309,20 @@ export function LiquidStudio({
         profile: profiles.find((profile) => profile.id === variant.segmentId) ?? null,
       }));
     });
+  }
+
+  function profileVariantCount(profileId: string) {
+    return keys.reduce((count, key) => {
+      const detail = detailsById[key.id] ?? null;
+      return count + (detail?.variants.filter((variant) => variant.stage === "draft" && variant.segmentId === profileId).length ?? 0);
+    }, 0);
+  }
+
+  function closeKeyEditor() {
+    setSelectedKeyId(null);
+    setKeyMode("edit");
+    setKeyDraft(emptyKeyDraft(sortedObservedScreens[0] ?? ""));
+    clearMessages();
   }
 
   function renderKeyEditorPanel(mode: "create" | "edit") {
@@ -785,14 +1348,7 @@ export function LiquidStudio({
               </label>
               <label className="liquid-ops-inline-create-field">
                 <span>Observed screen</span>
-                <select
-                  className="liquid-ops-input liquid-ops-table-input"
-                  value={keyDraft.screenKey}
-                  onChange={(event) => setKeyDraft((current) => ({ ...current, screenKey: event.target.value }))}
-                >
-                  {sortedObservedScreens.length === 0 ? <option value="">No observed screens</option> : null}
-                  {sortedObservedScreens.map((screen) => <option key={screen} value={screen}>{screen}</option>)}
-                </select>
+                <LiquidSelect compact value={keyDraft.screenKey} options={observedScreenOptions} placeholder="Choose screen" onChange={(nextValue) => setKeyDraft((current) => ({ ...current, screenKey: nextValue }))} />
               </label>
               <label className="liquid-ops-inline-create-field">
                 <span>Fallback text</span>
@@ -814,14 +1370,7 @@ export function LiquidStudio({
               </label>
               <label className="liquid-ops-inline-create-field">
                 <span>Status</span>
-                <select
-                  className="liquid-ops-input liquid-ops-table-input"
-                  value={keyDraft.enabled ? "active" : "archived"}
-                  onChange={(event) => setKeyDraft((current) => ({ ...current, enabled: event.target.value === "active" }))}
-                >
-                  <option value="active">Active</option>
-                  <option value="archived">Archived</option>
-                </select>
+                <LiquidSelect compact value={keyDraft.enabled ? "active" : "archived"} options={keyStatusOptions} onChange={(nextValue) => setKeyDraft((current) => ({ ...current, enabled: nextValue === "active" }))} />
               </label>
               <div className="liquid-ops-row-actions liquid-ops-inline-row-actions">
                 <button className="btn btn-primary btn-sm" type="button" onClick={saveKey} disabled={busy === "key"}>Create</button>
@@ -829,9 +1378,7 @@ export function LiquidStudio({
                 className="btn btn-ghost btn-sm"
                 type="button"
                 onClick={() => {
-                  setKeyMode("edit");
-                  setKeyDraft(emptyKeyDraft(sortedObservedScreens[0] ?? ""));
-                  clearMessages();
+                  void requestCloseKeyEditor();
                 }}
               >
                 Close
@@ -855,10 +1402,7 @@ export function LiquidStudio({
           </label>
           <label className="liquid-ops-field">
             <span>Observed screen</span>
-            <select className="liquid-ops-input" value={keyDraft.screenKey} onChange={(event) => setKeyDraft((current) => ({ ...current, screenKey: event.target.value }))}>
-              {sortedObservedScreens.length === 0 ? <option value="">No observed screens</option> : null}
-              {sortedObservedScreens.map((screen) => <option key={screen} value={screen}>{screen}</option>)}
-            </select>
+            <LiquidSelect value={keyDraft.screenKey} options={observedScreenOptions} placeholder="Choose screen" onChange={(nextValue) => setKeyDraft((current) => ({ ...current, screenKey: nextValue }))} />
           </label>
           <div className="liquid-ops-form-split">
             <label className="liquid-ops-field">
@@ -867,10 +1411,7 @@ export function LiquidStudio({
             </label>
             <label className="liquid-ops-field">
               <span>Availability</span>
-              <select className="liquid-ops-input" value={keyDraft.enabled ? "active" : "archived"} onChange={(event) => setKeyDraft((current) => ({ ...current, enabled: event.target.value === "active" }))}>
-                <option value="active">Active</option>
-                <option value="archived">Archived</option>
-              </select>
+              <LiquidSelect value={keyDraft.enabled ? "active" : "archived"} options={keyStatusOptions} onChange={(nextValue) => setKeyDraft((current) => ({ ...current, enabled: nextValue === "active" }))} />
             </label>
           </div>
           <label className="liquid-ops-field">
@@ -903,16 +1444,7 @@ export function LiquidStudio({
             placeholder="checkout.primary_cta"
           />
         </td>
-        <td>
-          <select
-            className="liquid-ops-input liquid-ops-table-input"
-            value={keyDraft.screenKey}
-            onChange={(event) => setKeyDraft((current) => ({ ...current, screenKey: event.target.value }))}
-          >
-            {sortedObservedScreens.length === 0 ? <option value="">No observed screens</option> : null}
-            {sortedObservedScreens.map((screen) => <option key={screen} value={screen}>{screen}</option>)}
-          </select>
-        </td>
+        <td><LiquidSelect compact value={keyDraft.screenKey} options={observedScreenOptions} placeholder="Choose screen" onChange={(nextValue) => setKeyDraft((current) => ({ ...current, screenKey: nextValue }))} /></td>
         <td>
           <input
             className="liquid-ops-input liquid-ops-table-input"
@@ -929,16 +1461,7 @@ export function LiquidStudio({
             placeholder="en"
           />
         </td>
-        <td>
-          <select
-            className="liquid-ops-input liquid-ops-table-input"
-            value={keyDraft.enabled ? "active" : "archived"}
-            onChange={(event) => setKeyDraft((current) => ({ ...current, enabled: event.target.value === "active" }))}
-          >
-            <option value="active">Active</option>
-            <option value="archived">Archived</option>
-          </select>
-        </td>
+        <td><LiquidSelect compact value={keyDraft.enabled ? "active" : "archived"} options={keyStatusOptions} onChange={(nextValue) => setKeyDraft((current) => ({ ...current, enabled: nextValue === "active" }))} /></td>
         <td>
           <div className="liquid-ops-inline-meta">
             <strong>{state}</strong>
@@ -947,12 +1470,269 @@ export function LiquidStudio({
         </td>
         <td>
           <div className="liquid-ops-row-actions liquid-ops-inline-row-actions">
-            <button className="btn btn-primary btn-sm" type="button" onClick={saveKey} disabled={busy === "key"}>Save</button>
             {keyDraft.id ? <button className="btn btn-ghost btn-sm" type="button" onClick={deleteKey} disabled={busy === "key-delete"}>Delete</button> : null}
-            <button className="btn btn-ghost btn-sm" type="button" onClick={() => { setKeyMode("create"); clearMessages(); }}>Close</button>
+            <button className="btn btn-ghost btn-sm" type="button" onClick={requestCloseKeyEditor}>Close</button>
           </div>
         </td>
       </tr>
+    );
+  }
+
+  function renderProfileTraitBuilder(scope: "create" | "edit") {
+    return (
+      <div className="liquid-ops-inline-trait-builder">
+        {profileDraft.traits.map((row, index) => {
+          const trait = traitDefinitionByKey.get(row.traitKey) ?? null;
+          return (
+            <div key={`profile-${scope}-${index}`} className="liquid-ops-inline-trait-row">
+              <div className="liquid-ops-trait-chip">
+                <strong>{trait?.label ?? row.traitKey}</strong>
+                <span>{TRAIT_VALUE_TYPES.find((item) => item.value === (trait?.valueType ?? row.valueType))?.label ?? row.valueType}</span>
+              </div>
+              <ProfileTraitValueInput row={row} trait={trait} onChange={(patch) => updateProfileTrait(index, patch)} />
+              <button className="btn btn-ghost btn-sm" type="button" onClick={() => removeProfileTraitRow(index)}>Remove</button>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+
+  function renderTraitComposer() {
+    if (!traitComposer) return null;
+    const trait = traitDefinitionByKey.get(traitComposer.traitKey) ?? null;
+    if (!trait) return null;
+    const title = traitComposer.replaceIndex != null ? "Update trait" : "Add trait";
+    const targetLabel =
+      traitComposer.targetProfileId === "create"
+        ? profileDraft.name.trim() || "new profile"
+        : profiles.find((profile) => profile.id === traitComposer.targetProfileId)?.name ?? "selected profile";
+    return (
+      <div className="liquid-ops-profile-popover liquid-ops-profile-popover-main">
+        <div className="liquid-ops-profile-popover-head">
+          <div>
+            <strong>{title}</strong>
+            <span>{trait.label} for {targetLabel}</span>
+          </div>
+          <Tag>{TRAIT_VALUE_TYPES.find((item) => item.value === trait.valueType)?.label ?? trait.valueType}</Tag>
+        </div>
+        <ProfileTraitValueInput row={traitComposer.row} trait={trait} onChange={(patch) => setTraitComposer((current) => (current ? { ...current, row: { ...current.row, ...patch } } : current))} />
+        <div className="liquid-ops-profile-popover-actions">
+          <button className="btn btn-primary btn-sm" type="button" onClick={saveTraitComposer}>Apply</button>
+          <button className="btn btn-ghost btn-sm" type="button" onClick={cancelTraitComposer}>Cancel</button>
+        </div>
+      </div>
+    );
+  }
+
+  function renderProfileTraitShelf() {
+    return (
+      <div className="liquid-ops-profile-shelf">
+        <div className="liquid-ops-profile-shelf-copy">
+          <strong>Trait library</strong>
+          <span>Drag a trait onto a profile card to add it.</span>
+        </div>
+        <div className="liquid-ops-profile-pill-row">
+          {traits.length === 0 ? <span className="liquid-ops-muted">Create traits first, then drag them onto profiles.</span> : null}
+          {traits.map((trait) => (
+            <button
+              key={trait.id}
+              className={`liquid-ops-trait-pill ${draggedTraitKey === trait.traitKey ? "is-dragging" : ""}`.trim()}
+              type="button"
+              draggable
+              onDragStart={(event) => {
+                event.dataTransfer.effectAllowed = "copy";
+                event.dataTransfer.setData("text/plain", trait.traitKey);
+                setDraggedTraitKey(trait.traitKey);
+                clearMessages();
+              }}
+              onDragEnd={resetTraitDragState}
+            >
+              <span>{trait.label}</span>
+              <small>{TRAIT_VALUE_TYPES.find((item) => item.value === trait.valueType)?.label ?? trait.valueType}</small>
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  function renderProfileCard(profile: LiquidProfile) {
+    const isEditing = activeProfileId === profile.id && profileMode === "edit";
+    const accent = profileAccent(profile.id);
+    const variantCount = profileVariantCount(profile.id);
+    const isDropTarget = profileDropTarget === profile.id;
+    if (isEditing) {
+      return (
+        <article
+          key={profile.id}
+          className={`liquid-ops-profile-card liquid-ops-profile-card-edit ${isDropTarget ? "is-drop-target" : ""}`.trim()}
+          style={{ "--liquid-profile-accent": accent } as CSSProperties}
+          onDragOver={(event) => {
+            if (!draggedTraitKey) return;
+            event.preventDefault();
+            setProfileDropTarget(profile.id);
+          }}
+          onDragLeave={(event) => {
+            if (!event.currentTarget.contains(event.relatedTarget as Node | null) && profileDropTarget === profile.id) {
+              setProfileDropTarget(null);
+            }
+          }}
+          onDrop={(event) => {
+            event.preventDefault();
+            const traitKey = event.dataTransfer.getData("text/plain") || draggedTraitKey;
+            if (traitKey) openTraitComposerForTarget(profile.id, traitKey);
+          }}
+        >
+          <div className="liquid-ops-profile-accent" aria-hidden="true" />
+          <div className="liquid-ops-profile-card-head">
+            <div>
+              <div className="heading">Edit profile</div>
+              <p className="panel-copy">Update the saved audience and the trait values it reuses.</p>
+            </div>
+            <Tag tone={profileDraft.enabled ? "green" : "amber"}>{profileDraft.enabled ? "Active" : "Paused"}</Tag>
+          </div>
+          <div className="liquid-ops-profile-edit-grid">
+            <label className="liquid-ops-inline-create-field">
+              <span>Profile name</span>
+              <input className="liquid-ops-input liquid-ops-table-input" value={profileDraft.name} onChange={(event) => setProfileDraft((current) => ({ ...current, name: event.target.value }))} />
+            </label>
+            <label className="liquid-ops-inline-create-field">
+              <span>Profile key</span>
+              <input className="liquid-ops-input liquid-ops-table-input" value={profileDraft.profileKey} onChange={(event) => setProfileDraft((current) => ({ ...current, profileKey: event.target.value }))} />
+            </label>
+            <label className="liquid-ops-inline-create-field liquid-ops-profile-field-wide">
+              <span>Description</span>
+              <input className="liquid-ops-input liquid-ops-table-input" value={profileDraft.description} onChange={(event) => setProfileDraft((current) => ({ ...current, description: event.target.value }))} />
+            </label>
+            <label className="liquid-ops-inline-create-field">
+              <span>Status</span>
+              <LiquidSelect compact value={profileDraft.enabled ? "active" : "paused"} options={activeStatusOptions} onChange={(nextValue) => setProfileDraft((current) => ({ ...current, enabled: nextValue === "active" }))} />
+            </label>
+          </div>
+          <div className="liquid-ops-profile-section">
+            <div className="liquid-ops-profile-section-head">
+              <strong>Traits</strong>
+              <span className="liquid-ops-muted">Drag a trait here to add one.</span>
+            </div>
+            {renderProfileTraitBuilder("edit")}
+            {profileDraft.traits.length === 0 ? <div className="liquid-ops-profile-drop-hint">Drop a trait pill here to start building this profile.</div> : null}
+          </div>
+          <div className="liquid-ops-profile-card-actions">
+            <button className="btn btn-ghost btn-sm" type="button" onClick={deleteProfile} disabled={busy === "profile-delete"}>Delete</button>
+            <button className="btn btn-ghost btn-sm" type="button" onClick={requestCloseProfileEditor}>Close</button>
+          </div>
+        </article>
+      );
+    }
+    return (
+      <article
+        key={profile.id}
+        className={`liquid-ops-profile-card ${isDropTarget ? "is-drop-target" : ""}`.trim()}
+        style={{ "--liquid-profile-accent": accent } as CSSProperties}
+        onDragOver={(event) => {
+          if (!draggedTraitKey) return;
+          event.preventDefault();
+          setProfileDropTarget(profile.id);
+        }}
+        onDragLeave={(event) => {
+          if (!event.currentTarget.contains(event.relatedTarget as Node | null) && profileDropTarget === profile.id) {
+            setProfileDropTarget(null);
+          }
+        }}
+        onDrop={(event) => {
+          event.preventDefault();
+          const traitKey = event.dataTransfer.getData("text/plain") || draggedTraitKey;
+          if (traitKey) openTraitComposerForTarget(profile.id, traitKey);
+        }}
+      >
+        <div className="liquid-ops-profile-accent" aria-hidden="true" />
+        <div className="liquid-ops-profile-card-head">
+          <div className="liquid-ops-cell">
+            <strong>{profile.name}</strong>
+            <span>{profile.profileKey}</span>
+          </div>
+          <Tag tone={profile.enabled ? "green" : "amber"}>{profile.enabled ? "Active" : "Paused"}</Tag>
+        </div>
+        <p className="panel-copy liquid-ops-profile-copy">{profile.description || "No description yet."}</p>
+        <div className="liquid-ops-profile-facts">
+          <div><span>Traits</span><strong>{profile.traits.length}</strong></div>
+          <div><span>Variants</span><strong>{variantCount}</strong></div>
+          <div><span>Updated</span><strong>{formatDate(profile.updatedAt)}</strong></div>
+        </div>
+        <div className="liquid-ops-chip-row liquid-ops-profile-traits">
+          {profile.traits.length === 0 ? <span className="liquid-ops-muted">No traits yet</span> : null}
+          {profile.traits.map((trait) => <Tag key={`${profile.id}-${trait.traitKey}`}>{trait.label}: {formatProfileTraitDisplayValue(trait)}</Tag>)}
+        </div>
+        <div className="liquid-ops-profile-drop-hint">Drop a trait pill here to add or update this profile.</div>
+        <div className="liquid-ops-profile-card-actions">
+          <button className="btn btn-ghost btn-sm" type="button" onClick={() => { void requestSelectProfile(profile.id); }}>Edit</button>
+        </div>
+      </article>
+    );
+  }
+
+  function renderCreateProfileCard() {
+    const isDropTarget = profileDropTarget === "create";
+    return (
+      <section
+        className={`liquid-ops-profile-card liquid-ops-profile-card-edit liquid-ops-profile-card-create ${isDropTarget ? "is-drop-target" : ""}`.trim()}
+        style={{ "--liquid-profile-accent": "rgba(127, 182, 255, 0.95)" } as CSSProperties}
+        onDragOver={(event) => {
+          if (!draggedTraitKey) return;
+          event.preventDefault();
+          setProfileDropTarget("create");
+        }}
+        onDragLeave={(event) => {
+          if (!event.currentTarget.contains(event.relatedTarget as Node | null) && profileDropTarget === "create") {
+            setProfileDropTarget(null);
+          }
+        }}
+        onDrop={(event) => {
+          event.preventDefault();
+          const traitKey = event.dataTransfer.getData("text/plain") || draggedTraitKey;
+          if (traitKey) openTraitComposerForTarget("create", traitKey);
+        }}
+      >
+        <div className="liquid-ops-profile-accent" aria-hidden="true" />
+        <div className="liquid-ops-profile-card-head">
+          <div>
+            <div className="heading">New profile</div>
+            <p className="panel-copy">Create a reusable audience from the traits you already defined.</p>
+          </div>
+          <Tag tone={profileDraft.enabled ? "green" : "amber"}>{profileDraft.enabled ? "Active" : "Paused"}</Tag>
+        </div>
+        <div className="liquid-ops-profile-edit-grid">
+          <label className="liquid-ops-inline-create-field">
+            <span>Profile name</span>
+            <input className="liquid-ops-input liquid-ops-table-input" value={profileDraft.name} onChange={(event) => setProfileDraft((current) => ({ ...current, name: event.target.value }))} placeholder="Power users" />
+          </label>
+          <label className="liquid-ops-inline-create-field">
+            <span>Profile key</span>
+            <input className="liquid-ops-input liquid-ops-table-input" value={profileDraft.profileKey} onChange={(event) => setProfileDraft((current) => ({ ...current, profileKey: event.target.value }))} placeholder="power_users" />
+          </label>
+          <label className="liquid-ops-inline-create-field liquid-ops-profile-field-wide">
+            <span>Description</span>
+            <input className="liquid-ops-input liquid-ops-table-input" value={profileDraft.description} onChange={(event) => setProfileDraft((current) => ({ ...current, description: event.target.value }))} placeholder="High intent repeat visitors" />
+          </label>
+          <label className="liquid-ops-inline-create-field">
+            <span>Status</span>
+            <LiquidSelect compact value={profileDraft.enabled ? "active" : "paused"} options={activeStatusOptions} onChange={(nextValue) => setProfileDraft((current) => ({ ...current, enabled: nextValue === "active" }))} />
+          </label>
+        </div>
+        <div className="liquid-ops-profile-section">
+          <div className="liquid-ops-profile-section-head">
+            <strong>Traits</strong>
+            <span className="liquid-ops-muted">Drag a trait here to add one.</span>
+          </div>
+          {renderProfileTraitBuilder("create")}
+          {profileDraft.traits.length === 0 ? <div className="liquid-ops-profile-drop-hint">Drop a trait pill here to define the first rule for this profile.</div> : null}
+        </div>
+        <div className="liquid-ops-profile-card-actions">
+          <button className="btn btn-primary btn-sm" type="button" onClick={() => void saveProfile()} disabled={busy === "profile"}>Create</button>
+          <button className="btn btn-ghost btn-sm" type="button" onClick={requestCloseProfileEditor}>Close</button>
+        </div>
+      </section>
     );
   }
 
@@ -980,8 +1760,7 @@ export function LiquidStudio({
               disabled={!hasObservedScreens}
               onClick={() => {
                 setKeyMode("create");
-                selectKey(null, "create");
-                clearMessages();
+                void requestSelectKey(null, "create");
               }}
             >
               Create key
@@ -1025,13 +1804,7 @@ export function LiquidStudio({
                   const state = keyState(detail);
                   return (
                     <Fragment key={key.id}>
-                      <tr
-                        className={selectedKeyId === key.id ? "liquid-ops-row-active" : undefined}
-                        onClick={() => {
-                          setSelectedKeyId(key.id);
-                          clearMessages();
-                        }}
-                      >
+                      <tr className={selectedKeyId === key.id ? "liquid-ops-row-active" : undefined}>
                         <td>
                           <div className="liquid-ops-cell">
                             <strong>{key.key}</strong>
@@ -1049,8 +1822,7 @@ export function LiquidStudio({
                             type="button"
                             onClick={(event) => {
                               event.stopPropagation();
-                              selectKey(key.id, "edit");
-                              clearMessages();
+                              void requestSelectKey(key.id, "edit");
                             }}
                           >
                             Edit
@@ -1078,14 +1850,14 @@ export function LiquidStudio({
           <div className="liquid-ops-toolbar-actions">
             <div className="liquid-ops-subtabs">
               {(["profiles", "traits", "variants"] as RulesTab[]).map((tab) => (
-                <button key={tab} type="button" className={rulesTab === tab ? "active" : ""} onClick={() => setRulesTab(tab)}>
+                <button key={tab} type="button" className={rulesTab === tab ? "active" : ""} onClick={() => void requestRulesTabChange(tab)}>
                   {tab === "profiles" ? "Profiles" : tab === "traits" ? "Traits" : "Variants"}
                 </button>
               ))}
             </div>
-            {rulesTab === "profiles" ? <button className="btn btn-primary btn-sm" type="button" onClick={() => selectProfile(null)}>New profile</button> : null}
-            {rulesTab === "traits" ? <button className="btn btn-primary btn-sm" type="button" onClick={() => selectTrait(null)}>New trait</button> : null}
-            {rulesTab === "variants" ? <button className="btn btn-primary btn-sm" type="button" onClick={() => selectVariant(activeKeyId, activeProfileId, null)}>New variant</button> : null}
+            {rulesTab === "profiles" ? <button className="btn btn-primary btn-sm" type="button" onClick={() => void requestSelectProfile(null)}>New profile</button> : null}
+            {rulesTab === "traits" ? <button className="btn btn-primary btn-sm" type="button" onClick={() => void requestSelectTrait(null)}>New trait</button> : null}
+            {rulesTab === "variants" ? <button className="btn btn-primary btn-sm" type="button" onClick={() => void requestSelectVariant(activeKeyId, activeProfileId, null)}>New variant</button> : null}
           </div>
         </div>
 
@@ -1096,9 +1868,9 @@ export function LiquidStudio({
                 <div className="liquid-ops-inline-create-grid liquid-ops-rules-create-grid-traits">
                   <label className="liquid-ops-inline-create-field"><span>Label</span><input className="liquid-ops-input liquid-ops-table-input" value={traitDraft.label} onChange={(event) => setTraitDraft((current) => ({ ...current, label: event.target.value }))} placeholder="Age" /></label>
                   <label className="liquid-ops-inline-create-field"><span>Trait key</span><input className="liquid-ops-input liquid-ops-table-input" value={traitDraft.traitKey} onChange={(event) => setTraitDraft((current) => ({ ...current, traitKey: event.target.value }))} placeholder="age" /></label>
-                  <label className="liquid-ops-inline-create-field"><span>Type</span><select className="liquid-ops-input liquid-ops-table-input" value={traitDraft.valueType} onChange={(event) => setTraitDraft((current) => ({ ...current, valueType: event.target.value as TraitDraft["valueType"] }))}>{TRAIT_VALUE_TYPES.map((type) => <option key={type.value} value={type.value}>{type.label}</option>)}</select></label>
+                  <label className="liquid-ops-inline-create-field"><span>Type</span><LiquidSelect compact value={traitDraft.valueType} options={TRAIT_VALUE_TYPES.map((type) => ({ value: type.value, label: type.label }))} onChange={(nextValue) => setTraitDraft((current) => ({ ...current, valueType: nextValue as TraitDraft["valueType"] }))} /></label>
                   <label className="liquid-ops-inline-create-field"><span>Description</span><input className="liquid-ops-input liquid-ops-table-input" value={traitDraft.description} onChange={(event) => setTraitDraft((current) => ({ ...current, description: event.target.value }))} placeholder="Reusable profile label" /></label>
-                  <label className="liquid-ops-inline-create-field"><span>Status</span><select className="liquid-ops-input liquid-ops-table-input" value={traitDraft.enabled ? "active" : "paused"} onChange={(event) => setTraitDraft((current) => ({ ...current, enabled: event.target.value === "active" }))}><option value="active">Active</option><option value="paused">Paused</option></select></label>
+                  <label className="liquid-ops-inline-create-field"><span>Status</span><LiquidSelect compact value={traitDraft.enabled ? "active" : "paused"} options={activeStatusOptions} onChange={(nextValue) => setTraitDraft((current) => ({ ...current, enabled: nextValue === "active" }))} /></label>
                   <div className="liquid-ops-row-actions liquid-ops-inline-row-actions"><button className="btn btn-primary btn-sm" type="button" onClick={saveTrait} disabled={busy === "trait"}>Create</button></div>
                 </div>
               </section>
@@ -1109,10 +1881,10 @@ export function LiquidStudio({
                 <tbody>
                   {traits.map((trait) => (
                     <Fragment key={trait.id}>
-                      <tr className={activeTraitId === trait.id ? "liquid-ops-row-active" : undefined} onClick={() => { selectTrait(trait.id); clearMessages(); }}>
-                        <td><strong>{trait.label}</strong></td><td>{trait.traitKey}</td><td>{TRAIT_VALUE_TYPES.find((type) => type.value === trait.valueType)?.label ?? trait.valueType}</td><td className="liquid-ops-copy-cell">{trait.description || "No description"}</td><td><Tag tone={trait.enabled ? "green" : "amber"}>{trait.enabled ? "Active" : "Paused"}</Tag></td><td>{formatDate(trait.updatedAt)}</td><td><button className="btn btn-ghost btn-sm" type="button" onClick={(event) => { event.stopPropagation(); selectTrait(trait.id); }}>Edit</button></td>
+                      <tr className={activeTraitId === trait.id ? "liquid-ops-row-active" : undefined}>
+                        <td><strong>{trait.label}</strong></td><td>{trait.traitKey}</td><td>{TRAIT_VALUE_TYPES.find((type) => type.value === trait.valueType)?.label ?? trait.valueType}</td><td className="liquid-ops-copy-cell">{trait.description || "No description"}</td><td><Tag tone={trait.enabled ? "green" : "amber"}>{trait.enabled ? "Active" : "Paused"}</Tag></td><td>{formatDate(trait.updatedAt)}</td><td><button className="btn btn-ghost btn-sm" type="button" onClick={() => { void requestSelectTrait(trait.id); }}>Edit</button></td>
                       </tr>
-                      {activeTraitId === trait.id && traitMode === "edit" ? <tr className="liquid-ops-inline-editor-row"><td><input className="liquid-ops-input liquid-ops-table-input" value={traitDraft.label} onChange={(event) => setTraitDraft((current) => ({ ...current, label: event.target.value }))} /></td><td><input className="liquid-ops-input liquid-ops-table-input" value={traitDraft.traitKey} onChange={(event) => setTraitDraft((current) => ({ ...current, traitKey: event.target.value }))} /></td><td><select className="liquid-ops-input liquid-ops-table-input" value={traitDraft.valueType} onChange={(event) => setTraitDraft((current) => ({ ...current, valueType: event.target.value as TraitDraft["valueType"] }))}>{TRAIT_VALUE_TYPES.map((type) => <option key={type.value} value={type.value}>{type.label}</option>)}</select></td><td><input className="liquid-ops-input liquid-ops-table-input" value={traitDraft.description} onChange={(event) => setTraitDraft((current) => ({ ...current, description: event.target.value }))} /></td><td><select className="liquid-ops-input liquid-ops-table-input" value={traitDraft.enabled ? "active" : "paused"} onChange={(event) => setTraitDraft((current) => ({ ...current, enabled: event.target.value === "active" }))}><option value="active">Active</option><option value="paused">Paused</option></select></td><td><div className="liquid-ops-inline-meta"><strong>{formatDate(trait.updatedAt)}</strong></div></td><td><div className="liquid-ops-row-actions liquid-ops-inline-row-actions"><button className="btn btn-primary btn-sm" type="button" onClick={saveTrait} disabled={busy === "trait"}>Save</button><button className="btn btn-ghost btn-sm" type="button" onClick={deleteTrait} disabled={busy === "trait-delete"}>Delete</button></div></td></tr> : null}
+                      {activeTraitId === trait.id && traitMode === "edit" ? <tr className="liquid-ops-inline-editor-row"><td><input className="liquid-ops-input liquid-ops-table-input" value={traitDraft.label} onChange={(event) => setTraitDraft((current) => ({ ...current, label: event.target.value }))} /></td><td><input className="liquid-ops-input liquid-ops-table-input" value={traitDraft.traitKey} onChange={(event) => setTraitDraft((current) => ({ ...current, traitKey: event.target.value }))} /></td><td><LiquidSelect compact value={traitDraft.valueType} options={TRAIT_VALUE_TYPES.map((type) => ({ value: type.value, label: type.label }))} onChange={(nextValue) => setTraitDraft((current) => ({ ...current, valueType: nextValue as TraitDraft["valueType"] }))} /></td><td><input className="liquid-ops-input liquid-ops-table-input" value={traitDraft.description} onChange={(event) => setTraitDraft((current) => ({ ...current, description: event.target.value }))} /></td><td><LiquidSelect compact value={traitDraft.enabled ? "active" : "paused"} options={activeStatusOptions} onChange={(nextValue) => setTraitDraft((current) => ({ ...current, enabled: nextValue === "active" }))} /></td><td><div className="liquid-ops-inline-meta"><strong>{formatDate(trait.updatedAt)}</strong></div></td><td><div className="liquid-ops-row-actions liquid-ops-inline-row-actions"><button className="btn btn-ghost btn-sm" type="button" onClick={deleteTrait} disabled={busy === "trait-delete"}>Delete</button></div></td></tr> : null}
                     </Fragment>
                   ))}
                 </tbody>
@@ -1123,33 +1895,15 @@ export function LiquidStudio({
 
         {rulesTab === "profiles" ? (
           <div className="liquid-ops-surface liquid-ops-stack">
-            {profileMode === "create" ? (
-              <section className="liquid-ops-inline-create-card liquid-ops-inline-create-card-tall">
-                <div className="liquid-ops-rules-create-grid-profiles">
-                  <label className="liquid-ops-inline-create-field"><span>Profile name</span><input className="liquid-ops-input liquid-ops-table-input" value={profileDraft.name} onChange={(event) => setProfileDraft((current) => ({ ...current, name: event.target.value }))} placeholder="Power users" /></label>
-                  <label className="liquid-ops-inline-create-field"><span>Profile key</span><input className="liquid-ops-input liquid-ops-table-input" value={profileDraft.profileKey} onChange={(event) => setProfileDraft((current) => ({ ...current, profileKey: event.target.value }))} placeholder="power_users" /></label>
-                  <label className="liquid-ops-inline-create-field"><span>Description</span><input className="liquid-ops-input liquid-ops-table-input" value={profileDraft.description} onChange={(event) => setProfileDraft((current) => ({ ...current, description: event.target.value }))} placeholder="High intent repeat visitors" /></label>
-                  <label className="liquid-ops-inline-create-field"><span>Status</span><select className="liquid-ops-input liquid-ops-table-input" value={profileDraft.enabled ? "active" : "paused"} onChange={(event) => setProfileDraft((current) => ({ ...current, enabled: event.target.value === "active" }))}><option value="active">Active</option><option value="paused">Paused</option></select></label>
-                </div>
-                <div className="liquid-ops-inline-trait-builder">{profileDraft.traits.map((row, index) => <div key={`profile-create-${index}`} className="liquid-ops-inline-trait-row"><select className="liquid-ops-input liquid-ops-table-input" value={row.traitKey} onChange={(event) => updateProfileTrait(index, { traitKey: event.target.value })}><option value="">Trait</option>{traits.map((trait) => <option key={trait.id} value={trait.traitKey}>{trait.label}</option>)}</select><input className="liquid-ops-input liquid-ops-table-input" value={row.value} onChange={(event) => updateProfileTrait(index, { value: event.target.value })} placeholder="Value" /><button className="btn btn-ghost btn-sm" type="button" onClick={() => removeProfileTraitRow(index)}>Remove</button></div>)}</div>
-                <div className="liquid-ops-row-actions liquid-ops-inline-row-actions"><button className="btn btn-ghost btn-sm" type="button" onClick={addProfileTraitRow}>Add trait</button><button className="btn btn-primary btn-sm" type="button" onClick={saveProfile} disabled={busy === "profile"}>Create</button></div>
-              </section>
+            {renderProfileTraitShelf()}
+            {renderTraitComposer()}
+            {profiles.length === 0 && profileMode !== "create" ? <EmptyState title="No profiles yet" body="Create a saved audience after defining a few reusable traits." /> : null}
+            {profiles.length > 0 || profileMode === "create" ? (
+              <div className="liquid-ops-profile-grid">
+                {profileMode === "create" ? renderCreateProfileCard() : null}
+                {profiles.map((profile) => renderProfileCard(profile))}
+              </div>
             ) : null}
-            {profiles.length === 0 ? <EmptyState title="No profiles yet" body="Create a saved audience after defining a few reusable traits." /> : (
-              <table className="data-table liquid-ops-table">
-                <thead><tr><th>Profile</th><th>Traits</th><th>Description</th><th>Status</th><th>Updated</th><th /></tr></thead>
-                <tbody>
-                  {profiles.map((profile) => (
-                    <Fragment key={profile.id}>
-                      <tr className={activeProfileId === profile.id ? "liquid-ops-row-active" : undefined} onClick={() => { selectProfile(profile.id); clearMessages(); }}>
-                        <td><div className="liquid-ops-cell"><strong>{profile.name}</strong><span>{profile.profileKey}</span></div></td><td><div className="liquid-ops-chip-row">{profile.traits.length === 0 ? <span className="liquid-ops-muted">No traits</span> : null}{profile.traits.slice(0, 3).map((trait) => <Tag key={`${profile.id}-${trait.traitKey}`}>{trait.label}: {trait.value}</Tag>)}{profile.traits.length > 3 ? <Tag>+{profile.traits.length - 3}</Tag> : null}</div></td><td className="liquid-ops-copy-cell">{profile.description || "No description"}</td><td><Tag tone={profile.enabled ? "green" : "amber"}>{profile.enabled ? "Active" : "Paused"}</Tag></td><td>{formatDate(profile.updatedAt)}</td><td><button className="btn btn-ghost btn-sm" type="button" onClick={(event) => { event.stopPropagation(); selectProfile(profile.id); }}>Edit</button></td>
-                      </tr>
-                      {activeProfileId === profile.id && profileMode === "edit" ? <tr className="liquid-ops-inline-editor-row"><td><div className="liquid-ops-inline-stack"><input className="liquid-ops-input liquid-ops-table-input" value={profileDraft.name} onChange={(event) => setProfileDraft((current) => ({ ...current, name: event.target.value }))} /><input className="liquid-ops-input liquid-ops-table-input" value={profileDraft.profileKey} onChange={(event) => setProfileDraft((current) => ({ ...current, profileKey: event.target.value }))} /></div></td><td><div className="liquid-ops-inline-trait-builder">{profileDraft.traits.map((row, index) => <div key={`profile-edit-${index}`} className="liquid-ops-inline-trait-row"><select className="liquid-ops-input liquid-ops-table-input" value={row.traitKey} onChange={(event) => updateProfileTrait(index, { traitKey: event.target.value })}><option value="">Trait</option>{traits.map((trait) => <option key={trait.id} value={trait.traitKey}>{trait.label}</option>)}</select><input className="liquid-ops-input liquid-ops-table-input" value={row.value} onChange={(event) => updateProfileTrait(index, { value: event.target.value })} /><button className="btn btn-ghost btn-sm" type="button" onClick={() => removeProfileTraitRow(index)}>Remove</button></div>)}<button className="btn btn-ghost btn-sm" type="button" onClick={addProfileTraitRow}>Add trait value</button></div></td><td><input className="liquid-ops-input liquid-ops-table-input" value={profileDraft.description} onChange={(event) => setProfileDraft((current) => ({ ...current, description: event.target.value }))} /></td><td><select className="liquid-ops-input liquid-ops-table-input" value={profileDraft.enabled ? "active" : "paused"} onChange={(event) => setProfileDraft((current) => ({ ...current, enabled: event.target.value === "active" }))}><option value="active">Active</option><option value="paused">Paused</option></select></td><td><div className="liquid-ops-inline-meta"><strong>{formatDate(profile.updatedAt)}</strong></div></td><td><div className="liquid-ops-row-actions liquid-ops-inline-row-actions"><button className="btn btn-primary btn-sm" type="button" onClick={saveProfile} disabled={busy === "profile"}>Save</button><button className="btn btn-ghost btn-sm" type="button" onClick={deleteProfile} disabled={busy === "profile-delete"}>Delete</button></div></td></tr> : null}
-                    </Fragment>
-                  ))}
-                </tbody>
-              </table>
-            )}
           </div>
         ) : null}
 
@@ -1157,19 +1911,19 @@ export function LiquidStudio({
           <div className="liquid-ops-surface liquid-ops-stack">
             <div className="liquid-ops-toolbar liquid-ops-toolbar-inline">
               <SectionTitle title="Profile variants" body="Attach saved profiles to keys and override the fallback string for that audience." />
-              <label className="liquid-ops-inline-field"><span>Focus key</span><select value={activeKeyId ?? ""} onChange={(event) => selectKey(event.target.value || null, "edit")}>{keys.map((key) => <option key={key.id} value={key.id}>{key.key}</option>)}</select></label>
+              <label className="liquid-ops-inline-field"><span>Focus key</span><LiquidSelect value={activeKeyId ?? ""} options={keyOptions} placeholder="Choose key" onChange={(nextValue) => { void requestSelectKey(nextValue || null, "edit"); }} /></label>
             </div>
-            {variantMode === "create" ? <section className="liquid-ops-inline-create-card"><div className="liquid-ops-inline-create-grid liquid-ops-rules-create-grid-variants"><label className="liquid-ops-inline-create-field"><span>Key</span><select className="liquid-ops-input liquid-ops-table-input" value={variantDraft.keyId} onChange={(event) => setVariantDraft((current) => ({ ...current, keyId: event.target.value }))}><option value="">Choose key</option>{keys.map((key) => <option key={key.id} value={key.id}>{key.key}</option>)}</select></label><label className="liquid-ops-inline-create-field"><span>Profile</span><select className="liquid-ops-input liquid-ops-table-input" value={variantDraft.profileId} onChange={(event) => setVariantDraft((current) => ({ ...current, profileId: event.target.value }))}><option value="">Choose profile</option>{profiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.name}</option>)}</select></label><label className="liquid-ops-inline-create-field"><span>Resolved copy</span><input className="liquid-ops-input liquid-ops-table-input" value={variantDraft.text} onChange={(event) => setVariantDraft((current) => ({ ...current, text: event.target.value }))} placeholder="Continue to payment" /></label><label className="liquid-ops-inline-create-field"><span>Locale</span><input className="liquid-ops-input liquid-ops-table-input" value={variantDraft.locale} onChange={(event) => setVariantDraft((current) => ({ ...current, locale: event.target.value }))} placeholder="en" /></label><label className="liquid-ops-inline-create-field"><span>Status</span><select className="liquid-ops-input liquid-ops-table-input" value={variantDraft.enabled ? "ready" : "paused"} onChange={(event) => setVariantDraft((current) => ({ ...current, enabled: event.target.value === "ready" }))}><option value="ready">Draft ready</option><option value="paused">Paused</option></select></label><div className="liquid-ops-row-actions liquid-ops-inline-row-actions"><button className="btn btn-primary btn-sm" type="button" onClick={saveVariant} disabled={busy === "variant"}>Create</button></div></div></section> : null}
+            {variantMode === "create" ? <section className="liquid-ops-inline-create-card"><div className="liquid-ops-inline-create-grid liquid-ops-rules-create-grid-variants"><label className="liquid-ops-inline-create-field"><span>Key</span><LiquidSelect compact value={variantDraft.keyId} options={keyOptions} placeholder="Choose key" onChange={(nextValue) => setVariantDraft((current) => ({ ...current, keyId: nextValue }))} /></label><label className="liquid-ops-inline-create-field"><span>Profile</span><LiquidSelect compact value={variantDraft.profileId} options={profileOptions} placeholder="Choose profile" onChange={(nextValue) => setVariantDraft((current) => ({ ...current, profileId: nextValue }))} /></label><label className="liquid-ops-inline-create-field"><span>Resolved copy</span><input className="liquid-ops-input liquid-ops-table-input" value={variantDraft.text} onChange={(event) => setVariantDraft((current) => ({ ...current, text: event.target.value }))} placeholder="Continue to payment" /></label><label className="liquid-ops-inline-create-field"><span>Locale</span><input className="liquid-ops-input liquid-ops-table-input" value={variantDraft.locale} onChange={(event) => setVariantDraft((current) => ({ ...current, locale: event.target.value }))} placeholder="en" /></label><label className="liquid-ops-inline-create-field"><span>Status</span><LiquidSelect compact value={variantDraft.enabled ? "ready" : "paused"} options={readyStatusOptions} onChange={(nextValue) => setVariantDraft((current) => ({ ...current, enabled: nextValue === "ready" }))} /></label><div className="liquid-ops-row-actions liquid-ops-inline-row-actions"><button className="btn btn-primary btn-sm" type="button" onClick={saveVariant} disabled={busy === "variant"}>Create</button></div></div></section> : null}
             {variantRows.length === 0 ? <EmptyState title="No variants yet" body="Create a profile-specific variant when a saved audience should see copy different from the fallback." /> : (
               <table className="data-table liquid-ops-table">
                 <thead><tr><th>Key</th><th>Profile</th><th>Resolved copy</th><th>Locale</th><th>Status</th><th>Updated</th><th /></tr></thead>
                 <tbody>
                   {variantRows.map(({ key, detail, variant, profile }) => (
                     <Fragment key={variant.id}>
-                      <tr className={selectedVariantId === variant.id ? "liquid-ops-row-active" : undefined} onClick={() => { selectVariant(key.id, variant.segmentId ?? null, variant.id); clearMessages(); }}>
-                        <td>{key.key}</td><td>{profile?.name ?? "Removed profile"}</td><td className="liquid-ops-copy-cell">{variant.content.text}</td><td>{variant.locale ?? detail?.defaultLocale ?? "en"}</td><td><Tag tone={variant.enabled ? "green" : "amber"}>{variant.enabled ? "Draft ready" : "Paused"}</Tag></td><td>{formatDate(variant.updatedAt)}</td><td><button className="btn btn-ghost btn-sm" type="button" onClick={(event) => { event.stopPropagation(); selectVariant(key.id, variant.segmentId ?? null, variant.id); }}>Edit</button></td>
+                      <tr className={selectedVariantId === variant.id ? "liquid-ops-row-active" : undefined}>
+                        <td>{key.key}</td><td>{profile?.name ?? "Removed profile"}</td><td className="liquid-ops-copy-cell">{variant.content.text}</td><td>{variant.locale ?? detail?.defaultLocale ?? "en"}</td><td><Tag tone={variant.enabled ? "green" : "amber"}>{variant.enabled ? "Draft ready" : "Paused"}</Tag></td><td>{formatDate(variant.updatedAt)}</td><td><button className="btn btn-ghost btn-sm" type="button" onClick={() => { void requestSelectVariant(key.id, variant.segmentId ?? null, variant.id); }}>Edit</button></td>
                       </tr>
-                      {selectedVariantId === variant.id && variantMode === "edit" ? <tr className="liquid-ops-inline-editor-row"><td><select className="liquid-ops-input liquid-ops-table-input" value={variantDraft.keyId} onChange={(event) => setVariantDraft((current) => ({ ...current, keyId: event.target.value }))}>{keys.map((item) => <option key={item.id} value={item.id}>{item.key}</option>)}</select></td><td><select className="liquid-ops-input liquid-ops-table-input" value={variantDraft.profileId} onChange={(event) => setVariantDraft((current) => ({ ...current, profileId: event.target.value }))}>{profiles.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></td><td><input className="liquid-ops-input liquid-ops-table-input" value={variantDraft.text} onChange={(event) => setVariantDraft((current) => ({ ...current, text: event.target.value }))} /></td><td><input className="liquid-ops-input liquid-ops-table-input" value={variantDraft.locale} onChange={(event) => setVariantDraft((current) => ({ ...current, locale: event.target.value }))} /></td><td><select className="liquid-ops-input liquid-ops-table-input" value={variantDraft.enabled ? "ready" : "paused"} onChange={(event) => setVariantDraft((current) => ({ ...current, enabled: event.target.value === "ready" }))}><option value="ready">Draft ready</option><option value="paused">Paused</option></select></td><td><div className="liquid-ops-inline-meta"><strong>{profile?.name ?? "Profile"}</strong><span>{getDraftDefaultVariant(detail)?.content.text ?? "No fallback"}</span></div></td><td><div className="liquid-ops-row-actions liquid-ops-inline-row-actions"><button className="btn btn-primary btn-sm" type="button" onClick={saveVariant} disabled={busy === "variant"}>Save</button><button className="btn btn-ghost btn-sm" type="button" onClick={deleteVariant} disabled={busy === "variant-delete"}>Delete</button></div></td></tr> : null}
+                      {selectedVariantId === variant.id && variantMode === "edit" ? <tr className="liquid-ops-inline-editor-row"><td><LiquidSelect compact value={variantDraft.keyId} options={keyOptions} onChange={(nextValue) => setVariantDraft((current) => ({ ...current, keyId: nextValue }))} /></td><td><LiquidSelect compact value={variantDraft.profileId} options={profileOptions} onChange={(nextValue) => setVariantDraft((current) => ({ ...current, profileId: nextValue }))} /></td><td><input className="liquid-ops-input liquid-ops-table-input" value={variantDraft.text} onChange={(event) => setVariantDraft((current) => ({ ...current, text: event.target.value }))} /></td><td><input className="liquid-ops-input liquid-ops-table-input" value={variantDraft.locale} onChange={(event) => setVariantDraft((current) => ({ ...current, locale: event.target.value }))} /></td><td><LiquidSelect compact value={variantDraft.enabled ? "ready" : "paused"} options={readyStatusOptions} onChange={(nextValue) => setVariantDraft((current) => ({ ...current, enabled: nextValue === "ready" }))} /></td><td><div className="liquid-ops-inline-meta"><strong>{profile?.name ?? "Profile"}</strong><span>{getDraftDefaultVariant(detail)?.content.text ?? "No fallback"}</span></div></td><td><div className="liquid-ops-row-actions liquid-ops-inline-row-actions"><button className="btn btn-ghost btn-sm" type="button" onClick={deleteVariant} disabled={busy === "variant-delete"}>Delete</button></div></td></tr> : null}
                     </Fragment>
                   ))}
                 </tbody>
@@ -1201,7 +1955,7 @@ export function LiquidStudio({
               const profileVariants = detail?.variants.filter((variant) => variant.stage === "draft" && variant.segmentId) ?? [];
               const state = keyState(detail);
               return (
-                <div key={key.id} className={`liquid-ops-stage-row ${activeKeyId === key.id ? "active" : ""}`} onClick={() => selectKey(key.id, "edit")}>
+                <div key={key.id} className={`liquid-ops-stage-row ${activeKeyId === key.id ? "active" : ""}`}>
                   <div className="liquid-ops-stage-row-top">
                     <div>
                       <div className="heading">{key.key}</div>
@@ -1209,6 +1963,7 @@ export function LiquidStudio({
                     </div>
                     <div className="liquid-ops-row-actions">
                       <Tag tone={keyStateTone(state)}>{state}</Tag>
+                      <button className="btn btn-ghost btn-sm" type="button" onClick={() => void requestSelectKey(key.id, "edit")}>Inspect</button>
                       <button className="btn btn-primary btn-sm" type="button" onClick={(event) => { event.stopPropagation(); publishKey(key.id); }} disabled={busy === `publish-${key.id}`}>Push live</button>
                       <button className="btn btn-ghost btn-sm" type="button" onClick={(event) => { event.stopPropagation(); demoteKey(key.id); }} disabled={detail?.publishedRevision === 0 || busy === `demote-${key.id}`}>Demote to draft</button>
                     </div>
@@ -1291,11 +2046,12 @@ export function LiquidStudio({
                     <th>Liquid rate</th>
                     <th>Lift</th>
                     <th>Winner</th>
+                    <th />
                   </tr>
                 </thead>
                 <tbody>
                   {metricRows.map((row) => (
-                    <tr key={row.keyId} className={activeKeyId === row.keyId ? "liquid-ops-row-active" : undefined} onClick={() => selectKey(row.keyId, "edit")}>
+                    <tr key={row.keyId} className={activeKeyId === row.keyId ? "liquid-ops-row-active" : undefined}>
                       <td>{row.key}</td>
                       <td>{row.screen}</td>
                       <td>{formatNumber(row.exposures)}</td>
@@ -1303,6 +2059,7 @@ export function LiquidStudio({
                       <td>{formatPercent(row.liquidRate)}</td>
                       <td className={row.lift >= 0 ? "liquid-ops-positive" : "liquid-ops-negative"}>{row.lift >= 0 ? "+" : ""}{formatPercent(row.lift)}</td>
                       <td>{row.winner}</td>
+                      <td><button className="btn btn-ghost btn-sm" type="button" onClick={() => void requestSelectKey(row.keyId, "edit")}>Inspect</button></td>
                     </tr>
                   ))}
                 </tbody>
@@ -1393,7 +2150,7 @@ export function LiquidStudio({
     }
 
     const analyticsDetail = selectedKeyDetail;
-    const analyticsRow = metricRows.find((row) => row.keyId === activeKeyId) ?? metricRows[0] ?? null;
+    const analyticsRow = metricRows.find((row) => row.keyId === activeKeyId) ?? null;
     return (
       <section className="liquid-ops-inspector">
         <SectionTitle title="Analytics context" body="Keep one key in focus while you compare fallback performance, Liquid lift, and profile coverage." />
@@ -1420,7 +2177,7 @@ export function LiquidStudio({
       <div className="liquid-ops-main">
         <div className="liquid-ops-tabs">
           {TABS.map((tab) => (
-            <button key={tab.id} type="button" className={activeTab === tab.id ? "active" : ""} onClick={() => startTransition(() => setActiveTab(tab.id))}>
+            <button key={tab.id} type="button" className={activeTab === tab.id ? "active" : ""} onClick={() => void requestActiveTabChange(tab.id)}>
               {tab.label}
             </button>
           ))}

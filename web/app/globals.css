@@ -3252,6 +3252,30 @@ code, .mono {
   color: var(--text-3);
 }
 
+.liquid-ops-select {
+  width: 100%;
+  min-width: 0;
+}
+
+.liquid-ops-select-trigger {
+  width: 100%;
+  min-width: 0;
+  min-height: 42px;
+  align-items: center;
+}
+
+.liquid-ops-select-compact .liquid-ops-select-trigger {
+  min-height: 40px;
+  padding: 8px 12px;
+  border-radius: 12px;
+}
+
+.liquid-ops-select-popover {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
 .liquid-ops-inline-create-grid {
   display: grid;
   grid-template-columns: minmax(220px, 1.35fr) minmax(180px, 1.1fr) minmax(260px, 1.7fr) 92px 120px auto;
@@ -3290,6 +3314,231 @@ code, .mono {
   grid-template-columns: minmax(140px, 1fr) minmax(140px, 1fr) auto;
   gap: 8px;
   align-items: center;
+}
+
+.liquid-ops-inline-trait-range {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.liquid-ops-profile-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.liquid-ops-profile-shelf {
+  display: grid;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.liquid-ops-profile-shelf-copy {
+  display: grid;
+  gap: 4px;
+}
+
+.liquid-ops-profile-shelf-copy span {
+  color: var(--text-2);
+  font-size: 0.86rem;
+}
+
+.liquid-ops-profile-pill-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.liquid-ops-trait-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 38px;
+  min-width: 172px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.035);
+  color: var(--text);
+  cursor: grab;
+  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+}
+
+.liquid-ops-trait-pill:hover {
+  transform: translateY(-1px);
+  border-color: rgba(127, 182, 255, 0.28);
+  background: rgba(127, 182, 255, 0.08);
+}
+
+.liquid-ops-trait-pill:active,
+.liquid-ops-trait-pill.is-dragging {
+  cursor: grabbing;
+  opacity: 0.72;
+}
+
+.liquid-ops-trait-pill span {
+  white-space: nowrap;
+}
+
+.liquid-ops-trait-pill small {
+  color: var(--text-3);
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+
+.liquid-ops-trait-chip {
+  display: grid;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.liquid-ops-trait-chip span {
+  color: var(--text-3);
+  font-size: 0.74rem;
+}
+
+.liquid-ops-profile-card {
+  --liquid-profile-accent: rgba(127, 182, 255, 0.95);
+  position: relative;
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  border-radius: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background:
+    radial-gradient(circle at top right, color-mix(in srgb, var(--liquid-profile-accent) 14%, transparent), transparent 42%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.025), rgba(255, 255, 255, 0)),
+    rgba(11, 15, 26, 0.82);
+  overflow: hidden;
+}
+
+.liquid-ops-profile-card.is-drop-target {
+  border-color: color-mix(in srgb, var(--liquid-profile-accent) 40%, rgba(255, 255, 255, 0.08));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--liquid-profile-accent) 24%, transparent);
+}
+
+.liquid-ops-profile-card-edit {
+  gap: 16px;
+}
+
+.liquid-ops-profile-card-create {
+  min-height: 100%;
+}
+
+.liquid-ops-profile-accent {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: var(--liquid-profile-accent);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--liquid-profile-accent) 55%, transparent);
+}
+
+.liquid-ops-profile-card-head,
+.liquid-ops-profile-card-actions,
+.liquid-ops-profile-section-head {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.liquid-ops-profile-copy {
+  min-height: 44px;
+}
+
+.liquid-ops-profile-facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.liquid-ops-profile-facts div {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.liquid-ops-profile-facts span {
+  color: var(--text-3);
+  font-size: 0.78rem;
+}
+
+.liquid-ops-profile-facts strong {
+  font-size: 0.92rem;
+}
+
+.liquid-ops-profile-traits {
+  align-items: flex-start;
+}
+
+.liquid-ops-profile-edit-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.liquid-ops-profile-field-wide {
+  grid-column: 1 / -1;
+}
+
+.liquid-ops-profile-section {
+  display: grid;
+  gap: 10px;
+}
+
+.liquid-ops-profile-drop-hint {
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px dashed rgba(255, 255, 255, 0.12);
+  color: var(--text-3);
+  font-size: 0.82rem;
+  background: rgba(255, 255, 255, 0.015);
+}
+
+.liquid-ops-profile-popover {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(127, 182, 255, 0.2);
+  background:
+    linear-gradient(180deg, rgba(127, 182, 255, 0.08), rgba(127, 182, 255, 0.03)),
+    rgba(8, 12, 22, 0.92);
+  box-shadow: 0 18px 36px rgba(0, 0, 0, 0.28);
+}
+
+.liquid-ops-profile-popover-main {
+  margin-top: -2px;
+  margin-bottom: 2px;
+}
+
+.liquid-ops-profile-popover-head,
+.liquid-ops-profile-popover-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.liquid-ops-profile-popover-head div {
+  display: grid;
+  gap: 3px;
+}
+
+.liquid-ops-profile-popover-head span {
+  color: var(--text-2);
+  font-size: 0.82rem;
 }
 
 .liquid-ops-toolbar-inline {
@@ -3561,6 +3810,15 @@ code, .mono {
   .liquid-ops-rules-create-grid-traits,
   .liquid-ops-rules-create-grid-variants,
   .liquid-ops-inline-trait-row {
+    grid-template-columns: 1fr;
+  }
+
+  .liquid-ops-inline-trait-range {
+    grid-template-columns: 1fr;
+  }
+
+  .liquid-ops-profile-facts,
+  .liquid-ops-profile-edit-grid {
     grid-template-columns: 1fr;
   }
 

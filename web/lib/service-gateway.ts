@@ -168,7 +168,13 @@ export type LiquidProfileTrait = {
   traitId?: string | null;
   traitKey: string;
   label: string;
-  value: string;
+  valueType: "text" | "int" | "range" | "boolean" | "select";
+  value?: string | null;
+  intValue?: number | null;
+  minValue?: number | null;
+  maxValue?: number | null;
+  boolValue?: boolean | null;
+  displayValue: string;
 };
 
 export type LiquidProfile = {

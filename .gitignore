@@ -9,3 +9,6 @@ node_modules/
 .next-build/
 output/
 tmp/
+__pycache__/
+*.pyc
+web/tsconfig.tsbuildinfo

@@ -116,6 +116,9 @@ def liquid_update_key_draft(
         return update_liquid_key_draft(db, account["workspace_id"], account.get("user_id"), key_id, payload.model_dump())
     except LookupError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="That Liquid key already exists.") from exc
 
 
 @router.post("/keys/{key_id}/publish", response_model=LiquidKeyDetailOut)

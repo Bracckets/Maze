@@ -49,6 +49,7 @@ class LiquidKeyCreateIn(BaseModel):
 
 
 class LiquidKeyDraftUpdateIn(BaseModel):
+    key: str = Field(..., min_length=2, max_length=160, pattern=r"^[a-z0-9._/-]+$")
     label: str = Field(..., min_length=2, max_length=160)
     description: str | None = Field(default=None, max_length=600)
     namespace: str | None = Field(default=None, max_length=80)
@@ -179,14 +180,24 @@ class LiquidTraitOut(BaseModel):
 class LiquidProfileTraitValueIn(BaseModel):
     traitId: str | None = None
     traitKey: str = Field(..., min_length=2, max_length=120, pattern=r"^[a-z0-9._/-]+$")
-    value: str = Field(..., min_length=1, max_length=160)
+    value: str | None = Field(default=None, max_length=160)
+    intValue: int | None = None
+    minValue: float | None = None
+    maxValue: float | None = None
+    boolValue: bool | None = None
 
 
 class LiquidProfileTraitValueOut(BaseModel):
     traitId: str | None = None
     traitKey: str
     label: str
-    value: str
+    valueType: TraitValueType = "text"
+    value: str | None = None
+    intValue: int | None = None
+    minValue: float | None = None
+    maxValue: float | None = None
+    boolValue: bool | None = None
+    displayValue: str
 
 
 class LiquidProfileUpsertIn(BaseModel):

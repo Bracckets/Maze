@@ -309,6 +309,7 @@ def update_liquid_key_draft(db: Session, workspace_id: str, user_id: str | None,
             """
             UPDATE liquid_keys
             SET
+                key_name = :key_name,
                 label = :label,
                 description = :description,
                 namespace = :namespace,
@@ -325,6 +326,7 @@ def update_liquid_key_draft(db: Session, workspace_id: str, user_id: str | None,
         {
             "workspace_id": workspace_id,
             "key_id": key_id,
+            "key_name": payload["key"],
             "label": payload["label"],
             "description": payload.get("description"),
             "namespace": payload.get("namespace"),
@@ -2101,31 +2103,87 @@ def _profile_conditions(traits: list[dict[str, Any]], trait_map: dict[str, dict[
     seen_trait_keys: set[str] = set()
     for trait in traits:
         trait_key = (trait.get("traitKey") or "").strip()
-        value = str(trait.get("value") or "").strip()
-        if not trait_key or not value:
+        if not trait_key:
             continue
         if trait_key in seen_trait_keys:
             raise ValueError("Each profile trait can only be used once.")
         if trait_key not in trait_map:
             raise ValueError(f"Trait '{trait_key}' must be created before it can be used in a profile.")
+        value_type = str(trait_map[trait_key].get("valueType") or "text")
         seen_trait_keys.add(trait_key)
-        conditions.append({"field": trait_key, "operator": "eq", "value": value})
+        if value_type in {"text", "select"}:
+            value = str(trait.get("value") or "").strip()
+            if not value:
+                raise ValueError(f"Trait '{trait_map[trait_key]['label']}' needs a value.")
+            conditions.append({"field": trait_key, "operator": "eq", "value": value})
+            continue
+        if value_type == "int":
+            int_value = _coerce_profile_int(trait.get("intValue"), trait.get("value"), trait_map[trait_key]["label"])
+            conditions.append({"field": trait_key, "operator": "eq", "value": int_value})
+            continue
+        if value_type == "boolean":
+            bool_value = _coerce_profile_bool(trait.get("boolValue"), trait.get("value"), trait_map[trait_key]["label"])
+            conditions.append({"field": trait_key, "operator": "eq", "value": bool_value})
+            continue
+        if value_type == "range":
+            min_value, max_value = _coerce_profile_range(
+                trait.get("minValue"),
+                trait.get("maxValue"),
+                trait_map[trait_key]["label"],
+            )
+            conditions.append({"field": trait_key, "operator": "gte", "value": min_value})
+            conditions.append({"field": trait_key, "operator": "lte", "value": max_value})
+            continue
+        raise ValueError(f"Trait '{trait_map[trait_key]['label']}' has an unsupported value type.")
     return {"all": conditions, "any": []}
 
 
 def _profile_out(row: dict[str, Any], trait_map: dict[str, dict[str, Any]]) -> dict[str, Any]:
     traits: list[dict[str, Any]] = []
+    grouped_conditions: OrderedDict[str, list[dict[str, Any]]] = OrderedDict()
     for condition in _condition_group(row["conditions"]).get("all", []):
         trait_key = str(condition.get("field") or "").strip()
         if not trait_key:
             continue
+        grouped_conditions.setdefault(trait_key, []).append(condition)
+
+    for trait_key, trait_conditions in grouped_conditions.items():
         definition = trait_map.get(trait_key)
+        value_type = str(definition.get("valueType") if definition else _infer_profile_trait_value_type(trait_conditions))
+        value: str | None = None
+        int_value: int | None = None
+        min_value: float | None = None
+        max_value: float | None = None
+        bool_value: bool | None = None
+
+        if value_type in {"text", "select"}:
+            first = next((condition for condition in trait_conditions if condition.get("operator") == "eq"), trait_conditions[0])
+            raw_value = first.get("value")
+            value = "" if raw_value is None else str(raw_value)
+        elif value_type == "int":
+            first = next((condition for condition in trait_conditions if condition.get("operator") == "eq"), trait_conditions[0])
+            int_value = _normalize_int_value(first.get("value"))
+        elif value_type == "boolean":
+            first = next((condition for condition in trait_conditions if condition.get("operator") == "eq"), trait_conditions[0])
+            bool_value = _normalize_bool_value(first.get("value"))
+        elif value_type == "range":
+            min_condition = next((condition for condition in trait_conditions if condition.get("operator") == "gte"), None)
+            max_condition = next((condition for condition in trait_conditions if condition.get("operator") == "lte"), None)
+            min_value = _normalize_number_value(min_condition.get("value")) if min_condition else None
+            max_value = _normalize_number_value(max_condition.get("value")) if max_condition else None
+
         traits.append(
             {
                 "traitId": definition["id"] if definition else None,
                 "traitKey": trait_key,
                 "label": definition["label"] if definition else _screen_label(trait_key),
-                "value": str(condition.get("value") or ""),
+                "valueType": value_type,
+                "value": value,
+                "intValue": int_value,
+                "minValue": min_value,
+                "maxValue": max_value,
+                "boolValue": bool_value,
+                "displayValue": _profile_trait_display_value(value_type, value, int_value, min_value, max_value, bool_value),
             }
         )
     return {
@@ -2137,6 +2195,147 @@ def _profile_out(row: dict[str, Any], trait_map: dict[str, dict[str, Any]]) -> d
         "enabled": row["enabled"],
         "updatedAt": row["updated_at"],
     }
+
+
+def _coerce_profile_int(raw_int: Any, raw_value: Any, label: str) -> int:
+    candidate = raw_int if raw_int is not None else raw_value
+    if isinstance(candidate, bool):
+        raise ValueError(f"Trait '{label}' needs a whole number.")
+    if isinstance(candidate, int):
+        return candidate
+    if isinstance(candidate, float) and candidate.is_integer():
+        return int(candidate)
+    text_value = str(candidate or "").strip()
+    if not re.fullmatch(r"-?\d+", text_value):
+        raise ValueError(f"Trait '{label}' needs a whole number.")
+    return int(text_value)
+
+
+def _coerce_profile_bool(raw_bool: Any, raw_value: Any, label: str) -> bool:
+    candidate = raw_bool if raw_bool is not None else raw_value
+    if isinstance(candidate, bool):
+        return candidate
+    text_value = str(candidate or "").strip().lower()
+    if text_value in {"true", "1", "yes"}:
+        return True
+    if text_value in {"false", "0", "no"}:
+        return False
+    raise ValueError(f"Trait '{label}' must be true or false.")
+
+
+def _coerce_profile_range(raw_min: Any, raw_max: Any, label: str) -> tuple[float, float]:
+    min_value = _coerce_profile_number(raw_min, f"Trait '{label}' needs a starting value.")
+    max_value = _coerce_profile_number(raw_max, f"Trait '{label}' needs an ending value.")
+    if min_value > max_value:
+        raise ValueError(f"Trait '{label}' must use a start value that is less than or equal to the end value.")
+    return min_value, max_value
+
+
+def _coerce_profile_number(raw_value: Any, error_message: str) -> float:
+    if raw_value is None or raw_value == "":
+        raise ValueError(error_message)
+    if isinstance(raw_value, bool):
+        raise ValueError(error_message)
+    if isinstance(raw_value, (int, float)):
+        numeric_value = float(raw_value)
+        if numeric_value != numeric_value or numeric_value in {float("inf"), float("-inf")}:
+            raise ValueError(error_message)
+        return numeric_value
+    text_value = str(raw_value).strip()
+    if not text_value:
+        raise ValueError(error_message)
+    try:
+        numeric_value = float(text_value)
+    except ValueError as exc:
+        raise ValueError(error_message) from exc
+    if numeric_value != numeric_value or numeric_value in {float("inf"), float("-inf")}:
+        raise ValueError(error_message)
+    return numeric_value
+
+
+def _normalize_int_value(raw_value: Any) -> int | None:
+    if raw_value is None or isinstance(raw_value, bool):
+        return None
+    if isinstance(raw_value, int):
+        return raw_value
+    if isinstance(raw_value, float) and raw_value.is_integer():
+        return int(raw_value)
+    text_value = str(raw_value).strip()
+    if not re.fullmatch(r"-?\d+", text_value):
+        return None
+    return int(text_value)
+
+
+def _normalize_bool_value(raw_value: Any) -> bool | None:
+    if isinstance(raw_value, bool):
+        return raw_value
+    text_value = str(raw_value or "").strip().lower()
+    if text_value in {"true", "1", "yes"}:
+        return True
+    if text_value in {"false", "0", "no"}:
+        return False
+    return None
+
+
+def _normalize_number_value(raw_value: Any) -> float | None:
+    if raw_value is None or raw_value == "" or isinstance(raw_value, bool):
+        return None
+    if isinstance(raw_value, (int, float)):
+        numeric_value = float(raw_value)
+        if numeric_value != numeric_value or numeric_value in {float("inf"), float("-inf")}:
+            return None
+        return numeric_value
+    text_value = str(raw_value).strip()
+    if not text_value:
+        return None
+    try:
+        numeric_value = float(text_value)
+    except ValueError:
+        return None
+    if numeric_value != numeric_value or numeric_value in {float("inf"), float("-inf")}:
+        return None
+    return numeric_value
+
+
+def _infer_profile_trait_value_type(conditions: list[dict[str, Any]]) -> str:
+    operators = {str(condition.get("operator") or "") for condition in conditions}
+    if "gte" in operators or "lte" in operators:
+        return "range"
+    first_value = next((condition.get("value") for condition in conditions if condition.get("operator") == "eq"), None)
+    if isinstance(first_value, bool):
+        return "boolean"
+    if _normalize_int_value(first_value) is not None:
+        return "int"
+    return "text"
+
+
+def _profile_trait_display_value(
+    value_type: str,
+    value: str | None,
+    int_value: int | None,
+    min_value: float | None,
+    max_value: float | None,
+    bool_value: bool | None,
+) -> str:
+    if value_type in {"text", "select"}:
+        return value or "No value"
+    if value_type == "int":
+        return str(int_value) if int_value is not None else "No value"
+    if value_type == "boolean":
+        if bool_value is None:
+            return "No value"
+        return "True" if bool_value else "False"
+    if value_type == "range":
+        if min_value is None or max_value is None:
+            return "No range"
+        return f"{_format_profile_number(min_value)} to {_format_profile_number(max_value)}"
+    return value or "No value"
+
+
+def _format_profile_number(value: float) -> str:
+    if float(value).is_integer():
+        return str(int(value))
+    return f"{value:.2f}".rstrip("0").rstrip(".")
 
 
 def _assert_targeting_refs(db: Session, workspace_id: str, payload: dict[str, Any]) -> None:
@@ -2178,24 +2377,28 @@ def _clear_default_variant(
     locale: str | None,
     exclude_variant_id: str | None,
 ) -> None:
+    exclude_clause = ""
+    params: dict[str, Any] = {
+        "workspace_id": workspace_id,
+        "key_id": key_id,
+        "locale": locale,
+    }
+    if exclude_variant_id:
+        exclude_clause = "\n              AND id <> CAST(:exclude_variant_id AS uuid)"
+        params["exclude_variant_id"] = exclude_variant_id
     db.execute(
         text(
-            """
+            f"""
             UPDATE liquid_variants
             SET is_default = false, updated_at = now()
             WHERE workspace_id = CAST(:workspace_id AS uuid)
               AND key_id = CAST(:key_id AS uuid)
               AND stage = 'draft'
               AND COALESCE(locale, '') = COALESCE(:locale, '')
-              AND (:exclude_variant_id IS NULL OR id <> CAST(:exclude_variant_id AS uuid))
+              {exclude_clause}
             """
         ),
-        {
-            "workspace_id": workspace_id,
-            "key_id": key_id,
-            "locale": locale,
-            "exclude_variant_id": exclude_variant_id,
-        },
+        params,
     )
 
 
