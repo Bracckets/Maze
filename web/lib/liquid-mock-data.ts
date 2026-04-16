@@ -77,6 +77,18 @@ function makeBundleSummary(
   };
 }
 
+function makeReadiness(
+  state: LiquidKeyDetail["readiness"]["state"] = "fallback_only",
+): LiquidKeyDetail["readiness"] {
+  return {
+    state,
+    blockingIssues: [],
+    dependentTraits: [],
+    lastPreviewAt: null,
+    lastPublishAt: null,
+  };
+}
+
 export function buildLiquidDemoState(): LiquidDemoState {
   const segments: LiquidSegment[] = [
     {
@@ -205,7 +217,7 @@ export function buildLiquidDemoState(): LiquidDemoState {
     },
   ];
 
-  const keyDetails: LiquidKeyDetail[] = [
+  const rawKeyDetails: Array<Omit<LiquidKeyDetail, "dependencyCount" | "readiness">> = [
     {
       id: "key-checkout-primary-cta",
       key: "checkout.primary.cta",
@@ -400,6 +412,12 @@ export function buildLiquidDemoState(): LiquidDemoState {
       ],
     },
   ];
+
+  const keyDetails: LiquidKeyDetail[] = rawKeyDetails.map((detail) => ({
+    ...detail,
+    dependencyCount: detail.variants.filter((variant) => Boolean(variant.segmentId)).length,
+    readiness: makeReadiness(detail.enabled ? "ready" : "fallback_only"),
+  }));
 
   const keys = keyDetails.map((detail) => detailToSummary(detail));
   const bundles: LiquidBundleSummary[] = [

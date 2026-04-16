@@ -8,6 +8,8 @@ EmphasisValue = Literal["low", "medium", "high"]
 ExperimentStatus = Literal["draft", "active", "paused", "completed"]
 ConditionOperator = Literal["eq", "neq", "in", "not_in", "gte", "lte", "contains", "exists", "prefix"]
 TraitValueType = Literal["text", "int", "range", "boolean", "select"]
+TraitSourceType = Literal["app_profile", "maze_computed", "manual_test"]
+LiquidReadinessState = Literal["ready", "missing_source", "test_only", "low_coverage", "fallback_only"]
 
 
 class LiquidContentPayload(BaseModel):
@@ -71,6 +73,8 @@ class LiquidKeySummaryOut(BaseModel):
     bundleCount: int
     publishedRevision: int
     publishedAt: datetime | None = None
+    dependencyCount: int = 0
+    readiness: "LiquidReadinessOut | None" = None
     updatedAt: datetime
 
 
@@ -139,6 +143,8 @@ class LiquidKeyDetailOut(BaseModel):
     draftUpdatedAt: datetime
     variants: list[LiquidVariantOut]
     bundles: list[LiquidBundleReferenceOut]
+    dependencyCount: int = 0
+    readiness: "LiquidReadinessOut"
 
 
 class LiquidSegmentUpsertIn(BaseModel):
@@ -164,7 +170,20 @@ class LiquidTraitUpsertIn(BaseModel):
     label: str = Field(..., min_length=2, max_length=120)
     description: str | None = Field(default=None, max_length=400)
     valueType: TraitValueType = "text"
+    sourceType: TraitSourceType = "app_profile"
+    sourceKey: str | None = Field(default=None, max_length=160)
+    exampleValues: list[str] = Field(default_factory=list, max_length=6)
     enabled: bool = True
+
+    @field_validator("exampleValues")
+    @classmethod
+    def normalize_example_values(cls, value: list[str]) -> list[str]:
+        normalized: list[str] = []
+        for item in value:
+            cleaned = item.strip()
+            if cleaned:
+                normalized.append(cleaned[:80])
+        return normalized[:6]
 
 
 class LiquidTraitOut(BaseModel):
@@ -173,6 +192,11 @@ class LiquidTraitOut(BaseModel):
     label: str
     description: str | None = None
     valueType: TraitValueType
+    sourceType: TraitSourceType
+    sourceKey: str | None = None
+    liveEligible: bool
+    coveragePercent: float
+    exampleValues: list[str] = Field(default_factory=list)
     enabled: bool
     updatedAt: datetime
 
@@ -192,12 +216,34 @@ class LiquidProfileTraitValueOut(BaseModel):
     traitKey: str
     label: str
     valueType: TraitValueType = "text"
+    sourceType: TraitSourceType = "app_profile"
+    sourceKey: str | None = None
+    liveEligible: bool = True
+    coveragePercent: float = 0
     value: str | None = None
     intValue: int | None = None
     minValue: float | None = None
     maxValue: float | None = None
     boolValue: bool | None = None
     displayValue: str
+
+
+class LiquidKeyDependencyOut(BaseModel):
+    traitKey: str
+    label: str
+    sourceType: TraitSourceType
+    sourceKey: str | None = None
+    liveEligible: bool
+    coveragePercent: float
+    status: LiquidReadinessState
+
+
+class LiquidReadinessOut(BaseModel):
+    state: LiquidReadinessState
+    blockingIssues: list[str] = Field(default_factory=list)
+    dependentTraits: list[LiquidKeyDependencyOut] = Field(default_factory=list)
+    lastPreviewAt: datetime | None = None
+    lastPublishAt: datetime | None = None
 
 
 class LiquidProfileUpsertIn(BaseModel):
@@ -214,6 +260,7 @@ class LiquidProfileOut(BaseModel):
     name: str
     description: str | None = None
     traits: list[LiquidProfileTraitValueOut]
+    readiness: LiquidReadinessOut | None = None
     enabled: bool
     updatedAt: datetime
 
@@ -330,6 +377,27 @@ class LiquidResolvedItemOut(BaseModel):
     locale: str
     source: Literal["experiment", "rule", "segment", "default", "safe_fallback"]
     experiment: LiquidExperimentAssignmentOut | None = None
+    matchedVariantId: str | None = None
+    matchedProfileId: str | None = None
+    matchedProfileKey: str | None = None
+    fallbackReason: str | None = None
+
+
+class LiquidResolvedTraitOut(BaseModel):
+    traitKey: str
+    value: Any = None
+    sourceType: TraitSourceType
+    sourceKey: str | None = None
+    present: bool
+    liveEligible: bool = True
+
+
+class LiquidResolveDiagnosticsOut(BaseModel):
+    resolvedTraits: list[LiquidResolvedTraitOut] = Field(default_factory=list)
+    missingTraits: list[str] = Field(default_factory=list)
+    traitSources: dict[str, str] = Field(default_factory=dict)
+    matchedProfileCount: int = 0
+    fallbackItemCount: int = 0
 
 
 class LiquidBundleResolveOut(BaseModel):
@@ -340,6 +408,7 @@ class LiquidBundleResolveOut(BaseModel):
     ttlSeconds: int
     generatedAt: datetime
     items: list[LiquidResolvedItemOut]
+    diagnostics: LiquidResolveDiagnosticsOut
 
 
 class LiquidOverviewOut(BaseModel):
@@ -351,3 +420,15 @@ class LiquidOverviewOut(BaseModel):
     activeExperimentCount: int
     runtimePath: str
     cachePolicy: str
+
+
+class LiquidIntegrationStatusOut(BaseModel):
+    observedScreensCount: int
+    runtimeResolveCount7d: int
+    runtimeResolveActive: bool
+    appTraitCoverage: float
+    computedTraitCoverage: float
+    fallbackOnlyTrafficShare: float
+    personalizedTrafficShare: float
+    liveKeyCount: int
+    fallbackOnlyKeyCount: int

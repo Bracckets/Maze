@@ -53,12 +53,63 @@ def ensure_liquid_schema(connection) -> None:
                 label TEXT NOT NULL,
                 description TEXT,
                 value_type TEXT NOT NULL DEFAULT 'text',
+                source_type TEXT NOT NULL DEFAULT 'app_profile',
+                source_key TEXT,
+                example_values JSONB NOT NULL DEFAULT '[]'::jsonb,
                 enabled BOOLEAN NOT NULL DEFAULT true,
                 created_by UUID REFERENCES users(id) ON DELETE SET NULL,
                 updated_by UUID REFERENCES users(id) ON DELETE SET NULL,
                 created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
                 updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
                 UNIQUE (workspace_id, trait_key)
+            )
+            """
+        )
+    )
+    connection.execute(
+        text(
+            """
+            CREATE TABLE IF NOT EXISTS liquid_subject_traits (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                workspace_id UUID NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+                subject_id TEXT NOT NULL,
+                traits JSONB NOT NULL DEFAULT '{}'::jsonb,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                UNIQUE (workspace_id, subject_id)
+            )
+            """
+        )
+    )
+    connection.execute(
+        text(
+            """
+            CREATE TABLE IF NOT EXISTS liquid_computed_traits (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                workspace_id UUID NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+                subject_id TEXT NOT NULL,
+                traits JSONB NOT NULL DEFAULT '{}'::jsonb,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                UNIQUE (workspace_id, subject_id)
+            )
+            """
+        )
+    )
+    connection.execute(
+        text(
+            """
+            CREATE TABLE IF NOT EXISTS liquid_resolution_logs (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                workspace_id UUID NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+                stage TEXT NOT NULL,
+                screen_key TEXT NOT NULL,
+                subject_id TEXT,
+                request_traits JSONB NOT NULL DEFAULT '{}'::jsonb,
+                resolved_traits JSONB NOT NULL DEFAULT '{}'::jsonb,
+                matched_profile_count INTEGER NOT NULL DEFAULT 0,
+                fallback_item_count INTEGER NOT NULL DEFAULT 0,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT now()
             )
             """
         )
@@ -182,6 +233,12 @@ def ensure_liquid_schema(connection) -> None:
     connection.execute(text("CREATE INDEX IF NOT EXISTS idx_liquid_keys_workspace ON liquid_keys(workspace_id, updated_at DESC)"))
     connection.execute(text("CREATE INDEX IF NOT EXISTS idx_liquid_profile_traits_workspace ON liquid_profile_traits(workspace_id, updated_at DESC)"))
     connection.execute(text("ALTER TABLE liquid_profile_traits ADD COLUMN IF NOT EXISTS value_type TEXT NOT NULL DEFAULT 'text'"))
+    connection.execute(text("ALTER TABLE liquid_profile_traits ADD COLUMN IF NOT EXISTS source_type TEXT NOT NULL DEFAULT 'app_profile'"))
+    connection.execute(text("ALTER TABLE liquid_profile_traits ADD COLUMN IF NOT EXISTS source_key TEXT"))
+    connection.execute(text("ALTER TABLE liquid_profile_traits ADD COLUMN IF NOT EXISTS example_values JSONB NOT NULL DEFAULT '[]'::jsonb"))
+    connection.execute(text("CREATE INDEX IF NOT EXISTS idx_liquid_subject_traits_workspace ON liquid_subject_traits(workspace_id, updated_at DESC)"))
+    connection.execute(text("CREATE INDEX IF NOT EXISTS idx_liquid_computed_traits_workspace ON liquid_computed_traits(workspace_id, updated_at DESC)"))
+    connection.execute(text("CREATE INDEX IF NOT EXISTS idx_liquid_resolution_logs_workspace ON liquid_resolution_logs(workspace_id, created_at DESC)"))
     connection.execute(text("CREATE INDEX IF NOT EXISTS idx_liquid_variants_key_stage ON liquid_variants(key_id, stage, priority DESC)"))
     connection.execute(text("CREATE INDEX IF NOT EXISTS idx_liquid_variants_workspace_stage ON liquid_variants(workspace_id, stage)"))
     connection.execute(text("CREATE INDEX IF NOT EXISTS idx_liquid_bundles_workspace ON liquid_screen_bundles(workspace_id, updated_at DESC)"))

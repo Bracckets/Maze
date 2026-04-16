@@ -88,6 +88,27 @@ export type LiquidConditionGroup = {
   any: LiquidCondition[];
 };
 
+export type LiquidTraitSourceType = "app_profile" | "maze_computed" | "manual_test";
+export type LiquidReadinessState = "ready" | "missing_source" | "test_only" | "low_coverage" | "fallback_only";
+
+export type LiquidKeyDependency = {
+  traitKey: string;
+  label: string;
+  sourceType: LiquidTraitSourceType;
+  sourceKey?: string | null;
+  liveEligible: boolean;
+  coveragePercent: number;
+  status: LiquidReadinessState;
+};
+
+export type LiquidReadiness = {
+  state: LiquidReadinessState;
+  blockingIssues: string[];
+  dependentTraits: LiquidKeyDependency[];
+  lastPreviewAt?: string | null;
+  lastPublishAt?: string | null;
+};
+
 export type LiquidVariant = {
   id: string;
   stage: "draft" | "published";
@@ -120,6 +141,8 @@ export type LiquidKeySummary = {
   bundleCount: number;
   publishedRevision: number;
   publishedAt?: string | null;
+  dependencyCount: number;
+  readiness?: LiquidReadiness | null;
   updatedAt: string;
 };
 
@@ -135,6 +158,8 @@ export type LiquidKeyDetail = {
   publishedAt?: string | null;
   draftUpdatedAt: string;
   variants: LiquidVariant[];
+  dependencyCount: number;
+  readiness: LiquidReadiness;
   bundles: Array<{
     id: string;
     screenKey: string;
@@ -160,6 +185,11 @@ export type LiquidTraitDefinition = {
   label: string;
   description?: string | null;
   valueType: "text" | "int" | "range" | "boolean" | "select";
+  sourceType: LiquidTraitSourceType;
+  sourceKey?: string | null;
+  liveEligible: boolean;
+  coveragePercent: number;
+  exampleValues: string[];
   enabled: boolean;
   updatedAt: string;
 };
@@ -169,6 +199,10 @@ export type LiquidProfileTrait = {
   traitKey: string;
   label: string;
   valueType: "text" | "int" | "range" | "boolean" | "select";
+  sourceType: LiquidTraitSourceType;
+  sourceKey?: string | null;
+  liveEligible: boolean;
+  coveragePercent: number;
   value?: string | null;
   intValue?: number | null;
   minValue?: number | null;
@@ -183,6 +217,7 @@ export type LiquidProfile = {
   name: string;
   description?: string | null;
   traits: LiquidProfileTrait[];
+  readiness?: LiquidReadiness | null;
   enabled: boolean;
   updatedAt: string;
 };
@@ -258,6 +293,18 @@ export type LiquidOverview = {
   cachePolicy: string;
 };
 
+export type LiquidIntegrationStatus = {
+  observedScreensCount: number;
+  runtimeResolveCount7d: number;
+  runtimeResolveActive: boolean;
+  appTraitCoverage: number;
+  computedTraitCoverage: number;
+  fallbackOnlyTrafficShare: number;
+  personalizedTrafficShare: number;
+  liveKeyCount: number;
+  fallbackOnlyKeyCount: number;
+};
+
 export type LiquidBundleResolve = {
   screenKey: string;
   stage: "draft" | "published";
@@ -274,11 +321,29 @@ export type LiquidBundleResolve = {
     ordering: number;
     locale: string;
     source: "experiment" | "rule" | "segment" | "default" | "safe_fallback";
+    matchedVariantId?: string | null;
+    matchedProfileId?: string | null;
+    matchedProfileKey?: string | null;
+    fallbackReason?: string | null;
     experiment?: {
       experimentKey: string;
       arm: string;
     } | null;
   }>;
+  diagnostics: {
+    resolvedTraits: Array<{
+      traitKey: string;
+      value: unknown;
+      sourceType: LiquidTraitSourceType;
+      sourceKey?: string | null;
+      present: boolean;
+      liveEligible: boolean;
+    }>;
+    missingTraits: string[];
+    traitSources: Record<string, string>;
+    matchedProfileCount: number;
+    fallbackItemCount: number;
+  };
 };
 
 const backendBaseUrl = (process.env.MAZE_BACKEND_URL ?? process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000").replace(/\/$/, "");
@@ -426,6 +491,25 @@ export async function getLiquidOverview(): Promise<LiquidOverview> {
     };
   }
   return data as LiquidOverview;
+}
+
+export async function getLiquidIntegrationStatus(): Promise<LiquidIntegrationStatus> {
+  const result = await backendRequest<LiquidIntegrationStatus | { detail?: string }>("/liquid/integration-status", "GET");
+  const data = result.data;
+  if (!result.ok || (typeof data === "object" && data !== null && "detail" in data)) {
+    return {
+      observedScreensCount: 0,
+      runtimeResolveCount7d: 0,
+      runtimeResolveActive: false,
+      appTraitCoverage: 0,
+      computedTraitCoverage: 0,
+      fallbackOnlyTrafficShare: 100,
+      personalizedTrafficShare: 0,
+      liveKeyCount: 0,
+      fallbackOnlyKeyCount: 0,
+    };
+  }
+  return data as LiquidIntegrationStatus;
 }
 
 export async function getLiquidKeys(query?: string): Promise<LiquidKeySummary[]> {

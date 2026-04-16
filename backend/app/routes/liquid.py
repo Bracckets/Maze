@@ -10,6 +10,7 @@ from app.liquid.schemas import (
     LiquidBundleSummaryOut,
     LiquidExperimentOut,
     LiquidExperimentUpsertIn,
+    LiquidIntegrationStatusOut,
     LiquidKeyCreateIn,
     LiquidKeyDetailOut,
     LiquidKeyDraftUpdateIn,
@@ -44,6 +45,7 @@ from app.liquid.service import (
     demote_liquid_key,
     get_liquid_bundle_detail,
     get_liquid_experiment,
+    get_liquid_integration_status,
     get_liquid_key_detail,
     get_liquid_overview,
     get_liquid_profile,
@@ -77,6 +79,11 @@ router = APIRouter(prefix="/liquid", tags=["liquid"])
 @router.get("/overview", response_model=LiquidOverviewOut)
 def liquid_overview(account: dict = Depends(get_current_account), db: Session = Depends(get_db)):
     return get_liquid_overview(db, account["workspace_id"])
+
+
+@router.get("/integration-status", response_model=LiquidIntegrationStatusOut)
+def liquid_integration_status(account: dict = Depends(get_current_account), db: Session = Depends(get_db)):
+    return get_liquid_integration_status(db, account["workspace_id"])
 
 
 @router.get("/keys", response_model=list[LiquidKeySummaryOut])

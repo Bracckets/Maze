@@ -3167,6 +3167,10 @@ code, .mono {
   color: var(--text-2);
 }
 
+.liquid-ops-note-inline {
+  padding: 12px 14px;
+}
+
 .liquid-ops-table {
   min-width: 760px;
 }
@@ -3291,7 +3295,16 @@ code, .mono {
 
 .liquid-ops-rules-create-grid-traits {
   display: grid;
-  grid-template-columns: minmax(160px, 1fr) minmax(160px, 1fr) 120px minmax(220px, 1.5fr) 120px auto;
+  grid-template-columns:
+    minmax(140px, 1fr)
+    minmax(140px, 1fr)
+    110px
+    140px
+    minmax(180px, 1.25fr)
+    minmax(180px, 1.25fr)
+    120px
+    120px
+    auto;
   gap: 10px;
   align-items: center;
 }
@@ -3326,6 +3339,48 @@ code, .mono {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 16px;
+}
+
+.liquid-ops-automation-strip {
+  display: grid;
+  gap: 16px;
+}
+
+.liquid-ops-automation-grid,
+.liquid-ops-context-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.liquid-ops-automation-item,
+.liquid-ops-context-grid > div {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.liquid-ops-automation-item strong,
+.liquid-ops-context-grid strong {
+  font-size: 1rem;
+}
+
+.liquid-ops-automation-item span,
+.liquid-ops-context-grid span {
+  color: var(--text-3);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.liquid-ops-suggested-strip {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .liquid-ops-profile-shelf {
@@ -3811,6 +3866,13 @@ code, .mono {
   .liquid-ops-rules-create-grid-variants,
   .liquid-ops-inline-trait-row {
     grid-template-columns: 1fr;
+  }
+
+  .liquid-ops-automation-grid,
+  .liquid-ops-context-grid,
+  .liquid-ops-suggested-strip {
+    grid-template-columns: 1fr;
+    display: grid;
   }
 
   .liquid-ops-inline-trait-range {

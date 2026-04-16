@@ -1,4 +1,17 @@
-from app.liquid.service import _clear_default_variant, _profile_conditions, _profile_out, list_liquid_keys
+from datetime import UTC, datetime, timedelta
+
+from app.liquid.service import (
+    _assert_custom_trait_allowed,
+    _builtin_trait_by_key,
+    _builtin_trait_out,
+    _clear_default_variant,
+    _compute_behavior_traits,
+    _merged_resolution_traits,
+    _profile_conditions,
+    _profile_out,
+    _readiness_from_dependent_traits,
+    list_liquid_keys,
+)
 
 
 class FakeMappingsResult:
@@ -177,3 +190,120 @@ def test_clear_default_variant_with_exclude_id_includes_exclude_clause():
     sql, params = db.calls[0]
     assert params["exclude_variant_id"] == "variant-id"
     assert "id <> CAST(:exclude_variant_id AS uuid)" in sql
+
+
+def test_readiness_marks_missing_source_as_blocking():
+    readiness = _readiness_from_dependent_traits(
+        [
+            {
+                "traitKey": "plan",
+                "label": "Plan",
+                "sourceType": "app_profile",
+                "sourceKey": None,
+                "liveEligible": True,
+                "coveragePercent": 0,
+                "status": "missing_source",
+            }
+        ],
+        fallback_only=False,
+    )
+
+    assert readiness["state"] == "missing_source"
+    assert readiness["blockingIssues"] == ["Plan is missing a runtime source."]
+
+
+def test_merged_resolution_traits_prefers_preview_then_request_then_stored(monkeypatch):
+    monkeypatch.setattr(
+        "app.liquid.service._trait_definition_map",
+        lambda db, workspace_id: {
+            "plan": {"sourceType": "app_profile", "sourceKey": "user.plan", "liveEligible": True},
+            "maze.intent_level": {"sourceType": "maze_computed", "sourceKey": "maze.intent_level", "liveEligible": True},
+            "preview_only": {"sourceType": "manual_test", "sourceKey": "preview_only", "liveEligible": False},
+        },
+    )
+    monkeypatch.setattr(
+        "app.liquid.service._subject_traits_for_subject",
+        lambda db, workspace_id, subject_id: {"user": {"plan": "starter"}},
+    )
+
+    merged, diagnostics = _merged_resolution_traits(
+        db=None,
+        workspace_id="workspace-id",
+        request_traits={"user": {"plan": "growth"}},
+        subject_id="subject-1",
+        computed_traits={"maze.intent_level": "high"},
+        preview_overrides={"preview_only": "on"},
+        stage="draft",
+    )
+
+    assert merged["plan"] == "growth"
+    assert merged["maze.intent_level"] == "high"
+    assert merged["preview_only"] == "on"
+    assert diagnostics["missingTraits"] == []
+    assert diagnostics["traitSources"]["preview_only"] == "manual_test"
+
+
+def test_compute_behavior_traits_derives_safe_operational_fields():
+    now = datetime.now(UTC)
+    db = FakeSession(
+        [
+            {"occurred_at": now, "event_type": "screen", "screen": "checkout_paywall", "element_id": None},
+            {"occurred_at": now - timedelta(hours=1), "event_type": "tap", "screen": "payment", "element_id": "primary_cta"},
+            {"occurred_at": now - timedelta(hours=2), "event_type": "screen", "screen": "paywall_offer", "element_id": None},
+            {"occurred_at": now - timedelta(hours=3), "event_type": "screen", "screen": "onboarding_step_1", "element_id": None},
+            {"occurred_at": now - timedelta(hours=4), "event_type": "screen", "screen": "home", "element_id": None},
+            {"occurred_at": now - timedelta(hours=5), "event_type": "tap", "screen": "checkout_review", "element_id": "submit"},
+        ]
+    )
+
+    traits = _compute_behavior_traits(db, "workspace-id", "subject-1")
+
+    assert traits["maze.intent_level"] in {"medium", "high"}
+    assert traits["maze.usage_depth"] in {"active", "power"}
+    assert traits["maze.recent_activity"] == "active_24h"
+    assert traits["maze.paywall_fatigue"] is False
+    assert traits["maze.onboarding_stage"] in {"completed", "stalled", "in_progress"}
+
+
+def test_builtin_maze_trait_is_registered():
+    trait = _builtin_trait_by_key("maze.intent_level")
+
+    assert trait is not None
+    assert trait["sourceType"] == "maze_computed"
+
+
+def test_custom_traits_cannot_claim_maze_computed_source():
+    try:
+        _assert_custom_trait_allowed(
+            {
+                "traitKey": "custom.intent",
+                "sourceType": "maze_computed",
+            }
+        )
+    except ValueError as exc:
+        assert "built in" in str(exc)
+    else:
+        raise AssertionError("Expected Maze-computed trait creation to be rejected.")
+
+
+def test_builtin_trait_out_is_live_eligible():
+    db = FakeSession([])
+
+    payload = _builtin_trait_out(
+        db,
+        "workspace-id",
+        {
+            "id": "builtin:maze.intent_level",
+            "traitKey": "maze.intent_level",
+            "label": "Intent level",
+            "description": "Behavior-derived intent",
+            "valueType": "select",
+            "sourceType": "maze_computed",
+            "sourceKey": "maze.intent_level",
+            "exampleValues": ["low", "medium", "high"],
+            "enabled": True,
+        },
+    )
+
+    assert payload["liveEligible"] is True
+    assert payload["coveragePercent"] == 0.0

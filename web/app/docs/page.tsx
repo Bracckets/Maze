@@ -11,31 +11,31 @@ const sections = [
     content: [
       {
         type: "p",
-        text: "Liquid works best when you use it in this order: Summary, Message, Screen, Audience, then Go live.",
+        text: "Liquid works best when you use it in this order: Keys, Rules, Staging, then Analytics.",
       },
       {
         type: "p",
-        text: "1. Summary: check what already exists, what is selected, and what would be served if you published now.",
+        text: "1. Keys: define one stable content key, assign it to an observed Maze screen, and set the default fallback text your app can always render.",
       },
       {
         type: "p",
-        text: "2. Message: create one reusable piece of text, give it a stable ID, and add the versions your app can return. Start with the default version first.",
+        text: "2. Rules: define reusable traits, map each trait to a real source, then build profiles and profile-specific variants. Traits are not just labels anymore; they need a runtime source.",
       },
       {
         type: "p",
-        text: "3. Screen: add the messages that belong to one app screen. This is the set the client fetches together at runtime.",
+        text: "3. Staging: preview the actual resolved output, check readiness, and publish only when traits are live-safe and coverage looks healthy.",
       },
       {
         type: "p",
-        text: "4. Audience: only use this when the message should change for a specific user group, app state, or test. Groups describe who, Rules describe when, and Tests split traffic.",
+        text: "4. Analytics: measure fallback rate, profile match rate, trait coverage, and whether personalized variants outperform the default copy.",
       },
       {
         type: "p",
-        text: "5. Go live: run preview with realistic request data, inspect the exact response, then publish the message first and the screen second.",
+        text: "Liquid is fallback-first: the default copy is always safe, while personalization is additive and only goes live when the runtime inputs are resolvable.",
       },
       {
         type: "p",
-        text: "Practical tip: keep most messages simple. Use the Audience step sparingly so the live behavior stays easy to reason about.",
+        text: "Practical tip: keep trait sources explicit. App traits come from your app or backend, Maze traits come from behavior, and manual-test traits stay in preview only.",
       },
     ],
   },
@@ -82,7 +82,7 @@ Maze.initialize(context, "YOUR_API_KEY")`,
     content: [
       {
         type: "p",
-        text: "Define stable keys and screen bundles in Maze, then resolve a bundle at runtime with one request. Liquid returns text plus safe attributes like icon, visibility, emphasis, and ordering.",
+        text: "Define stable keys and observed-screen assignments in Maze, then resolve a bundle at runtime with one request. Liquid returns text plus safe attributes like icon, visibility, emphasis, and ordering, while preview flows expose diagnostics for missing traits and fallback behavior.",
       },
       {
         type: "code",
@@ -91,7 +91,10 @@ Maze.resolveLiquidBundle(
     screen: "checkout_paywall",
     locale: "en-US",
     subjectId: userId,
-    traits: ["plan": "growth"]
+    traits: [
+        "user.plan": "growth",
+        "user.region": "na"
+    ]
 ) { result in
     // render result.items
 }
@@ -101,10 +104,17 @@ Maze.resolveLiquidBundle(
     screen = "checkout_paywall",
     locale = "en-US",
     subjectId = userId,
-    traits = mapOf("plan" to "growth")
+    traits = mapOf(
+        "user.plan" to "growth",
+        "user.region" to "na"
+    )
 ) { result ->
     // render result.getOrNull()?.items
 }`,
+      },
+      {
+        type: "p",
+        text: "Maze computes behavior traits like intent level or usage depth on the server. Your app should only send traits it already knows, such as plan, region, language, or account tier.",
       },
     ],
   },
@@ -170,7 +180,10 @@ Maze.track(event: "error_message", screen: "kyc_form", elementId: "email_field")
         text: `POST /events                         # Ingest session events from SDKs
 POST /liquid/runtime/bundles/resolve # Resolve a published Liquid bundle
 POST /liquid/preview/bundles/resolve # Preview a draft Liquid bundle
+GET  /liquid/integration-status      # Liquid onboarding and readiness summary
 GET  /liquid/keys                    # Manage content keys
+GET  /liquid/traits                  # Trait definitions and sources
+GET  /liquid/profiles                # Reusable user profiles
 GET  /liquid/bundles                 # Manage screen bundles
 GET  /liquid/segments                # Audience segments
 GET  /liquid/rules                   # Request rules

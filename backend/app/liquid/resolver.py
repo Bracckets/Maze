@@ -20,6 +20,7 @@ class VariantCandidate:
     id: str
     locale: str | None
     content: dict[str, Any]
+    segment_id: str | None
     segment_key: str | None
     segment_enabled: bool
     segment_conditions: dict[str, Any]
@@ -113,6 +114,10 @@ def resolve_entry(entry: BundleEntry, context: ResolutionContext) -> dict[str, A
         "locale": context.locale or entry.default_locale,
         "source": "safe_fallback",
         "experiment": None,
+        "matchedVariantId": None,
+        "matchedProfileId": None,
+        "matchedProfileKey": None,
+        "fallbackReason": "no_matching_variant",
     }
 
 
@@ -190,6 +195,10 @@ def _resolved_candidate(
         "locale": candidate.locale or context.locale or default_locale,
         "source": source,
         "experiment": experiment,
+        "matchedVariantId": candidate.id,
+        "matchedProfileId": candidate.segment_id,
+        "matchedProfileKey": candidate.segment_key,
+        "fallbackReason": None if source not in {"default", "safe_fallback"} else source,
     }
 
 

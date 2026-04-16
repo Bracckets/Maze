@@ -3,14 +3,22 @@ import Link from "next/link";
 import { LiquidStudio } from "@/components/liquid-studio";
 import { DashboardShell } from "@/components/site-shell";
 import { getSessionScreens } from "@/lib/site-data";
-import { getLiquidKeyDetail, getLiquidKeys, getLiquidProfiles, getLiquidTraits, type LiquidKeyDetail } from "@/lib/service-gateway";
+import {
+  getLiquidIntegrationStatus,
+  getLiquidKeyDetail,
+  getLiquidKeys,
+  getLiquidProfiles,
+  getLiquidTraits,
+  type LiquidKeyDetail,
+} from "@/lib/service-gateway";
 
 export default async function LiquidPage() {
-  const [keys, profiles, traits, observedScreens] = await Promise.all([
+  const [keys, profiles, traits, observedScreens, integrationStatus] = await Promise.all([
     getLiquidKeys(),
     getLiquidProfiles(),
     getLiquidTraits(),
     getSessionScreens(),
+    getLiquidIntegrationStatus(),
   ]);
   const keyDetails = (await Promise.all(keys.map((key) => getLiquidKeyDetail(key.id)))).filter(
     (item): item is LiquidKeyDetail => Boolean(item),
@@ -32,6 +40,7 @@ export default async function LiquidPage() {
         initialProfiles={profiles}
         initialTraits={traits}
         observedScreens={observedScreens}
+        initialIntegrationStatus={integrationStatus}
       />
     </DashboardShell>
   );

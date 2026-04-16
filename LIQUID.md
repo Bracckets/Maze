@@ -1,61 +1,89 @@
 # Liquid
 
-Liquid is Maze's runtime adaptive content engine.
+Liquid is Maze's guided-automation content engine.
 
-Maze continues to capture product behavior and instrumentation health.
-Liquid extends Maze by becoming the runtime source of truth for mobile content bundles.
+Maze captures product behavior and instrumentation health. Liquid uses that context to resolve safe app copy at runtime while keeping fallback text deterministic, reviewable, and easy to ship.
 
-## V1 scope
+## Product model
 
-Liquid v1 supports:
+Liquid is built around one primary object: the content key.
+
+- A key belongs to one observed Maze screen.
+- A key always has default fallback text.
+- A key can have profile-specific variants.
+- A profile is a reusable set of typed trait conditions.
+- A trait definition explains both the type of a value and where it comes from.
+
+Trait sources are explicit:
+
+- `app_profile`
+  The app or backend provides the value at runtime, for example `user.plan` or `user.region`.
+- `maze_computed`
+  Maze derives the value from behavior, for example `maze.intent_level`.
+- `manual_test`
+  Preview-only input for draft testing. This is never live-eligible.
+
+## Supported scope
+
+Liquid currently supports:
 
 - text resolution
-- simple attributes: `icon`, `visibility`, `emphasis`, `ordering`
+- safe attributes: `icon`, `visibility`, `emphasis`, `ordering`
 - screen-bundle delivery
 - locale variants with fallback
-- reusable rules
-- reusable segments
-- experiments with deterministic assignment
+- reusable typed traits
+- reusable user profiles
+- deterministic experiments
 - draft and publish state
+- preview diagnostics
+- readiness checks before publish
 - mobile-friendly caching
 
-Liquid v1 does not support:
+Liquid does not support:
 
 - LLM calls at runtime
 - AI copy generation
 - arbitrary layout mutation
 - free-form UI generation
-- vertical-specific business logic
+- inference of sensitive identity traits like age or gender from behavior
 
 ## Architecture summary
 
-The implementation is intentionally native to the existing Maze repo:
+The implementation stays native to the existing Maze repo:
 
 - Backend: FastAPI routes under `/liquid`, a dedicated `app/liquid` module, and the existing text-SQL service style.
-- Database: PostgreSQL tables added to `backend/maze.sql`, mirrored in `ensure_runtime_schema()`, plus a standalone migration file in `backend/storage/migrations`.
-- Dashboard: a new authenticated `/liquid` surface inside the existing Next.js dashboard shell.
-- Integration: Maze and Liquid share the same workspace key, runtime host, and SDK story.
+- Database: PostgreSQL tables in `backend/maze.sql`, mirrored in `ensure_runtime_schema()`, plus standalone migrations in `backend/storage/migrations`.
+- Dashboard: an authenticated `/liquid` surface inside the existing Next.js shell.
+- Integration: Maze and Liquid share the same workspace key, backend host, and SDK story.
 
 ## Data model
 
 Core tables:
 
 - `liquid_keys`
-  Stores stable content keys, workspace scoping, default locale, and publish metadata.
+  Stable content keys, workspace scoping, default locale, and publish metadata.
 - `liquid_variants`
-  Stores draft and published content payloads plus targeting references.
+  Draft and published content payloads plus targeting references.
 - `liquid_screen_bundles`
-  Stores stable screen identifiers and publish metadata.
+  Stable screen identifiers and publish metadata.
 - `liquid_screen_bundle_mappings`
   Maps keys into draft and published bundles with explicit ordering.
 - `liquid_segments`
-  Stores reusable audience definitions.
+  Reusable user profiles and profile conditions.
+- `liquid_profile_traits`
+  Reusable trait catalog including value type, source type, source key, and example values.
+- `liquid_subject_traits`
+  Stored app-provided traits keyed by workspace and subject.
+- `liquid_computed_traits`
+  Cached Maze-derived behavior traits keyed by workspace and subject.
+- `liquid_resolution_logs`
+  Preview and runtime diagnostics used by staging, onboarding, and analytics.
 - `liquid_rules`
-  Stores reusable request-context predicates.
+  Compatibility layer for reusable request-context predicates.
 - `liquid_experiments`
-  Stores experiment metadata, allocation, and deterministic seed values.
+  Experiment metadata, allocation, and deterministic seed values.
 
-Content is intentionally typed rather than free-form:
+Content remains intentionally typed rather than free-form:
 
 ```json
 {
@@ -77,7 +105,15 @@ Liquid uses copy-on-publish semantics:
 - Runtime resolution only reads published rows.
 - Preview resolution only reads draft rows.
 
-This keeps runtime deterministic and prevents accidental live edits.
+Before publish, Liquid evaluates readiness:
+
+- `ready`
+- `missing_source`
+- `test_only`
+- `low_coverage`
+- `fallback_only`
+
+Manual-test traits are blocked from live publish, and missing runtime sources surface as blocking issues in staging and the dashboard.
 
 ## Resolver pipeline
 
@@ -86,9 +122,14 @@ Runtime resolution is bundle-first:
 1. The client asks for one screen bundle.
 2. Liquid loads the published bundle mappings for that screen.
 3. Liquid gathers all published variants for those keys in one query.
-4. The resolver applies:
+4. Liquid merges runtime context in this order:
+   - app-provided request traits
+   - stored subject traits already seen by Maze
+   - Maze-computed behavior traits
+   - preview-only overrides in draft preview
+5. The resolver applies:
    - locale matching and locale fallback
-   - segment conditions
+   - profile and segment conditions
    - rule conditions
    - active experiment assignment
    - default fallback
@@ -101,6 +142,14 @@ Experiment assignment is deterministic:
 - A bucket is chosen once and the matching experiment arm is returned.
 
 If no experiment arm is selected, Liquid falls back to non-experiment variants and then to the default variant.
+
+Preview and admin flows also expose diagnostics:
+
+- which traits were present
+- which source each trait came from
+- which traits were missing
+- which profiles matched
+- why a fallback happened
 
 ## Runtime contract
 
@@ -122,7 +171,7 @@ Request:
   "appVersion": "6.8.0",
   "country": "US",
   "traits": {
-    "plan": "growth"
+    "user.plan": "growth"
   }
 }
 ```
@@ -136,7 +185,7 @@ Response:
   "revision": 3,
   "etag": "9d4f7f9ec64d2f4d",
   "ttlSeconds": 60,
-  "generatedAt": "2026-04-12T10:42:00Z",
+  "generatedAt": "2026-04-17T10:42:00Z",
   "items": [
     {
       "key": "checkout_paywall.headline",
@@ -146,13 +195,29 @@ Response:
       "emphasis": "high",
       "ordering": 10,
       "locale": "en-US",
-      "source": "experiment",
-      "experiment": {
-        "experimentKey": "paywall-copy",
-        "arm": "treatment"
-      }
+      "source": "default",
+      "matchedProfileKey": "power_users",
+      "fallbackReason": null
     }
-  ]
+  ],
+  "diagnostics": {
+    "resolvedTraits": [
+      {
+        "traitKey": "plan",
+        "value": "growth",
+        "sourceType": "app_profile",
+        "sourceKey": "user.plan",
+        "present": true,
+        "liveEligible": true
+      }
+    ],
+    "missingTraits": [],
+    "traitSources": {
+      "plan": "app_profile"
+    },
+    "matchedProfileCount": 1,
+    "fallbackItemCount": 0
+  }
 }
 ```
 
@@ -163,23 +228,32 @@ POST /liquid/preview/bundles/resolve
 Authorization: Bearer <dashboard-session>
 ```
 
-Preview reads draft state and returns the same shape with `stage: "draft"`.
+Preview reads draft state and returns the same shape with `stage: "draft"`, plus diagnostics about resolved traits, missing traits, matched profiles, and fallback reasons.
+
+## Computed traits
+
+Maze currently derives only non-sensitive behavioral traits:
+
+- `maze.intent_level`
+- `maze.usage_depth`
+- `maze.recent_activity`
+- `maze.paywall_fatigue`
+- `maze.onboarding_stage`
+
+These are operational signals, not identity inference.
 
 ## Dashboard coverage
 
 The dashboard includes:
 
-- Liquid overview metrics
-- key search and creation
-- draft key editing
-- locale variant editing
-- draft key publish action
-- screen bundle authoring
-- draft bundle publish action
-- preview resolution
-- segment management
-- rule management
-- experiment management
+- key CRUD using observed Maze screens
+- trait definition management with explicit sources and coverage
+- profile management backed by reusable traits
+- profile-specific variant editing
+- staging with readiness checks and publish/demote actions
+- preview resolution with diagnostics
+- analytics for fallback rate, match rate, and trait coverage
+- onboarding and integration status for observed screens and runtime activity
 
 ## Mobile integration
 
@@ -197,7 +271,7 @@ Android:
 - `Maze.resolveLiquidBundle(...)`
 - `Maze.clearLiquidCache()`
 
-The SDKs now expose bundle resolution helpers and cache the last successful bundle response using the server-provided TTL.
+The SDKs expose bundle resolution helpers and cache the last successful bundle response using the server-provided TTL.
 
 ## Caching
 
@@ -214,20 +288,9 @@ SDK-side guidance:
 
 ## Deferred items
 
-Deliberately deferred beyond v1:
+Deliberately deferred:
 
 - localization workflows with translation memory
 - user-level personalization scoring beyond deterministic rules
-- resolution logging and analytics for every content decision
 - richer attribute types beyond the current safe set
-- dashboard diff views between draft and published revisions
 - automated rollout guardrails based on experiment performance
-
-## Founder-facing decisions still needing approval
-
-The implementation is shippable, but these product decisions still deserve explicit approval:
-
-1. Whether bundle caching should stay at `60s` by default or become workspace-configurable.
-2. Whether experiment traffic allocation should remain bundle-wide percentage gating or become per-arm sums that must equal `100`.
-3. Whether disabled bundles should remain previewable in admin mode, which is how v1 currently behaves.
-4. Whether Liquid should later expose server-side resolution logs for debugging, since v1 intentionally skips that table to keep the first release lean.

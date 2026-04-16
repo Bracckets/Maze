@@ -71,6 +71,22 @@ export type LiquidRulePerformanceRow = {
 
 type LiquidPreviewItem = LiquidBundleResolve["items"][number];
 
+const DEFAULT_LIQUID_READINESS: LiquidKeyDetail["readiness"] = {
+  state: "fallback_only",
+  blockingIssues: [],
+  dependentTraits: [],
+  lastPreviewAt: null,
+  lastPublishAt: null,
+};
+
+const DEFAULT_LIQUID_DIAGNOSTICS: LiquidBundleResolve["diagnostics"] = {
+  resolvedTraits: [],
+  missingTraits: [],
+  traitSources: {},
+  matchedProfileCount: 0,
+  fallbackItemCount: 0,
+};
+
 export function parseJsonSafely(value: string): unknown | null {
   if (!value.trim()) {
     return null;
@@ -343,6 +359,7 @@ export function buildPreviewFallback(
     ttlSeconds: 60,
     generatedAt: new Date().toISOString(),
     items,
+    diagnostics: DEFAULT_LIQUID_DIAGNOSTICS,
   };
 }
 
@@ -363,6 +380,8 @@ export function detailToSummary(detail: LiquidKeyDetail): LiquidKeySummary {
     bundleCount: detail.bundles.length,
     publishedRevision: detail.publishedRevision,
     publishedAt: detail.publishedAt,
+    dependencyCount: detail.dependencyCount,
+    readiness: detail.readiness ?? DEFAULT_LIQUID_READINESS,
     updatedAt: detail.draftUpdatedAt,
   };
 }

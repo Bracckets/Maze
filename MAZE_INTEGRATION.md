@@ -1,13 +1,13 @@
 # MAZE_INTEGRATION
 
-Follow this document exactly when integrating Maze into a mobile app.
+Follow this document when integrating Maze into a mobile app.
 
 Maze now covers two connected responsibilities:
 
 1. Behavior telemetry and optional session capture
 2. Liquid runtime bundle resolution for app content
 
-The integration goal is one coherent Maze setup, not separate SDK stories.
+The goal is one coherent Maze setup, not two separate SDK stories.
 
 ## Core integration contract
 
@@ -17,14 +17,17 @@ At runtime the app should:
 2. continue sending telemetry with `Maze.screen(...)` and `Maze.track(...)`
 3. identify a screen using a stable `screenKey`
 4. resolve one Liquid bundle for that screen
-5. cache the resolved bundle locally
-6. render text plus safe attributes returned by Liquid
+5. pass stable app or account traits when available
+6. render the returned content or fall back to local defaults
 
-Developers should only need to do three app-specific things:
+Developers should only need to do four app-specific things:
 
 - define stable screen identifiers
 - define stable content keys in UI code
-- map returned Liquid content to existing UI labels and simple attributes
+- pass stable identity or account traits that the app already knows
+- map returned Liquid content to existing UI labels and safe attributes
+
+Maze computes behavior traits on the server. The app should not try to recreate those client-side.
 
 ## Compliance first
 
@@ -49,9 +52,7 @@ Never enable capture by default on:
 
 ### iOS
 
-Use Swift Package Manager.
-
-Add the Maze package to the main app target:
+Use Swift Package Manager:
 
 ```text
 https://github.com/maze/ios-sdk
@@ -80,7 +81,7 @@ import com.maze.sdk.MazeConfig
 
 ## 2. Configure Maze once
 
-Maze uses the same workspace API key for telemetry and Liquid runtime bundle resolution.
+Maze uses the same workspace API key for telemetry and Liquid bundle resolution.
 
 ### iOS
 
@@ -117,7 +118,7 @@ Notes:
 
 ## 3. Define stable screen keys and content keys
 
-In app code, use stable identifiers that do not depend on copy text.
+Use stable identifiers that do not depend on display copy.
 
 Examples:
 
@@ -130,7 +131,7 @@ Examples:
   - `checkout_paywall.primary_cta`
   - `kyc_form.email_hint`
 
-The app should still own layout and component structure.
+The app still owns layout and component structure.
 Liquid only replaces content values and safe presentation attributes.
 
 ## 4. Track screens and product behavior
@@ -145,7 +146,7 @@ Maze.screen("checkout_paywall")
 Maze.screen("checkout_paywall")
 ```
 
-Placement:
+Recommended placement:
 
 - UIKit: `viewDidAppear(_:)`
 - SwiftUI: `.onAppear`
@@ -184,7 +185,10 @@ Maze.resolveLiquidBundle(
     locale: "en-US",
     subjectId: userId,
     country: "US",
-    traits: ["plan": "growth"]
+    traits: [
+        "user.plan": "growth",
+        "user.region": "na"
+    ]
 ) { result in
     switch result {
     case .success(let bundle):
@@ -203,7 +207,10 @@ Maze.resolveLiquidBundle(
     locale = "en-US",
     subjectId = userId,
     country = "US",
-    traits = mapOf("plan" to "growth")
+    traits = mapOf(
+        "user.plan" to "growth",
+        "user.region" to "na"
+    )
 ) { result ->
     result.onSuccess { bundle ->
         render(bundle)
@@ -219,9 +226,39 @@ Send these fields when available:
 - `locale`
 - `subjectId`
 - `country`
-- stable traits such as `plan`, `cohort`, or `region`
+- stable app or backend traits such as `user.plan`, `user.region`, or `user.cohort`
 
-## 6. Render returned content
+Do not send sensitive values unless they are already explicitly approved for personalization in your own product and legal review.
+
+## 6. Trait sourcing model
+
+Liquid matches profiles against a merged runtime context.
+
+That context is built from:
+
+1. traits the app sends with the resolve request
+2. traits Maze already stored for the same `subjectId`
+3. Maze-computed behavior traits
+4. preview-only overrides inside dashboard preview
+
+Examples of app-provided traits:
+
+- `user.plan`
+- `user.region`
+- `user.language`
+- `account.tier`
+
+Examples of Maze-computed traits:
+
+- `maze.intent_level`
+- `maze.usage_depth`
+- `maze.recent_activity`
+- `maze.paywall_fatigue`
+- `maze.onboarding_stage`
+
+Maze does not infer sensitive identity traits such as age or gender from behavior.
+
+## 7. Render returned content
 
 Each resolved item can contain:
 
@@ -241,7 +278,7 @@ Example mapping:
 
 Do not let Liquid generate arbitrary layouts or component trees.
 
-## 7. Caching and fallback
+## 8. Caching and fallback
 
 Runtime behavior should be:
 
@@ -260,21 +297,37 @@ Expected server behavior:
 Preview behavior:
 
 - dashboard preview calls the draft preview endpoint
+- preview returns diagnostics for missing traits and fallback reasons
 - mobile production runtime must not use draft content
 
-## 8. Draft and publish workflow
+## 9. Draft, staging, and publish workflow
 
 Inside Maze:
 
-- edit keys and variants in draft
-- edit bundle mappings in draft
-- preview the bundle in the Maze dashboard
+- create or update keys and default copy
+- define trait sources and reusable profiles
+- attach profile-specific variants
+- preview the resolved bundle with diagnostics
+- check staging readiness
 - publish the key
 - publish the bundle
 
 Only published keys and published bundles are served to production runtime.
 
-## 9. Session capture compliance
+## 10. Integration status you should expect in Maze
+
+The Liquid dashboard now reports:
+
+- whether observed screens exist
+- whether runtime bundle resolves are happening
+- app trait coverage
+- Maze-computed trait coverage
+- fallback-only live keys
+- personalized traffic share
+
+If personalization is not happening, check trait coverage before changing copy.
+
+## 11. Session capture compliance
 
 If the host app enables capture at all, it must:
 
@@ -297,7 +350,7 @@ Maze.setSessionCaptureEnabled(true)
 Maze.setCaptureBlockedScreens(setOf("login", "signup", "otp_verification", "payment"))
 ```
 
-## 10. Data safety rules
+## 12. Data safety rules
 
 Never send raw values for:
 
@@ -315,49 +368,27 @@ Rules:
 - `deviceId` must come from an app-controlled identifier
 - sensitive screens must remain blocked from capture
 
-## 11. Backend endpoints used by the integration
+## 13. Backend endpoints used by the integration
 
 Telemetry:
 
 - `POST /events`
-- `POST /screenshots`
 
 Liquid:
 
 - `POST /liquid/runtime/bundles/resolve`
+- `POST /liquid/preview/bundles/resolve`
+- `GET /liquid/integration-status`
 
-Dashboard and preview:
+Admin:
 
 - `GET /liquid/keys`
+- `GET /liquid/traits`
+- `GET /liquid/profiles`
+- `GET /liquid/variants`
 - `GET /liquid/bundles`
-- `GET /liquid/segments`
-- `GET /liquid/rules`
-- `GET /liquid/experiments`
-- `POST /liquid/preview/bundles/resolve`
 
-## 12. Verification checklist
+Health:
 
-Before finishing, confirm all of the following:
-
-1. `Maze.configure(...)` is called exactly once.
-2. At least 3 important screens call `Maze.screen(...)`.
-3. At least 2 CTA handlers call `Maze.track(... event: "tap" ...)`.
-4. At least 1 form-heavy screen tracks submission or validation behavior.
-5. Screen capture is disabled by default.
-6. Capture can only be enabled through explicit app-side consent.
-7. Sensitive screens are blocked from capture.
-8. The app resolves at least 1 Liquid bundle for a real screen.
-9. The app renders Liquid `text` and safe attributes from the bundle response.
-10. The app falls back to cached or local defaults if bundle resolution fails.
-
-## 13. Success criteria
-
-The integration is successful only when:
-
-- Maze telemetry is active
-- the Liquid runtime bundle path is active
-- the app uses stable screen keys and content keys
-- bundle resolution happens through the Maze SDK path
-- the app caches bundle responses locally
-- the app renders published content only in production
-- session capture remains compliant
+- `GET /health`
+- `GET /ready`

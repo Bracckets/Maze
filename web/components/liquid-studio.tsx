@@ -4,6 +4,8 @@ import { Fragment, startTransition, useDeferredValue, useState, type CSSProperti
 
 import { Tag } from "@/components/ui";
 import type {
+  LiquidBundleResolve,
+  LiquidIntegrationStatus,
   LiquidKeyDetail,
   LiquidKeySummary,
   LiquidProfile,
@@ -16,6 +18,7 @@ type Props = {
   initialProfiles: LiquidProfile[];
   initialTraits: LiquidTraitDefinition[];
   observedScreens: string[];
+  initialIntegrationStatus: LiquidIntegrationStatus;
 };
 
 type LiquidTab = "keys" | "rules" | "staging" | "analytics";
@@ -36,6 +39,9 @@ type TraitDraft = {
   label: string;
   description: string;
   valueType: "text" | "int" | "range" | "boolean" | "select";
+  sourceType: "app_profile" | "maze_computed" | "manual_test";
+  sourceKey: string;
+  exampleValues: string;
   enabled: boolean;
 };
 
@@ -67,6 +73,14 @@ type VariantDraft = {
   locale: string;
   text: string;
   enabled: boolean;
+};
+
+type PreviewState = {
+  detail: LiquidKeyDetail | null;
+  profileId: string | null;
+  result: LiquidBundleResolve | null;
+  busy: boolean;
+  error: string | null;
 };
 
 type KeyMetric = {
@@ -116,6 +130,11 @@ const TRAIT_VALUE_TYPES: Array<{ value: TraitValueType; label: string }> = [
   { value: "select", label: "Select" },
 ];
 
+const TRAIT_SOURCE_OPTIONS: Array<{ value: TraitDraft["sourceType"]; label: string }> = [
+  { value: "app_profile", label: "App profile" },
+  { value: "manual_test", label: "Manual test" },
+];
+
 const BOOLEAN_OPTIONS: SelectOption[] = [
   { value: "true", label: "True" },
   { value: "false", label: "False" },
@@ -126,7 +145,17 @@ function emptyKeyDraft(screenKey = ""): KeyDraft {
 }
 
 function emptyTraitDraft(): TraitDraft {
-  return { id: null, traitKey: "", label: "", description: "", valueType: "text", enabled: true };
+  return {
+    id: null,
+    traitKey: "",
+    label: "",
+    description: "",
+    valueType: "text",
+    sourceType: "app_profile",
+    sourceKey: "",
+    exampleValues: "",
+    enabled: true,
+  };
 }
 
 function emptyProfileDraft(): ProfileDraft {
@@ -203,6 +232,32 @@ function keyStateTone(state: string): "accent" | "green" | "amber" | "red" | "de
   return "accent";
 }
 
+function readinessTone(state?: string | null): "accent" | "green" | "amber" | "red" | "default" {
+  if (state === "ready") return "green";
+  if (state === "fallback_only" || state === "low_coverage") return "amber";
+  if (state === "missing_source" || state === "test_only") return "red";
+  return "default";
+}
+
+function readinessLabel(state?: string | null) {
+  if (!state) return "Unknown";
+  if (state === "fallback_only") return "Fallback only";
+  if (state === "missing_source") return "Missing source";
+  if (state === "test_only") return "Test-only";
+  if (state === "low_coverage") return "Low coverage";
+  return "Ready";
+}
+
+function traitSourceLabel(sourceType: LiquidTraitDefinition["sourceType"]) {
+  if (sourceType === "maze_computed") return "Maze computed";
+  if (sourceType === "manual_test") return "Manual test";
+  return "App profile";
+}
+
+function isSystemTrait(trait: LiquidTraitDefinition | null | undefined) {
+  return trait?.sourceType === "maze_computed";
+}
+
 function titleFromKey(key: string) {
   const normalized = key.replace(/[._/-]+/g, " ").trim();
   return normalized ? normalized.charAt(0).toUpperCase() + normalized.slice(1) : key;
@@ -264,6 +319,8 @@ function keySummaryFromDetail(detail: LiquidKeyDetail): LiquidKeySummary {
     bundleCount: detail.bundles.length,
     publishedRevision: detail.publishedRevision,
     publishedAt: detail.publishedAt,
+    dependencyCount: detail.dependencyCount,
+    readiness: detail.readiness,
     updatedAt: detail.draftUpdatedAt,
   };
 }
@@ -288,6 +345,9 @@ function buildTraitDraft(trait: LiquidTraitDefinition | null) {
     label: trait.label,
     description: trait.description ?? "",
     valueType: trait.valueType,
+    sourceType: trait.sourceType,
+    sourceKey: trait.sourceKey ?? "",
+    exampleValues: trait.exampleValues.join(", "),
     enabled: trait.enabled,
   };
 }
@@ -351,6 +411,12 @@ function normalizeTraitDraftValue(draft: TraitDraft) {
     label: draft.label.trim(),
     description: draft.description.trim(),
     valueType: draft.valueType,
+    sourceType: draft.sourceType,
+    sourceKey: draft.sourceKey.trim(),
+    exampleValues: draft.exampleValues
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean),
     enabled: draft.enabled,
   };
 }
@@ -387,6 +453,14 @@ function normalizeVariantDraftValue(draft: VariantDraft) {
     text: draft.text,
     enabled: draft.enabled,
   };
+}
+
+function hasMeaningfulVariantDraft(draft: VariantDraft) {
+  return Boolean(draft.keyId || draft.profileId || draft.text.trim());
+}
+
+function isCompleteVariantDraft(draft: VariantDraft) {
+  return Boolean(draft.keyId && draft.profileId && draft.text.trim());
 }
 
 function buildVariantDraft(detail: LiquidKeyDetail | null, profileId: string | null): VariantDraft {
@@ -611,6 +685,7 @@ export function LiquidStudio({
   initialProfiles,
   initialTraits,
   observedScreens,
+  initialIntegrationStatus,
 }: Props) {
   const sortedObservedScreens = [...observedScreens].sort((a, b) => a.localeCompare(b));
   const [activeTab, setActiveTab] = useState<LiquidTab>("keys");
@@ -620,6 +695,7 @@ export function LiquidStudio({
   );
   const [profiles, setProfiles] = useState(initialProfiles);
   const [traits, setTraits] = useState(initialTraits);
+  const [integrationStatus, setIntegrationStatus] = useState(initialIntegrationStatus);
   const [selectedKeyId, setSelectedKeyId] = useState<string | null>(null);
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
   const [selectedTraitId, setSelectedTraitId] = useState<string | null>(null);
@@ -641,6 +717,13 @@ export function LiquidStudio({
   const [busy, setBusy] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [previewState, setPreviewState] = useState<PreviewState>({
+    detail: null,
+    profileId: null,
+    result: null,
+    busy: false,
+    error: null,
+  });
   const deferredKeySearch = useDeferredValue(keySearch);
   const deferredAnalyticsSearch = useDeferredValue(analyticsSearch);
 
@@ -849,6 +932,12 @@ export function LiquidStudio({
     setVariantDraft(variantId ? buildVariantDraft(detail, profileId) : emptyVariantDraft(keyId ?? "", profileId ?? "", detail?.defaultLocale ?? "en"));
   }
 
+  function resetVariantEditor(nextDraft?: VariantDraft) {
+    setSelectedVariantId(null);
+    setVariantMode("create");
+    setVariantDraft(nextDraft ?? emptyVariantDraft(activeKeyId ?? "", activeProfileId ?? "", selectedKeyDetail?.defaultLocale ?? "en"));
+  }
+
   function upsertKeyDetail(detail: LiquidKeyDetail) {
     setDetailsById((current) => ({ ...current, [detail.id]: detail }));
     setKeys((current) => {
@@ -1008,6 +1097,10 @@ export function LiquidStudio({
       setError("Add both a trait key and label.");
       return false;
     }
+    if (traitDraft.sourceType === "maze_computed") {
+      setError("Maze-computed traits are built in. Create an app or manual test trait instead.");
+      return false;
+    }
     setBusy("trait");
     try {
       const payload = {
@@ -1015,6 +1108,12 @@ export function LiquidStudio({
         label: traitDraft.label.trim(),
         description: traitDraft.description.trim() || null,
         valueType: traitDraft.valueType,
+        sourceType: traitDraft.sourceType,
+        sourceKey: traitDraft.sourceKey.trim() || null,
+        exampleValues: traitDraft.exampleValues
+          .split(",")
+          .map((item) => item.trim())
+          .filter(Boolean),
         enabled: traitDraft.enabled,
       };
       const trait = traitDraft.id
@@ -1038,6 +1137,10 @@ export function LiquidStudio({
 
   async function deleteTrait() {
     if (!traitDraft.id) return;
+    if (traitDraft.sourceType === "maze_computed") {
+      setError("Maze-computed traits are built in and cannot be deleted.");
+      return;
+    }
     clearMessages();
     setBusy("trait-delete");
     try {
@@ -1178,6 +1281,7 @@ export function LiquidStudio({
       const detail = await requestJson<LiquidKeyDetail>(`/api/liquid/keys/${keyId}/publish`, { method: "POST" });
       upsertKeyDetail(detail);
       setNotice("Draft moved live.");
+      void refreshIntegrationStatus();
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : "Could not publish this key.");
     } finally {
@@ -1192,10 +1296,64 @@ export function LiquidStudio({
       const detail = await requestJson<LiquidKeyDetail>(`/api/liquid/keys/${keyId}/demote`, { method: "POST" });
       upsertKeyDetail(detail);
       setNotice("Live copy moved back to draft.");
+      void refreshIntegrationStatus();
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : "Could not demote this key.");
     } finally {
       setBusy(null);
+    }
+  }
+
+  async function refreshIntegrationStatus() {
+    try {
+      const status = await requestJson<LiquidIntegrationStatus>("/api/liquid/integration-status");
+      setIntegrationStatus(status);
+    } catch {
+      // Keep the current status visible if the refresh fails.
+    }
+  }
+
+  async function runPreview(detail: LiquidKeyDetail, profileId?: string | null) {
+    const screenKey = getScreenKey(detail);
+    if (!screenKey) {
+      setPreviewState({ detail, profileId: profileId ?? null, result: null, busy: false, error: "Assign this key to an observed screen first." });
+      return;
+    }
+    const profile = profileId ? profiles.find((item) => item.id === profileId) ?? null : null;
+    const traitsPayload =
+      profile?.traits.reduce<Record<string, string | number | boolean>>((carry, trait) => {
+        if (trait.valueType === "range") {
+          if (trait.minValue != null && trait.maxValue != null) carry[trait.traitKey] = (trait.minValue + trait.maxValue) / 2;
+          else if (trait.minValue != null) carry[trait.traitKey] = trait.minValue;
+          else if (trait.maxValue != null) carry[trait.traitKey] = trait.maxValue;
+          return carry;
+        }
+        if (trait.intValue != null) carry[trait.traitKey] = trait.intValue;
+        else if (trait.boolValue != null) carry[trait.traitKey] = trait.boolValue;
+        else if (trait.value) carry[trait.traitKey] = trait.value;
+        return carry;
+      }, {}) ?? {};
+    setPreviewState({ detail, profileId: profileId ?? null, result: null, busy: true, error: null });
+    try {
+      const result = await requestJson<LiquidBundleResolve>("/api/liquid/preview/bundles/resolve", {
+        method: "POST",
+        body: JSON.stringify({
+          screenKey,
+          locale: detail.defaultLocale,
+          subjectId: "liquid-preview-user",
+          traits: traitsPayload,
+        }),
+      });
+      setPreviewState({ detail, profileId: profileId ?? null, result, busy: false, error: null });
+      void refreshIntegrationStatus();
+    } catch (nextError) {
+      setPreviewState({
+        detail,
+        profileId: profileId ?? null,
+        result: null,
+        busy: false,
+        error: nextError instanceof Error ? nextError.message : "Could not run preview.",
+      });
     }
   }
 
@@ -1233,7 +1391,24 @@ export function LiquidStudio({
   }
 
   async function persistVariantEditor() {
+    const normalized = normalizeVariantDraftValue(variantDraft);
+    if (variantMode === "create" && !variantDraft.id) {
+      if (!isCompleteVariantDraft(variantDraft)) {
+        resetVariantEditor();
+        clearMessages();
+        return true;
+      }
+    }
     if (!isVariantDraftDirty()) return true;
+    if (!normalized.keyId || !normalized.profileId || !normalized.text.trim()) {
+      if (variantMode === "edit" && variantDraft.id) {
+        setVariantDraft(variantDraftBaseline);
+      } else {
+        resetVariantEditor();
+      }
+      clearMessages();
+      return true;
+    }
     return saveVariant();
   }
 
@@ -1461,6 +1636,12 @@ export function LiquidStudio({
             placeholder="en"
           />
         </td>
+        <td>
+          <div className="liquid-ops-inline-meta">
+            <strong>{readinessLabel(detail?.readiness?.state)}</strong>
+            <span>{detail?.dependencyCount ? `${detail.dependencyCount} dependencies` : "Fallback only"}</span>
+          </div>
+        </td>
         <td><LiquidSelect compact value={keyDraft.enabled ? "active" : "archived"} options={keyStatusOptions} onChange={(nextValue) => setKeyDraft((current) => ({ ...current, enabled: nextValue === "active" }))} /></td>
         <td>
           <div className="liquid-ops-inline-meta">
@@ -1525,6 +1706,43 @@ export function LiquidStudio({
     );
   }
 
+  function renderAutomationStrip() {
+    return (
+      <section className="liquid-ops-surface liquid-ops-automation-strip">
+        <SectionTitle
+          title="Integration status"
+          body="Liquid stays lightweight in the app. Maze observes screens, records arriving traits, and highlights where personalization is still falling back."
+        />
+        <div className="liquid-ops-automation-grid">
+          <div className="liquid-ops-automation-item">
+            <strong>Observed screens</strong>
+            <span>{formatNumber(integrationStatus.observedScreensCount)}</span>
+          </div>
+          <div className="liquid-ops-automation-item">
+            <strong>Runtime resolves (7d)</strong>
+            <span>{formatNumber(integrationStatus.runtimeResolveCount7d)}</span>
+          </div>
+          <div className="liquid-ops-automation-item">
+            <strong>App trait coverage</strong>
+            <span>{formatPercent(integrationStatus.appTraitCoverage)}</span>
+          </div>
+          <div className="liquid-ops-automation-item">
+            <strong>Maze trait coverage</strong>
+            <span>{formatPercent(integrationStatus.computedTraitCoverage)}</span>
+          </div>
+          <div className="liquid-ops-automation-item">
+            <strong>Personalized traffic</strong>
+            <span>{formatPercent(integrationStatus.personalizedTrafficShare)}</span>
+          </div>
+          <div className="liquid-ops-automation-item">
+            <strong>Fallback-only live keys</strong>
+            <span>{formatNumber(integrationStatus.fallbackOnlyKeyCount)}</span>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   function renderProfileTraitShelf() {
     return (
       <div className="liquid-ops-profile-shelf">
@@ -1549,7 +1767,7 @@ export function LiquidStudio({
               onDragEnd={resetTraitDragState}
             >
               <span>{trait.label}</span>
-              <small>{TRAIT_VALUE_TYPES.find((item) => item.value === trait.valueType)?.label ?? trait.valueType}</small>
+              <small>{traitSourceLabel(trait.sourceType)} · {TRAIT_VALUE_TYPES.find((item) => item.value === trait.valueType)?.label ?? trait.valueType}</small>
             </button>
           ))}
         </div>
@@ -1660,9 +1878,15 @@ export function LiquidStudio({
           <div><span>Variants</span><strong>{variantCount}</strong></div>
           <div><span>Updated</span><strong>{formatDate(profile.updatedAt)}</strong></div>
         </div>
+        {profile.readiness?.blockingIssues?.length ? (
+          <div className="liquid-ops-note liquid-ops-note-inline">
+            <Tag tone={readinessTone(profile.readiness.state)}>{readinessLabel(profile.readiness.state)}</Tag>
+            <span>{profile.readiness.blockingIssues[0]}</span>
+          </div>
+        ) : null}
         <div className="liquid-ops-chip-row liquid-ops-profile-traits">
           {profile.traits.length === 0 ? <span className="liquid-ops-muted">No traits yet</span> : null}
-          {profile.traits.map((trait) => <Tag key={`${profile.id}-${trait.traitKey}`}>{trait.label}: {formatProfileTraitDisplayValue(trait)}</Tag>)}
+          {profile.traits.map((trait) => <Tag key={`${profile.id}-${trait.traitKey}`}>{trait.label}: {formatProfileTraitDisplayValue(trait)} · {traitSourceLabel(trait.sourceType)}</Tag>)}
         </div>
         <div className="liquid-ops-profile-drop-hint">Drop a trait pill here to add or update this profile.</div>
         <div className="liquid-ops-profile-card-actions">
@@ -1738,6 +1962,7 @@ export function LiquidStudio({
 
   function renderKeysTab() {
     const hasObservedScreens = sortedObservedScreens.length > 0;
+    const suggestedScreens = sortedObservedScreens.slice(0, 4);
     return (
       <div className="liquid-ops-stage">
         <div className="liquid-ops-toolbar">
@@ -1770,6 +1995,31 @@ export function LiquidStudio({
 
         {hasObservedScreens && keyMode === "create" ? renderKeyEditorPanel("create") : null}
 
+        {hasObservedScreens && suggestedScreens.length > 0 ? (
+          <div className="liquid-ops-surface liquid-ops-suggested-strip">
+            <div className="liquid-ops-inline-meta">
+              <strong>Suggested starting screens</strong>
+              <span>Start from a screen Maze is already observing.</span>
+            </div>
+            <div className="liquid-ops-chip-row">
+              {suggestedScreens.map((screen) => (
+                <button
+                  key={screen}
+                  className="btn btn-ghost btn-sm"
+                  type="button"
+                  onClick={() => {
+                    setKeyMode("create");
+                    setKeyDraft(emptyKeyDraft(screen));
+                    setSelectedKeyId(null);
+                  }}
+                >
+                  {screen}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
         {!hasObservedScreens ? (
           <EmptyState
             title="No observed screens yet"
@@ -1793,6 +2043,7 @@ export function LiquidStudio({
                   <th>Screen</th>
                   <th>Fallback text</th>
                   <th>Locales</th>
+                  <th>Readiness</th>
                   <th>State</th>
                   <th>Last updated</th>
                   <th />
@@ -1814,6 +2065,12 @@ export function LiquidStudio({
                         <td>{getScreenKey(detail) || "Unassigned"}</td>
                         <td className="liquid-ops-copy-cell">{getDraftDefaultVariant(detail)?.content.text ?? "No fallback copy yet"}</td>
                         <td>{getLocaleCount(detail) || 1}</td>
+                        <td>
+                          <div className="liquid-ops-cell">
+                            <Tag tone={readinessTone(key.readiness?.state)}>{readinessLabel(key.readiness?.state)}</Tag>
+                            <span>{key.dependencyCount > 0 ? `${key.dependencyCount} trait dependencies` : "Fallback only"}</span>
+                          </div>
+                        </td>
                         <td><Tag tone={keyStateTone(state)}>{state}</Tag></td>
                         <td>{formatDate(detail?.draftUpdatedAt ?? key.updatedAt)}</td>
                         <td>
@@ -1863,13 +2120,20 @@ export function LiquidStudio({
 
         {rulesTab === "traits" ? (
           <div className="liquid-ops-surface liquid-ops-stack">
+            <div className="liquid-ops-note">
+              <Tag tone="accent">System traits</Tag>
+              <span>Maze-computed traits appear automatically here. Create only app-backed or manual preview traits.</span>
+            </div>
             {traitMode === "create" ? (
               <section className="liquid-ops-inline-create-card">
                 <div className="liquid-ops-inline-create-grid liquid-ops-rules-create-grid-traits">
                   <label className="liquid-ops-inline-create-field"><span>Label</span><input className="liquid-ops-input liquid-ops-table-input" value={traitDraft.label} onChange={(event) => setTraitDraft((current) => ({ ...current, label: event.target.value }))} placeholder="Age" /></label>
                   <label className="liquid-ops-inline-create-field"><span>Trait key</span><input className="liquid-ops-input liquid-ops-table-input" value={traitDraft.traitKey} onChange={(event) => setTraitDraft((current) => ({ ...current, traitKey: event.target.value }))} placeholder="age" /></label>
                   <label className="liquid-ops-inline-create-field"><span>Type</span><LiquidSelect compact value={traitDraft.valueType} options={TRAIT_VALUE_TYPES.map((type) => ({ value: type.value, label: type.label }))} onChange={(nextValue) => setTraitDraft((current) => ({ ...current, valueType: nextValue as TraitDraft["valueType"] }))} /></label>
+                  <label className="liquid-ops-inline-create-field"><span>Source</span><LiquidSelect compact value={traitDraft.sourceType} options={TRAIT_SOURCE_OPTIONS.map((type) => ({ value: type.value, label: type.label }))} onChange={(nextValue) => setTraitDraft((current) => ({ ...current, sourceType: nextValue as TraitDraft["sourceType"] }))} /></label>
+                  <label className="liquid-ops-inline-create-field"><span>Source key</span><input className="liquid-ops-input liquid-ops-table-input" value={traitDraft.sourceKey} onChange={(event) => setTraitDraft((current) => ({ ...current, sourceKey: event.target.value }))} placeholder="user.plan or account.tier" /></label>
                   <label className="liquid-ops-inline-create-field"><span>Description</span><input className="liquid-ops-input liquid-ops-table-input" value={traitDraft.description} onChange={(event) => setTraitDraft((current) => ({ ...current, description: event.target.value }))} placeholder="Reusable profile label" /></label>
+                  <label className="liquid-ops-inline-create-field"><span>Example values</span><input className="liquid-ops-input liquid-ops-table-input" value={traitDraft.exampleValues} onChange={(event) => setTraitDraft((current) => ({ ...current, exampleValues: event.target.value }))} placeholder="growth, pro, enterprise" /></label>
                   <label className="liquid-ops-inline-create-field"><span>Status</span><LiquidSelect compact value={traitDraft.enabled ? "active" : "paused"} options={activeStatusOptions} onChange={(nextValue) => setTraitDraft((current) => ({ ...current, enabled: nextValue === "active" }))} /></label>
                   <div className="liquid-ops-row-actions liquid-ops-inline-row-actions"><button className="btn btn-primary btn-sm" type="button" onClick={saveTrait} disabled={busy === "trait"}>Create</button></div>
                 </div>
@@ -1877,14 +2141,14 @@ export function LiquidStudio({
             ) : null}
             {traits.length === 0 ? <EmptyState title="No traits yet" body="Add reusable labels like Plan, Region, or Age before building profiles." /> : (
               <table className="data-table liquid-ops-table">
-                <thead><tr><th>Label</th><th>Trait key</th><th>Type</th><th>Description</th><th>Status</th><th>Updated</th><th /></tr></thead>
+                <thead><tr><th>Label</th><th>Trait key</th><th>Type</th><th>Source</th><th>Source key</th><th>Coverage</th><th>Live</th><th>Description</th><th>Status</th><th>Updated</th><th /></tr></thead>
                 <tbody>
                   {traits.map((trait) => (
                     <Fragment key={trait.id}>
                       <tr className={activeTraitId === trait.id ? "liquid-ops-row-active" : undefined}>
-                        <td><strong>{trait.label}</strong></td><td>{trait.traitKey}</td><td>{TRAIT_VALUE_TYPES.find((type) => type.value === trait.valueType)?.label ?? trait.valueType}</td><td className="liquid-ops-copy-cell">{trait.description || "No description"}</td><td><Tag tone={trait.enabled ? "green" : "amber"}>{trait.enabled ? "Active" : "Paused"}</Tag></td><td>{formatDate(trait.updatedAt)}</td><td><button className="btn btn-ghost btn-sm" type="button" onClick={() => { void requestSelectTrait(trait.id); }}>Edit</button></td>
+                        <td><div className="liquid-ops-cell"><strong>{trait.label}</strong>{isSystemTrait(trait) ? <span>Built in</span> : null}</div></td><td>{trait.traitKey}</td><td>{TRAIT_VALUE_TYPES.find((type) => type.value === trait.valueType)?.label ?? trait.valueType}</td><td>{traitSourceLabel(trait.sourceType)}</td><td>{trait.sourceKey || "Not mapped"}</td><td>{formatPercent(trait.coveragePercent)}</td><td><Tag tone={readinessTone(trait.liveEligible ? (trait.coveragePercent < 40 ? "low_coverage" : "ready") : "test_only")}>{trait.liveEligible ? "Live" : "Preview only"}</Tag></td><td className="liquid-ops-copy-cell">{trait.description || "No description"}</td><td><Tag tone={trait.enabled ? "green" : "amber"}>{trait.enabled ? "Active" : "Paused"}</Tag></td><td>{isSystemTrait(trait) ? "System" : formatDate(trait.updatedAt)}</td><td>{isSystemTrait(trait) ? <Tag tone="accent">System</Tag> : <button className="btn btn-ghost btn-sm" type="button" onClick={() => { void requestSelectTrait(trait.id); }}>Edit</button>}</td>
                       </tr>
-                      {activeTraitId === trait.id && traitMode === "edit" ? <tr className="liquid-ops-inline-editor-row"><td><input className="liquid-ops-input liquid-ops-table-input" value={traitDraft.label} onChange={(event) => setTraitDraft((current) => ({ ...current, label: event.target.value }))} /></td><td><input className="liquid-ops-input liquid-ops-table-input" value={traitDraft.traitKey} onChange={(event) => setTraitDraft((current) => ({ ...current, traitKey: event.target.value }))} /></td><td><LiquidSelect compact value={traitDraft.valueType} options={TRAIT_VALUE_TYPES.map((type) => ({ value: type.value, label: type.label }))} onChange={(nextValue) => setTraitDraft((current) => ({ ...current, valueType: nextValue as TraitDraft["valueType"] }))} /></td><td><input className="liquid-ops-input liquid-ops-table-input" value={traitDraft.description} onChange={(event) => setTraitDraft((current) => ({ ...current, description: event.target.value }))} /></td><td><LiquidSelect compact value={traitDraft.enabled ? "active" : "paused"} options={activeStatusOptions} onChange={(nextValue) => setTraitDraft((current) => ({ ...current, enabled: nextValue === "active" }))} /></td><td><div className="liquid-ops-inline-meta"><strong>{formatDate(trait.updatedAt)}</strong></div></td><td><div className="liquid-ops-row-actions liquid-ops-inline-row-actions"><button className="btn btn-ghost btn-sm" type="button" onClick={deleteTrait} disabled={busy === "trait-delete"}>Delete</button></div></td></tr> : null}
+                      {activeTraitId === trait.id && traitMode === "edit" && !isSystemTrait(trait) ? <tr className="liquid-ops-inline-editor-row"><td><input className="liquid-ops-input liquid-ops-table-input" value={traitDraft.label} onChange={(event) => setTraitDraft((current) => ({ ...current, label: event.target.value }))} /></td><td><input className="liquid-ops-input liquid-ops-table-input" value={traitDraft.traitKey} onChange={(event) => setTraitDraft((current) => ({ ...current, traitKey: event.target.value }))} /></td><td><LiquidSelect compact value={traitDraft.valueType} options={TRAIT_VALUE_TYPES.map((type) => ({ value: type.value, label: type.label }))} onChange={(nextValue) => setTraitDraft((current) => ({ ...current, valueType: nextValue as TraitDraft["valueType"] }))} /></td><td><LiquidSelect compact value={traitDraft.sourceType} options={TRAIT_SOURCE_OPTIONS.map((type) => ({ value: type.value, label: type.label }))} onChange={(nextValue) => setTraitDraft((current) => ({ ...current, sourceType: nextValue as TraitDraft["sourceType"] }))} /></td><td><input className="liquid-ops-input liquid-ops-table-input" value={traitDraft.sourceKey} onChange={(event) => setTraitDraft((current) => ({ ...current, sourceKey: event.target.value }))} /></td><td><div className="liquid-ops-inline-meta"><strong>{formatPercent(trait.coveragePercent)}</strong><span>{trait.exampleValues.join(", ") || "No samples"}</span></div></td><td><Tag tone={readinessTone(trait.liveEligible ? (trait.coveragePercent < 40 ? "low_coverage" : "ready") : "test_only")}>{trait.liveEligible ? "Live" : "Preview only"}</Tag></td><td><input className="liquid-ops-input liquid-ops-table-input" value={traitDraft.description} onChange={(event) => setTraitDraft((current) => ({ ...current, description: event.target.value }))} /></td><td><LiquidSelect compact value={traitDraft.enabled ? "active" : "paused"} options={activeStatusOptions} onChange={(nextValue) => setTraitDraft((current) => ({ ...current, enabled: nextValue === "active" }))} /></td><td><div className="liquid-ops-inline-meta"><strong>{formatDate(trait.updatedAt)}</strong></div></td><td><div className="liquid-ops-row-actions liquid-ops-inline-row-actions"><button className="btn btn-ghost btn-sm" type="button" onClick={deleteTrait} disabled={busy === "trait-delete"}>Delete</button></div></td></tr> : null}
                     </Fragment>
                   ))}
                 </tbody>
@@ -1911,19 +2175,18 @@ export function LiquidStudio({
           <div className="liquid-ops-surface liquid-ops-stack">
             <div className="liquid-ops-toolbar liquid-ops-toolbar-inline">
               <SectionTitle title="Profile variants" body="Attach saved profiles to keys and override the fallback string for that audience." />
-              <label className="liquid-ops-inline-field"><span>Focus key</span><LiquidSelect value={activeKeyId ?? ""} options={keyOptions} placeholder="Choose key" onChange={(nextValue) => { void requestSelectKey(nextValue || null, "edit"); }} /></label>
             </div>
-            {variantMode === "create" ? <section className="liquid-ops-inline-create-card"><div className="liquid-ops-inline-create-grid liquid-ops-rules-create-grid-variants"><label className="liquid-ops-inline-create-field"><span>Key</span><LiquidSelect compact value={variantDraft.keyId} options={keyOptions} placeholder="Choose key" onChange={(nextValue) => setVariantDraft((current) => ({ ...current, keyId: nextValue }))} /></label><label className="liquid-ops-inline-create-field"><span>Profile</span><LiquidSelect compact value={variantDraft.profileId} options={profileOptions} placeholder="Choose profile" onChange={(nextValue) => setVariantDraft((current) => ({ ...current, profileId: nextValue }))} /></label><label className="liquid-ops-inline-create-field"><span>Resolved copy</span><input className="liquid-ops-input liquid-ops-table-input" value={variantDraft.text} onChange={(event) => setVariantDraft((current) => ({ ...current, text: event.target.value }))} placeholder="Continue to payment" /></label><label className="liquid-ops-inline-create-field"><span>Locale</span><input className="liquid-ops-input liquid-ops-table-input" value={variantDraft.locale} onChange={(event) => setVariantDraft((current) => ({ ...current, locale: event.target.value }))} placeholder="en" /></label><label className="liquid-ops-inline-create-field"><span>Status</span><LiquidSelect compact value={variantDraft.enabled ? "ready" : "paused"} options={readyStatusOptions} onChange={(nextValue) => setVariantDraft((current) => ({ ...current, enabled: nextValue === "ready" }))} /></label><div className="liquid-ops-row-actions liquid-ops-inline-row-actions"><button className="btn btn-primary btn-sm" type="button" onClick={saveVariant} disabled={busy === "variant"}>Create</button></div></div></section> : null}
+            {variantMode === "create" ? <section className="liquid-ops-inline-create-card"><div className="liquid-ops-inline-create-grid liquid-ops-rules-create-grid-variants"><label className="liquid-ops-inline-create-field"><span>Key</span><LiquidSelect compact value={variantDraft.keyId} options={keyOptions} placeholder="Choose key" onChange={(nextValue) => setVariantDraft((current) => ({ ...current, keyId: nextValue }))} /></label><label className="liquid-ops-inline-create-field"><span>Profile</span><LiquidSelect compact value={variantDraft.profileId} options={profileOptions} placeholder="Choose profile" onChange={(nextValue) => setVariantDraft((current) => ({ ...current, profileId: nextValue }))} /></label><label className="liquid-ops-inline-create-field"><span>Resolved copy</span><input className="liquid-ops-input liquid-ops-table-input" value={variantDraft.text} onChange={(event) => setVariantDraft((current) => ({ ...current, text: event.target.value }))} placeholder="Continue to payment" /></label><label className="liquid-ops-inline-create-field"><span>Locale</span><input className="liquid-ops-input liquid-ops-table-input" value={variantDraft.locale} onChange={(event) => setVariantDraft((current) => ({ ...current, locale: event.target.value }))} placeholder="en" /></label><label className="liquid-ops-inline-create-field"><span>Status</span><LiquidSelect compact value={variantDraft.enabled ? "ready" : "paused"} options={readyStatusOptions} onChange={(nextValue) => setVariantDraft((current) => ({ ...current, enabled: nextValue === "ready" }))} /></label><div className="liquid-ops-inline-meta"><strong>{profiles.find((item) => item.id === variantDraft.profileId)?.readiness ? readinessLabel(profiles.find((item) => item.id === variantDraft.profileId)?.readiness?.state) : "Choose a profile"}</strong><span>{profiles.find((item) => item.id === variantDraft.profileId)?.readiness?.blockingIssues?.[0] ?? "Live eligibility follows the selected profile's traits."}</span></div><div className="liquid-ops-row-actions liquid-ops-inline-row-actions"><button className="btn btn-primary btn-sm" type="button" onClick={saveVariant} disabled={busy === "variant"}>Create</button></div></div></section> : null}
             {variantRows.length === 0 ? <EmptyState title="No variants yet" body="Create a profile-specific variant when a saved audience should see copy different from the fallback." /> : (
               <table className="data-table liquid-ops-table">
-                <thead><tr><th>Key</th><th>Profile</th><th>Resolved copy</th><th>Locale</th><th>Status</th><th>Updated</th><th /></tr></thead>
+                <thead><tr><th>Key</th><th>Profile</th><th>Resolved copy</th><th>Locale</th><th>Live readiness</th><th>Status</th><th>Updated</th><th /></tr></thead>
                 <tbody>
                   {variantRows.map(({ key, detail, variant, profile }) => (
                     <Fragment key={variant.id}>
                       <tr className={selectedVariantId === variant.id ? "liquid-ops-row-active" : undefined}>
-                        <td>{key.key}</td><td>{profile?.name ?? "Removed profile"}</td><td className="liquid-ops-copy-cell">{variant.content.text}</td><td>{variant.locale ?? detail?.defaultLocale ?? "en"}</td><td><Tag tone={variant.enabled ? "green" : "amber"}>{variant.enabled ? "Draft ready" : "Paused"}</Tag></td><td>{formatDate(variant.updatedAt)}</td><td><button className="btn btn-ghost btn-sm" type="button" onClick={() => { void requestSelectVariant(key.id, variant.segmentId ?? null, variant.id); }}>Edit</button></td>
+                        <td>{key.key}</td><td>{profile?.name ?? "Removed profile"}</td><td className="liquid-ops-copy-cell">{variant.content.text}</td><td>{variant.locale ?? detail?.defaultLocale ?? "en"}</td><td><Tag tone={readinessTone(profile?.readiness?.state)}>{readinessLabel(profile?.readiness?.state)}</Tag></td><td><Tag tone={variant.enabled ? "green" : "amber"}>{variant.enabled ? "Draft ready" : "Paused"}</Tag></td><td>{formatDate(variant.updatedAt)}</td><td><button className="btn btn-ghost btn-sm" type="button" onClick={() => { void requestSelectVariant(key.id, variant.segmentId ?? null, variant.id); }}>Edit</button></td>
                       </tr>
-                      {selectedVariantId === variant.id && variantMode === "edit" ? <tr className="liquid-ops-inline-editor-row"><td><LiquidSelect compact value={variantDraft.keyId} options={keyOptions} onChange={(nextValue) => setVariantDraft((current) => ({ ...current, keyId: nextValue }))} /></td><td><LiquidSelect compact value={variantDraft.profileId} options={profileOptions} onChange={(nextValue) => setVariantDraft((current) => ({ ...current, profileId: nextValue }))} /></td><td><input className="liquid-ops-input liquid-ops-table-input" value={variantDraft.text} onChange={(event) => setVariantDraft((current) => ({ ...current, text: event.target.value }))} /></td><td><input className="liquid-ops-input liquid-ops-table-input" value={variantDraft.locale} onChange={(event) => setVariantDraft((current) => ({ ...current, locale: event.target.value }))} /></td><td><LiquidSelect compact value={variantDraft.enabled ? "ready" : "paused"} options={readyStatusOptions} onChange={(nextValue) => setVariantDraft((current) => ({ ...current, enabled: nextValue === "ready" }))} /></td><td><div className="liquid-ops-inline-meta"><strong>{profile?.name ?? "Profile"}</strong><span>{getDraftDefaultVariant(detail)?.content.text ?? "No fallback"}</span></div></td><td><div className="liquid-ops-row-actions liquid-ops-inline-row-actions"><button className="btn btn-ghost btn-sm" type="button" onClick={deleteVariant} disabled={busy === "variant-delete"}>Delete</button></div></td></tr> : null}
+                      {selectedVariantId === variant.id && variantMode === "edit" ? <tr className="liquid-ops-inline-editor-row"><td><LiquidSelect compact value={variantDraft.keyId} options={keyOptions} onChange={(nextValue) => setVariantDraft((current) => ({ ...current, keyId: nextValue }))} /></td><td><LiquidSelect compact value={variantDraft.profileId} options={profileOptions} onChange={(nextValue) => setVariantDraft((current) => ({ ...current, profileId: nextValue }))} /></td><td><input className="liquid-ops-input liquid-ops-table-input" value={variantDraft.text} onChange={(event) => setVariantDraft((current) => ({ ...current, text: event.target.value }))} /></td><td><input className="liquid-ops-input liquid-ops-table-input" value={variantDraft.locale} onChange={(event) => setVariantDraft((current) => ({ ...current, locale: event.target.value }))} /></td><td><Tag tone={readinessTone(profile?.readiness?.state)}>{readinessLabel(profile?.readiness?.state)}</Tag></td><td><LiquidSelect compact value={variantDraft.enabled ? "ready" : "paused"} options={readyStatusOptions} onChange={(nextValue) => setVariantDraft((current) => ({ ...current, enabled: nextValue === "ready" }))} /></td><td><div className="liquid-ops-inline-meta"><strong>{profile?.name ?? "Profile"}</strong><span>{profile?.readiness?.blockingIssues?.[0] ?? getDraftDefaultVariant(detail)?.content.text ?? "No fallback"}</span></div></td><td><div className="liquid-ops-row-actions liquid-ops-inline-row-actions"><button className="btn btn-ghost btn-sm" type="button" onClick={deleteVariant} disabled={busy === "variant-delete"}>Delete</button></div></td></tr> : null}
                     </Fragment>
                   ))}
                 </tbody>
@@ -1941,7 +2204,7 @@ export function LiquidStudio({
         <div className="liquid-ops-toolbar">
           <SectionTitle
             title="Draft and live staging"
-            body="Review every key before it ships. Publish when draft copy is ready, or demote a live key back to draft immediately."
+            body="Review every key before it ships. Liquid now shows whether a key is ready for live traffic, which traits it depends on, and when fallback is still doing the work."
           />
         </div>
         {keys.length === 0 ? (
@@ -1963,7 +2226,9 @@ export function LiquidStudio({
                     </div>
                     <div className="liquid-ops-row-actions">
                       <Tag tone={keyStateTone(state)}>{state}</Tag>
+                      <Tag tone={readinessTone(detail?.readiness?.state)}>{readinessLabel(detail?.readiness?.state)}</Tag>
                       <button className="btn btn-ghost btn-sm" type="button" onClick={() => void requestSelectKey(key.id, "edit")}>Inspect</button>
+                      <button className="btn btn-ghost btn-sm" type="button" onClick={() => detail ? void runPreview(detail, detail.variants.find((variant) => variant.stage === "draft" && variant.segmentId)?.segmentId ?? null) : undefined}>Run preview</button>
                       <button className="btn btn-primary btn-sm" type="button" onClick={(event) => { event.stopPropagation(); publishKey(key.id); }} disabled={busy === `publish-${key.id}`}>Push live</button>
                       <button className="btn btn-ghost btn-sm" type="button" onClick={(event) => { event.stopPropagation(); demoteKey(key.id); }} disabled={detail?.publishedRevision === 0 || busy === `demote-${key.id}`}>Demote to draft</button>
                     </div>
@@ -1986,6 +2251,10 @@ export function LiquidStudio({
                       <strong>Last publish</strong>
                       <p className="panel-copy">{formatDate(detail?.publishedAt)}</p>
                     </div>
+                    <div>
+                      <strong>Readiness</strong>
+                      <p className="panel-copy">{detail?.readiness?.blockingIssues?.[0] ?? (detail?.readiness?.state === "fallback_only" ? "This key is serving fallback copy only." : "This key is ready for live traffic.")}</p>
+                    </div>
                   </div>
 
                   {profileVariants.length > 0 ? (
@@ -1996,11 +2265,54 @@ export function LiquidStudio({
                       })}
                     </div>
                   ) : null}
+                  {detail?.readiness?.dependentTraits?.length ? (
+                    <div className="liquid-ops-chip-row">
+                      {detail.readiness.dependentTraits.map((trait) => (
+                        <Tag key={`${key.id}-${trait.traitKey}`}>{trait.label} · {traitSourceLabel(trait.sourceType)} · {formatPercent(trait.coveragePercent)}</Tag>
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
               );
             })}
           </div>
         )}
+        {previewState.detail ? (
+          <section className="liquid-ops-surface liquid-ops-stack">
+            <SectionTitle title="Resolution preview" body="Preview uses the selected draft key and its attached profile traits so you can inspect the exact runtime decision before publishing." />
+            {previewState.busy ? <div className="panel-copy">Running preview…</div> : null}
+            {previewState.error ? <div className="liquid-ops-note"><Tag tone="red">Preview error</Tag><span>{previewState.error}</span></div> : null}
+            {previewState.result ? (
+              <>
+                <div className="liquid-ops-context-grid">
+                  <div><span>Screen</span><strong>{previewState.result.screenKey}</strong></div>
+                  <div><span>Matched profiles</span><strong>{previewState.result.diagnostics.matchedProfileCount}</strong></div>
+                  <div><span>Fallback items</span><strong>{previewState.result.diagnostics.fallbackItemCount}</strong></div>
+                  <div><span>Missing traits</span><strong>{previewState.result.diagnostics.missingTraits.length}</strong></div>
+                </div>
+                <div className="liquid-ops-chip-row">
+                  {previewState.result!.diagnostics.resolvedTraits.map((trait) => (
+                    <Tag key={trait.traitKey}>{trait.traitKey}: {trait.present ? String(trait.value) : "Missing"} · {traitSourceLabel(trait.sourceType)}</Tag>
+                  ))}
+                </div>
+                <table className="data-table liquid-ops-table">
+                  <thead><tr><th>Key</th><th>Final text</th><th>Source</th><th>Matched profile</th><th>Fallback reason</th></tr></thead>
+                  <tbody>
+                    {previewState.result!.items.map((item) => (
+                      <tr key={`${previewState.result!.screenKey}-${item.key}`}>
+                        <td>{item.key}</td>
+                        <td className="liquid-ops-copy-cell">{item.text}</td>
+                        <td>{item.source}</td>
+                        <td>{item.matchedProfileKey ?? "None"}</td>
+                        <td>{item.fallbackReason ?? "Not applicable"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </>
+            ) : null}
+          </section>
+        ) : null}
       </div>
     );
   }
@@ -2010,8 +2322,8 @@ export function LiquidStudio({
       <div className="liquid-ops-stage liquid-ops-stack">
         <div className="liquid-ops-toolbar">
           <SectionTitle
-            title="Modeled Liquid analytics"
-            body="This analytics surface is ready for real Liquid attribution. Until backend attribution is wired, the figures below are modeled from the current key and profile configuration."
+            title="Liquid analytics"
+            body="Track how often Liquid personalizes traffic, where fallback still dominates, and which traits or profiles are limiting live match rate."
           />
           <div className="liquid-ops-toolbar-actions">
             <div className="liquid-ops-search">
@@ -2026,14 +2338,28 @@ export function LiquidStudio({
         </div>
 
         <div className="liquid-ops-note">
-          <Tag tone="amber">Modeled data</Tag>
-          <span>Use this to understand the shape of Liquid reporting now. Swap in real attribution later without changing the information architecture.</span>
+          <Tag tone="amber">Mixed data</Tag>
+          <span>Runtime coverage and fallback share come from real Liquid resolve logs. Per-key lift is still modeled until full attribution lands.</span>
         </div>
 
         {metricRows.length === 0 ? (
           <EmptyState title="No analytics yet" body="Once keys exist, Liquid analytics will compare fallback copy and profile-specific variants side by side." />
         ) : (
           <>
+            <div className="liquid-ops-analytics-grid">
+              <div className="liquid-ops-surface">
+                <SectionTitle title="Profiles needing attention" body="Profiles below are most likely to miss live traffic because of missing sources, test-only traits, or low coverage." />
+                <div className="liquid-ops-ranked-list">
+                  {profiles.filter((profile) => profile.readiness && profile.readiness.state !== "ready").slice(0, 4).map((profile) => (
+                    <div key={profile.id} className="liquid-ops-ranked-item">
+                      <div><strong>{profile.name}</strong><span>{profile.readiness?.blockingIssues?.[0] ?? readinessLabel(profile.readiness?.state)}</span></div>
+                      <div className={profile.readiness?.state === "low_coverage" ? "liquid-ops-negative" : "liquid-ops-negative"}>{readinessLabel(profile.readiness?.state)}</div>
+                    </div>
+                  ))}
+                  {profiles.filter((profile) => profile.readiness && profile.readiness.state !== "ready").length === 0 ? <div className="panel-copy">Every saved profile is live-safe right now.</div> : null}
+                </div>
+              </div>
+            </div>
             <div className="liquid-ops-surface">
               <SectionTitle title="Default vs Liquid copy performance" />
               <table className="data-table liquid-ops-table">
@@ -2107,6 +2433,8 @@ export function LiquidStudio({
                 </div>
               </div>
             </div>
+
+            {renderAutomationStrip()}
           </>
         )}
       </div>
@@ -2114,7 +2442,7 @@ export function LiquidStudio({
   }
 
   function renderInspector() {
-    if (activeTab === "keys" || activeTab === "rules") {
+    if (activeTab === "keys" || activeTab === "rules" || activeTab === "analytics") {
       return null;
     }
 
@@ -2149,27 +2477,7 @@ export function LiquidStudio({
       );
     }
 
-    const analyticsDetail = selectedKeyDetail;
-    const analyticsRow = metricRows.find((row) => row.keyId === activeKeyId) ?? null;
-    return (
-      <section className="liquid-ops-inspector">
-        <SectionTitle title="Analytics context" body="Keep one key in focus while you compare fallback performance, Liquid lift, and profile coverage." />
-        {!analyticsRow ? (
-          <EmptyState title="No analytics in view" body="Create a few keys and profiles to populate the analytics workspace." />
-        ) : (
-          <>
-            <div className="liquid-ops-inspector-meta">
-              <div><span>Key</span><strong>{analyticsRow.key}</strong></div>
-              <div><span>Screen</span><strong>{analyticsRow.screen}</strong></div>
-              <div><span>Exposures</span><strong>{formatNumber(analyticsRow.exposures)}</strong></div>
-              <div><span>Lift</span><strong>{analyticsRow.lift >= 0 ? "+" : ""}{formatPercent(analyticsRow.lift)}</strong></div>
-            </div>
-            <div className="liquid-ops-context-block"><strong>Fallback copy</strong><span>{getDraftDefaultVariant(analyticsDetail)?.content.text ?? "Not configured"}</span></div>
-            <div className="liquid-ops-context-block"><strong>Profile coverage</strong><span>{analyticsDetail?.variants.filter((variant) => variant.stage === "draft" && variant.segmentId).length ?? 0} profile-specific variants attached</span></div>
-          </>
-        )}
-      </section>
-    );
+    return null;
   }
 
   return (
@@ -2185,15 +2493,12 @@ export function LiquidStudio({
 
         {notice ? <div className="liquid-ops-banner success">{notice}</div> : null}
         {error ? <div className="liquid-ops-banner error">{error}</div> : null}
-
-        {activeTab === "staging" || activeTab === "analytics" ? (
+        {activeTab === "staging" ? (
           <div className="liquid-ops-editor-zone">
             <div className="liquid-ops-editor-head">
-              <span>{activeTab === "staging" ? "Selected staging context" : "Selected analytics context"}</span>
+              <span>Selected staging context</span>
               <p className="panel-copy">
-                {activeTab === "staging"
-                  ? "Review the selected key and decide whether it should stay draft or move live."
-                  : "Use the selected key context to compare fallback copy, profile coverage, and modeled lift."}
+                Review the selected key and decide whether it should stay draft or move live.
               </p>
             </div>
             {renderInspector()}
