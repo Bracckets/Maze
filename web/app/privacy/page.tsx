@@ -5,11 +5,11 @@ import { getRequestLocale } from "@/lib/i18n-server";
 const sections = [
   {
     title: "What we collect",
-    body: "Maze collects behavioral metadata: screen names, event names, timestamps, element identifiers, and aggregate interaction patterns. We also collect operational telemetry — SDK version, delivery status, and ingestion metrics — to keep the service reliable.",
+    body: "Pollex collects behavioral metadata: screen names, event names, timestamps, element identifiers, and aggregate interaction patterns. We also collect operational telemetry — SDK version, delivery status, and ingestion metrics — to keep the service reliable.",
   },
   {
     title: "What we do not collect",
-    body: "Maze is not designed to receive passwords, OTP codes, credit card numbers, national IDs, or bank account numbers. These fields must be masked or omitted before any event leaves the user's device. If they appear in your event stream, that is a misconfiguration.",
+    body: "Pollex is not designed to receive passwords, OTP codes, credit card numbers, national IDs, or bank account numbers. These fields must be masked or omitted before any event leaves the user's device. If they appear in your event stream, that is a misconfiguration.",
   },
   {
     title: "How data is used",
@@ -40,8 +40,8 @@ export default async function PrivacyPage() {
         </h1>
         <p className="subtext" style={{ fontSize: "0.95rem" }}>
           {locale === "ar"
-            ? "يلتقط Maze إشارات الاحتكاك لمساعدة فرق المنتج على تحسين تطبيقاتهم. لم يُصمم لجمع بيانات الاعتماد أو البيانات المالية أو المعلومات الشخصية."
-            : "Maze captures friction signals to help product teams improve their apps. We are not designed to collect credentials, financial data, or personally identifiable information."}
+            ? "يلتقط Pollex إشارات الاحتكاك لمساعدة فرق المنتج على تحسين تطبيقاتهم. لم يُصمم لجمع بيانات الاعتماد أو البيانات المالية أو المعلومات الشخصية."
+            : "Pollex captures friction signals to help product teams improve their apps. We are not designed to collect credentials, financial data, or personally identifiable information."}
         </p>
       </section>
 

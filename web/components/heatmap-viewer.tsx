@@ -65,7 +65,6 @@ export function HeatmapViewer({ initialScreen, screens }: Props) {
   const [isLoading, setIsLoading] = useState(true);
   const [frameSize, setFrameSize] = useState({ width: 375, height: 812 });
   const [selectedPointIndex, setSelectedPointIndex] = useState(0);
-  const [isExpanded, setIsExpanded] = useState(false);
   const [isScreenMenuOpen, setIsScreenMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -77,9 +76,7 @@ export function HeatmapViewer({ initialScreen, screens }: Props) {
     const updateSize = () => {
       setFrameSize({
         width: element.clientWidth || 375,
-        height:
-          element.clientHeight ||
-          Math.round((element.clientWidth || 375) * (812 / 375)),
+        height: element.clientHeight || Math.round((element.clientWidth || 375) * (812 / 375)),
       });
     };
 
@@ -87,7 +84,7 @@ export function HeatmapViewer({ initialScreen, screens }: Props) {
     const observer = new ResizeObserver(updateSize);
     observer.observe(element);
     return () => observer.disconnect();
-  }, [isExpanded]);
+  }, []);
 
   useEffect(() => {
     const mountHeatmap = async () => {
@@ -102,13 +99,13 @@ export function HeatmapViewer({ initialScreen, screens }: Props) {
         heatmapInstanceRef.current = h337.create({
           container: heatmapLayerRef.current,
           radius: 42,
-          maxOpacity: 0.78,
-          minOpacity: 0.1,
-          blur: 0.88,
+          maxOpacity: 0.72,
+          minOpacity: 0.08,
+          blur: 0.9,
           gradient: {
-            0.2: "#4f8bff",
-            0.55: "#ffe168",
-            1.0: "#ff5f56",
+            0.2: "#7db0ff",
+            0.55: "#ffd572",
+            1.0: "#ff7d67",
           },
         });
       }
@@ -120,10 +117,7 @@ export function HeatmapViewer({ initialScreen, screens }: Props) {
   useEffect(() => {
     const loadHeatmap = async () => {
       setIsLoading(true);
-      const response = await fetch(
-        `/api/heatmap?screen=${encodeURIComponent(selectedScreen)}`,
-        { cache: "no-store" },
-      );
+      const response = await fetch(`/api/heatmap?screen=${encodeURIComponent(selectedScreen)}`, { cache: "no-store" });
       const data = await response.json();
       const nextPoints = response.ok ? data.points : [];
       setPoints(nextPoints);
@@ -161,10 +155,9 @@ export function HeatmapViewer({ initialScreen, screens }: Props) {
 
   useEffect(() => {
     const loadScreenshot = async () => {
-      const response = await fetch(
-        `/api/screenshots?screen=${encodeURIComponent(selectedScreen)}&latest=true`,
-        { cache: "no-store" },
-      );
+      const response = await fetch(`/api/screenshots?screen=${encodeURIComponent(selectedScreen)}&latest=true`, {
+        cache: "no-store",
+      });
       const data = await response.json();
       if (!response.ok || !Array.isArray(data) || data.length === 0) {
         setScreenshotUrl(null);
@@ -172,6 +165,7 @@ export function HeatmapViewer({ initialScreen, screens }: Props) {
       }
       setScreenshotUrl(typeof data[0].signed_url === "string" ? data[0].signed_url : null);
     };
+
     void loadScreenshot();
   }, [selectedScreen]);
 
@@ -188,42 +182,42 @@ export function HeatmapViewer({ initialScreen, screens }: Props) {
         value: point.count,
       })),
     });
-  }, [points, frameSize]);
+  }, [frameSize, points]);
 
   const activeLayout = phoneLayouts[selectedScreen] ?? phoneLayouts.kyc_form;
   const totalPoints = points.reduce((sum, point) => sum + point.count, 0);
-  const totalClusters = points.length;
-  const sortedPoints = useMemo(
-    () => [...points].sort((a, b) => b.count - a.count),
-    [points],
-  );
+  const sortedPoints = useMemo(() => [...points].sort((a, b) => b.count - a.count), [points]);
   const selectedPoint = sortedPoints[selectedPointIndex] ?? null;
   const csv = useMemo(() => toCsv(sortedPoints), [sortedPoints]);
 
-  const viewer = (
-    <div className="heatmap-shell">
-      <div className="heatmap-topbar">
-        <div className="heatmap-title-block">
-          <div className="heatmap-screen-menu" ref={screenMenuRef}>
+  return (
+    <div className="pollex-heatmap">
+      <div className="pollex-heatmap-topbar">
+        <div>
+          <h2 className="heading">Interaction surface</h2>
+          <p className="panel-copy">Hotspots, screenshot context, and tap density in one minimal frame.</p>
+        </div>
+
+        <div className="pollex-heatmap-topbar-actions">
+          <div className="surface-select" ref={screenMenuRef}>
             <button
               aria-expanded={isScreenMenuOpen}
               aria-haspopup="menu"
-              className={`heatmap-screen-trigger ${isScreenMenuOpen ? "open" : ""}`}
+              className={`surface-select-trigger ${isScreenMenuOpen ? "open" : ""}`.trim()}
               type="button"
               onClick={() => setIsScreenMenuOpen((open) => !open)}
             >
-              <span className="heatmap-screen-kicker">Screen</span>
-              <span className="heatmap-screen-value">{selectedScreen}</span>
-              <span className="heatmap-screen-chevron" aria-hidden="true">
+              <span className="surface-select-value">{selectedScreen.toUpperCase()}</span>
+              <span className="surface-select-chevron" aria-hidden="true">
                 ▾
               </span>
             </button>
 
             {isScreenMenuOpen ? (
-              <div className="heatmap-screen-popover" role="menu">
+              <div className="surface-select-popover" role="menu">
                 {screens.map((screen) => (
                   <button
-                    className={`heatmap-screen-option ${screen === selectedScreen ? "active" : ""}`}
+                    className={`surface-select-option ${screen === selectedScreen ? "active" : ""}`.trim()}
                     key={screen}
                     role="menuitemradio"
                     type="button"
@@ -239,26 +233,36 @@ export function HeatmapViewer({ initialScreen, screens }: Props) {
               </div>
             ) : null}
           </div>
-          <Tag tone="accent">{totalPoints} taps</Tag>
-          <Tag>{totalClusters} clusters</Tag>
-        </div>
 
-        <div className="heatmap-controls">
-          <button className="btn btn-ghost btn-sm" onClick={() => downloadCsv(`maze-heatmap-${selectedScreen}.csv`, csv)}>
+          <button className="btn btn-ghost btn-sm" onClick={() => downloadCsv(`pollex-heatmap-${selectedScreen}.csv`, csv)}>
             Export CSV
-          </button>
-          <button className="btn btn-primary btn-sm" onClick={() => setIsExpanded(true)}>
-            Expand
           </button>
         </div>
       </div>
 
-      <div className="heatmap-workspace">
-        <div className="heatmap-stage">
-          <div
-            ref={frameRef}
-            className={`phone-frame ${isExpanded ? "phone-frame-expanded" : ""}`}
-          >
+      <div className="pollex-heatmap-frame">
+        <aside className="pollex-heatmap-column">
+          <div className="pollex-heatmap-column-head">
+            <span>Data</span>
+          </div>
+          <div className="pollex-heatmap-metric-list">
+            <div className="pollex-heatmap-metric-card">
+              <span>Total taps</span>
+              <strong>{totalPoints}</strong>
+            </div>
+            <div className="pollex-heatmap-metric-card">
+              <span>Hotspots</span>
+              <strong>{sortedPoints.length}</strong>
+            </div>
+            <div className="pollex-heatmap-metric-card">
+              <span>Peak cluster</span>
+              <strong>{sortedPoints[0]?.count ?? 0}</strong>
+            </div>
+          </div>
+        </aside>
+
+        <div className="pollex-heatmap-stage">
+          <div ref={frameRef} className="phone-frame pollex-phone-frame">
             <div className="phone-screen">
               <div className="phone-notch" />
 
@@ -273,11 +277,8 @@ export function HeatmapViewer({ initialScreen, screens }: Props) {
                         width: shape.width,
                         height: shape.height,
                         borderRadius: shape.radius ?? 12,
-                        background:
-                          index === activeLayout.length - 1
-                            ? "rgba(108,127,255,0.2)"
-                            : "rgba(255,255,255,0.05)",
-                        border: "1px solid rgba(255,255,255,0.06)",
+                        background: index === activeLayout.length - 1 ? "rgba(132, 171, 255, 0.16)" : "rgba(255, 255, 255, 0.045)",
+                        border: "1px solid rgba(255, 255, 255, 0.06)",
                       }}
                     />
                   ))
@@ -293,7 +294,7 @@ export function HeatmapViewer({ initialScreen, screens }: Props) {
                     width: "100%",
                     height: "100%",
                     objectFit: "cover",
-                    opacity: 0.42,
+                    opacity: 0.48,
                   }}
                 />
               ) : null}
@@ -311,36 +312,24 @@ export function HeatmapViewer({ initialScreen, screens }: Props) {
               <div ref={heatmapLayerRef} style={{ position: "absolute", inset: 0 }} />
             </div>
           </div>
-          <p className="subtext heatmap-status">
-            {isLoading
-              ? "Loading heatmap..."
-              : "Tap density is rendered from normalized coordinates returned by the backend."}
+
+          <p className="pollex-heatmap-status">
+            {isLoading ? "Loading heatmap..." : "Normalized tap coordinates are rendered directly on the current device frame."}
           </p>
         </div>
 
-        <div className="heatmap-sidepanel">
-          <div className="heatmap-summary">
-            <div>
-              <span>Total taps</span>
-              <strong>{totalPoints}</strong>
-            </div>
-            <div>
-              <span>Hotspots</span>
-              <strong>{totalClusters}</strong>
-            </div>
-            <div>
-              <span>Peak cluster</span>
-              <strong>{sortedPoints[0]?.count ?? 0}</strong>
-            </div>
+        <aside className="pollex-heatmap-column pollex-heatmap-column-scroll">
+          <div className="pollex-heatmap-column-head">
+            <span>Hotspots</span>
+            <Tag tone="accent">{sortedPoints.length}</Tag>
           </div>
-
-          <div className="heatmap-cluster-list">
+          <div className="pollex-hotspot-list">
             {sortedPoints.length > 0 ? (
-              sortedPoints.slice(0, 8).map((point, index) => (
+              sortedPoints.map((point, index) => (
                 <button
                   key={`${point.x}-${point.y}-${point.count}-${index}`}
                   type="button"
-                  className={`heatmap-cluster-row ${index === selectedPointIndex ? "active" : ""}`}
+                  className={`pollex-hotspot-row ${index === selectedPointIndex ? "active" : ""}`.trim()}
                   onClick={() => setSelectedPointIndex(index)}
                 >
                   <div>
@@ -349,65 +338,15 @@ export function HeatmapViewer({ initialScreen, screens }: Props) {
                       x {point.x.toFixed(2)} / y {point.y.toFixed(2)}
                     </span>
                   </div>
-                  <Tag tone={index === 0 ? "red" : index < 3 ? "amber" : "default"}>
-                    {point.count}
-                  </Tag>
+                  <Tag tone={index === 0 ? "red" : index < 3 ? "amber" : "default"}>{point.count}</Tag>
                 </button>
               ))
             ) : (
               <p className="empty-copy">No hotspot rows yet for this screen.</p>
             )}
           </div>
-
-          {selectedPoint ? (
-            <div className="heatmap-inspector">
-              <div className="heading">Inspector</div>
-              <div className="inspect-grid">
-                <div className="inspect-row">
-                  <span>Screen</span>
-                  <strong>{selectedScreen}</strong>
-                </div>
-                <div className="inspect-row">
-                  <span>X coordinate</span>
-                  <strong>{selectedPoint.x.toFixed(3)}</strong>
-                </div>
-                <div className="inspect-row">
-                  <span>Y coordinate</span>
-                  <strong>{selectedPoint.y.toFixed(3)}</strong>
-                </div>
-                <div className="inspect-row">
-                  <span>Tap count</span>
-                  <strong>{selectedPoint.count}</strong>
-                </div>
-              </div>
-            </div>
-          ) : null}
-        </div>
+        </aside>
       </div>
     </div>
-  );
-
-  return (
-    <>
-      {viewer}
-      {isExpanded ? (
-        <div className="overlay-shell" onClick={() => setIsExpanded(false)}>
-          <div className="overlay-panel overlay-heatmap" onClick={(event) => event.stopPropagation()}>
-            <div className="overlay-head">
-              <div>
-                <div className="heading">Expanded heatmap</div>
-                <p className="panel-copy">
-                  Inspect hotspot rows and the canvas together in a larger responsive view.
-                </p>
-              </div>
-              <button className="btn btn-ghost btn-sm" onClick={() => setIsExpanded(false)}>
-                Close
-              </button>
-            </div>
-            {viewer}
-          </div>
-        </div>
-      ) : null}
-    </>
   );
 }

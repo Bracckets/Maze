@@ -1,3 +1,4 @@
+import type { Route } from "next";
 import Link from "next/link";
 import { ReactNode } from "react";
 
@@ -8,39 +9,45 @@ import { getMessages } from "@/lib/i18n";
 import { getRequestLocale } from "@/lib/i18n-server";
 import { getCurrentUser } from "@/lib/service-gateway";
 
+type DashboardShellProps = {
+  activePath?: string;
+  children: ReactNode;
+  headerAction?: ReactNode;
+  subtitle?: string;
+  title: string;
+};
+
 export async function SiteShell({
   children,
-  eyebrow,
 }: {
   children: ReactNode;
-  eyebrow?: string;
 }) {
   const locale = await getRequestLocale();
   const messages = getMessages(locale);
   const currentUser = await getCurrentUser();
   const user = "user" in currentUser.data ? currentUser.data.user : null;
-  const navLinks = [
-    { href: "/dashboard", label: messages.nav.dashboard, public: false },
-    { href: "/usage", label: messages.nav.usage, public: false },
-    { href: "/liquid", label: messages.nav.liquid, public: false },
-    { href: "/heatmap", label: messages.nav.heatmap, public: false },
-    { href: "/pricing", label: messages.nav.pricing, public: true },
-    { href: "/docs", label: messages.nav.docs, public: true },
-    { href: "/profile", label: messages.nav.profile, public: false },
-  ] as const;
+  const navLinks: Array<{ href: Route; label: string }> = [
+    { href: "/pricing" as Route, label: messages.nav.pricing },
+    { href: "/docs" as Route, label: messages.nav.docs },
+    ...(user ? [{ href: "/dashboard" as Route, label: messages.nav.dashboard }] : []),
+  ];
 
   return (
     <div className="site-frame">
-      <header className="topbar">
-        <Brand href={user ? "/dashboard" : "/"} />
-        <nav className="topnav">
-          {navLinks
-            .filter((item) => item.public || user)
-            .map((item) => (
-              <Link key={item.href} href={item.href}>
-                {item.label}
-              </Link>
-            ))}
+      <header className="site-shell-header">
+        <div className="site-shell-brand">
+          <Brand href={user ? "/dashboard" : "/"} />
+        </div>
+
+        <nav className="site-shell-nav">
+          {navLinks.map((item) => (
+            <Link key={item.href} href={item.href}>
+              {item.label}
+            </Link>
+          ))}
+        </nav>
+
+        <div className="site-shell-actions">
           {!user ? (
             <>
               <Link className="btn btn-ghost btn-sm" href="/signin">
@@ -50,16 +57,19 @@ export async function SiteShell({
                 {messages.auth.signUp}
               </Link>
             </>
-          ) : null}
+          ) : (
+            <Link className="btn btn-ghost btn-sm" href="/profile">
+              {messages.auth.profile}
+            </Link>
+          )}
           <LocaleSwitcher />
-        </nav>
+        </div>
+
         <MobileNavMenu
           brandHref={user ? "/dashboard" : "/"}
           sections={[
             {
-              items: navLinks
-                .filter((item) => item.public || user)
-                .map((item) => ({ href: item.href, label: item.label })),
+              items: navLinks.map((item) => ({ href: item.href, label: item.label })),
             },
             {
               items: [
@@ -68,16 +78,23 @@ export async function SiteShell({
               ],
             },
           ]}
+          summary={
+            user
+              ? {
+                  title: user.workspace_name ?? "Workspace",
+                  subtitle: user.plan_name ?? "Pollex workspace",
+                }
+              : undefined
+          }
         />
       </header>
-      {eyebrow ? <p className="eyebrow">{eyebrow}</p> : null}
-      {children}
-      <footer className="site-footer">
+
+      <main className="site-shell-main">{children}</main>
+
+      <footer className="site-shell-footer">
         <div>
           <Brand compact href={user ? "/dashboard" : "/"} />
-          <p className="footer-copy" style={{ marginTop: 8 }}>
-            {messages.nav.footerTagline}
-          </p>
+          <p className="footer-copy">{messages.nav.footerTagline}</p>
         </div>
         <nav className="footer-links">
           <Link href="/pricing">{messages.nav.pricing}</Link>
@@ -91,98 +108,75 @@ export async function SiteShell({
 }
 
 export async function DashboardShell({
-  title,
-  subtitle,
-  headerAction,
+  activePath,
   children,
-}: {
-  title: string;
-  subtitle: string;
-  headerAction?: ReactNode;
-  aside?: ReactNode;
-  children: ReactNode;
-}) {
+  headerAction,
+  subtitle,
+  title,
+}: DashboardShellProps) {
   const locale = await getRequestLocale();
   const messages = getMessages(locale);
-  const navItems = [
-    { href: "/dashboard", label: messages.nav.dashboard },
-    { href: "/usage", label: messages.nav.usage },
-    { href: "/liquid", label: messages.nav.liquid },
-    { href: "/heatmap", label: messages.nav.heatmap },
-    { href: "/settings", label: messages.nav.settings },
-    { href: "/profile", label: messages.nav.profile },
-  ] as const;
-
-  const marketingItems = [
-    { href: "/pricing", label: messages.nav.pricing },
-    { href: "/docs", label: messages.nav.docs },
-  ] as const;
-
   const currentUser = await getCurrentUser();
   const user = "user" in currentUser.data ? currentUser.data.user : null;
-  const initials = user?.email.slice(0, 2).toUpperCase() ?? "NA";
+  const navItems: Array<{ href: Route; label: string }> = [
+    { href: "/dashboard" as Route, label: messages.nav.dashboard },
+    { href: "/usage" as Route, label: messages.nav.usage },
+    { href: "/heatmap" as Route, label: messages.nav.heatmap },
+    { href: "/liquid" as Route, label: messages.nav.liquid },
+    { href: "/profile" as Route, label: messages.nav.profile },
+    { href: "/settings" as Route, label: messages.nav.settings },
+  ] as const;
+  const resourceItems: Array<{ href: Route; label: string }> = [
+    { href: "/pricing" as Route, label: messages.nav.pricing },
+    { href: "/docs" as Route, label: messages.nav.docs },
+  ] as const;
+  const initials = user?.email.slice(0, 2).toUpperCase() ?? "PL";
 
   return (
-    <div className="sidebar-layout">
-      <aside className="sidebar">
-        <div className="sidebar-brand">
+    <div className="dashboard-shell">
+      <aside className="dashboard-sidebar">
+        <div className="dashboard-sidebar-brand">
           <Brand sidebar href="/dashboard" />
         </div>
 
-        <nav className="sidebar-nav">
-          <p className="sidebar-label">{messages.nav.product}</p>
-          {navItems.map((item) => (
-            <Link key={item.href} href={item.href} className="sidebar-link">
-              {item.label}
-            </Link>
-          ))}
+        <nav className="dashboard-sidebar-nav">
+          <div className="dashboard-sidebar-group">
+            <p className="dashboard-sidebar-label">{messages.nav.product}</p>
+            {navItems.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`dashboard-sidebar-link ${item.href === activePath ? "active" : ""}`.trim()}
+              >
+                <span className="dashboard-sidebar-link-indicator" aria-hidden="true" />
+                <span>{item.label}</span>
+              </Link>
+            ))}
+          </div>
 
-          <p className="sidebar-label">{messages.nav.resources}</p>
-          {marketingItems.map((item) => (
-            <Link key={item.href} href={item.href} className="sidebar-link">
-              {item.label}
-            </Link>
-          ))}
+          <div className="dashboard-sidebar-group">
+            <p className="dashboard-sidebar-label">{messages.nav.resources}</p>
+            {resourceItems.map((item) => (
+              <Link key={item.href} href={item.href} className="dashboard-sidebar-link">
+                <span className="dashboard-sidebar-link-indicator" aria-hidden="true" />
+                <span>{item.label}</span>
+              </Link>
+            ))}
+          </div>
         </nav>
 
-        <div className="sidebar-footer">
-          <Link href="/profile" className="sidebar-link">
-            <div
-              className="avatar"
-              style={{
-                width: 28,
-                height: 28,
-                borderRadius: 8,
-                fontSize: "0.7rem",
-              }}
-            >
-              {initials}
-            </div>
-            <div>
-              <div
-                style={{
-                  fontSize: "0.83rem",
-                  fontWeight: 600,
-                  color: "var(--text)",
-                }}
-              >
-                {user?.workspace_name ?? "Workspace"}
-              </div>
-              <div style={{ fontSize: "0.75rem", color: "var(--text-3)" }}>
-                {user?.plan_name ?? "Maze workspace"}
-              </div>
-            </div>
-          </Link>
-        </div>
+        <Link className="dashboard-workspace-card" href="/profile">
+          <div className="dashboard-workspace-avatar">{initials}</div>
+          <div>
+            <strong>{user?.workspace_name ?? "Workspace name"}</strong>
+            <span>{user?.plan_name ?? "Pollex workspace"}</span>
+          </div>
+        </Link>
       </aside>
 
-      <main className="main-content">
+      <main className="dashboard-main">
         <MobileNavMenu
           brandHref="/dashboard"
-          summary={{
-            title: user?.workspace_name ?? (locale === "ar" ? "مساحة العمل" : "Workspace"),
-            subtitle: user?.plan_name ?? (locale === "ar" ? "مساحة Maze" : "Maze workspace"),
-          }}
           sections={[
             {
               title: messages.nav.product,
@@ -190,18 +184,38 @@ export async function DashboardShell({
             },
             {
               title: messages.nav.resources,
-              items: marketingItems.map((item) => ({ href: item.href, label: item.label })),
+              items: resourceItems.map((item) => ({ href: item.href, label: item.label })),
             },
           ]}
+          summary={{
+            title: user?.workspace_name ?? (locale === "ar" ? "مساحة العمل" : "Workspace"),
+            subtitle: user?.plan_name ?? "Pollex workspace",
+          }}
         />
-        <div className="page-header">
-          <div>
+
+        <div className="dashboard-page-header">
+          <div className="dashboard-page-copy">
             <h1 className="page-title">{title}</h1>
-            <p className="page-subtitle">{subtitle}</p>
           </div>
-          {headerAction ? <div className="page-header-action">{headerAction}</div> : null}
+          <div className="dashboard-page-tools">
+            {headerAction}
+            <LocaleSwitcher />
+          </div>
         </div>
-        {children}
+
+        <div className="dashboard-page-body">{children}</div>
+
+        <footer className="dashboard-app-footer">
+          <div className="dashboard-app-footer-copy">
+            <Brand compact href="/dashboard" />
+            <span>{locale === "ar" ? "مساحة تشغيل أكثر هدوءًا للقرارات اليومية." : "A calmer operating surface for daily product decisions."}</span>
+          </div>
+          <nav className="dashboard-app-footer-links">
+            <Link href="/docs">{messages.nav.docs}</Link>
+            <Link href="/pricing">{messages.nav.pricing}</Link>
+            <Link href="/settings">{messages.nav.settings}</Link>
+          </nav>
+        </footer>
       </main>
     </div>
   );

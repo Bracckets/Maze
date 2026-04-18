@@ -1,11 +1,9 @@
 import { DashboardWorkbench } from "@/components/dashboard-workbench";
 import { DashboardShell } from "@/components/site-shell";
-import { getRequestLocale } from "@/lib/i18n-server";
 import { getIntegrationStatus } from "@/lib/service-gateway";
 import { getInsights, getIssues, getSessions } from "@/lib/site-data";
 
 export default async function DashboardPage() {
-  const locale = await getRequestLocale();
   const [insights, integrations, issues, sessions] = await Promise.all([
     getInsights(),
     getIntegrationStatus(),
@@ -15,8 +13,9 @@ export default async function DashboardPage() {
 
   return (
     <DashboardShell
-      title={locale === "ar" ? "مركز التحكم" : "Command center"}
-      subtitle={locale === "ar" ? "سطح تشغيل سريع الاستجابة لسلوك المستخدم والاحتكاك وصحة التتبع." : "A responsive operating surface for live behavior, friction, and instrumentation health."}
+      activePath="/dashboard"
+      title="Dashboard"
+      subtitle="Minimal enough to read at a glance, detailed enough to act without leaving the workspace."
     >
       <DashboardWorkbench
         insights={insights}

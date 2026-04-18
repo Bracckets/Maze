@@ -98,9 +98,9 @@ export const featureRows = [
 ] as const;
 
 export const stepsEasy = [
-  "Sign in to Maze",
+  "Sign in to Pollex",
   "Give your coding agent the MAZE_INTEGRATION.md file",
-  "Watch the Maze unfold"
+  "Watch Pollex unfold"
 ];
 
 export const stepsHard = [
@@ -138,7 +138,7 @@ export const pricingPlans = [
     name: "Scale",
     price: "Custom",
     cadence: "",
-    description: "For companies rolling Maze into mobile and web across squads.",
+    description: "For companies rolling Pollex into mobile and web across squads.",
     features: ["SSO + SCIM", "Data residency options", "Priority Slack support", "Dedicated onboarding architect"]
   }
 ];
@@ -147,7 +147,7 @@ export const profileMoments = [
   { label: "Role", value: "Principal Product Engineer" },
   { label: "Focus", value: "Onboarding and KYC journeys" },
   { label: "Team", value: "Growth Platform" },
-  { label: "Workspace", value: "Maze HQ" }
+  { label: "Workspace", value: "Pollex HQ" }
 ];
 
 const backendBaseUrl = (process.env.MAZE_BACKEND_URL ?? process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000").replace(/\/$/, "");

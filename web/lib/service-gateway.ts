@@ -374,7 +374,7 @@ async function backendRequest<T>(path: string, method: HttpMethod, body?: unknow
     return {
       ok: false,
       status: 503,
-      data: { detail: "Maze backend is unavailable right now. Please try again in a moment." } as T,
+      data: { detail: "Pollex backend is unavailable right now. Please try again in a moment." } as T,
     };
   }
 }

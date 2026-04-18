@@ -5,11 +5,11 @@ import { getRequestLocale } from "@/lib/i18n-server";
 const sections = [
   {
     title: "Using the service",
-    body: "Maze may only be used on products you are authorized to instrument. You are responsible for ensuring your integration complies with your own privacy policy and applicable laws in the regions where your users reside.",
+    body: "Pollex may only be used on products you are authorized to instrument. You are responsible for ensuring your integration complies with your own privacy policy and applicable laws in the regions where your users reside.",
   },
   {
     title: "Prohibited data",
-    body: "You agree not to send passwords, OTP codes, payment card details, national IDs, bank account numbers, or other regulated personal data through event metadata. Maze provides masking guidance and tooling, but compliance is your responsibility.",
+    body: "You agree not to send passwords, OTP codes, payment card details, national IDs, bank account numbers, or other regulated personal data through event metadata. Pollex provides masking guidance and tooling, but compliance is your responsibility.",
   },
   {
     title: "Workspace responsibility",
@@ -48,8 +48,8 @@ export default async function TermsPage() {
         </h1>
         <p className="subtext" style={{ fontSize: "0.95rem" }}>
           {locale === "ar"
-            ? "تغطي هذه الشروط كيفية الوصول إلى Maze واستخدامه، وما تقع مسؤوليته عليك، وكيف نتعامل مع الفوترة والبيانات."
-            : "These terms cover how you access and use Maze, what you're responsible for, and how we handle billing and data. No legal jargon beyond what's necessary."}
+            ? "تغطي هذه الشروط كيفية الوصول إلى Pollex واستخدامه، وما تقع مسؤوليته عليك، وكيف نتعامل مع الفوترة والبيانات."
+            : "These terms cover how you access and use Pollex, what you're responsible for, and how we handle billing and data. No legal jargon beyond what's necessary."}
         </p>
       </section>
 

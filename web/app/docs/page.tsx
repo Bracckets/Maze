@@ -15,7 +15,7 @@ const sections = [
       },
       {
         type: "p",
-        text: "1. Keys: define one stable content key, assign it to an observed Maze screen, and set the default fallback text your app can always render.",
+        text: "1. Keys: define one stable content key, assign it to an observed Pollex screen, and set the default fallback text your app can always render.",
       },
       {
         type: "p",
@@ -35,7 +35,7 @@ const sections = [
       },
       {
         type: "p",
-        text: "Practical tip: keep trait sources explicit. App traits come from your app or backend, Maze traits come from behavior, and manual-test traits stay in preview only.",
+        text: "Practical tip: keep trait sources explicit. App traits come from your app or backend, Pollex traits come from behavior, and manual-test traits stay in preview only.",
       },
     ],
   },
@@ -45,7 +45,7 @@ const sections = [
     content: [
       {
         type: "p",
-        text: "The fastest way to get started: sign in, hand your coding agent the MAZE_INTEGRATION.md file from the repo, and it will wire Maze analytics plus Liquid runtime bundles through one integration path.",
+        text: "The fastest way to get started: sign in, hand your coding agent the MAZE_INTEGRATION.md file from the repo, and it will wire Pollex analytics plus Liquid runtime bundles through one integration path.",
       },
       {
         type: "code",
@@ -63,7 +63,7 @@ implementation("com.maze:sdk:1.0.0")`,
     content: [
       {
         type: "p",
-        text: "Initialize Maze once at app launch — in AppDelegate, your SwiftUI @main struct, or your Application subclass on Android. Use your workspace API key from the Settings page. Maze continues to handle telemetry, while Liquid rides on the same workspace key for runtime content.",
+        text: "Initialize Pollex once at app launch — in AppDelegate, your SwiftUI @main struct, or your Application subclass on Android. Use your workspace API key from the Settings page. Pollex continues to handle telemetry, while Liquid rides on the same workspace key for runtime content.",
       },
       {
         type: "code",
@@ -82,7 +82,7 @@ Maze.initialize(context, "YOUR_API_KEY")`,
     content: [
       {
         type: "p",
-        text: "Define stable keys and observed-screen assignments in Maze, then resolve a bundle at runtime with one request. Liquid returns text plus safe attributes like icon, visibility, emphasis, and ordering, while preview flows expose diagnostics for missing traits and fallback behavior.",
+        text: "Define stable keys and observed-screen assignments in Pollex, then resolve a bundle at runtime with one request. Liquid returns text plus safe attributes like icon, visibility, emphasis, and ordering, while preview flows expose diagnostics for missing traits and fallback behavior.",
       },
       {
         type: "code",
@@ -114,7 +114,7 @@ Maze.resolveLiquidBundle(
       },
       {
         type: "p",
-        text: "Maze computes behavior traits like intent level or usage depth on the server. Your app should only send traits it already knows, such as plan, region, language, or account tier.",
+        text: "Pollex computes behavior traits like intent level or usage depth on the server. Your app should only send traits it already knows, such as plan, region, language, or account tier.",
       },
     ],
   },
@@ -124,7 +124,7 @@ Maze.resolveLiquidBundle(
     content: [
       {
         type: "p",
-        text: "Call Maze.screen() when each screen becomes visible. Use lowercase snake_case names that match your route or view controller name.",
+        text: "Call Pollex.screen() when each screen becomes visible. Use lowercase snake_case names that match your route or view controller name.",
       },
       {
         type: "code",
@@ -173,7 +173,7 @@ Maze.track(event: "error_message", screen: "kyc_form", elementId: "email_field")
     content: [
       {
         type: "p",
-        text: "The Maze backend exposes the following endpoints. Start it with `uvicorn app.main:app --reload` from the /backend directory.",
+        text: "The Pollex backend exposes the following endpoints. Start it with `uvicorn app.main:app --reload` from the /backend directory.",
       },
       {
         type: "code",
@@ -218,8 +218,8 @@ export default async function DocsPage() {
         </h1>
         <p className="subtext" style={{ fontSize: "1rem", maxWidth: 480, marginBottom: 24 }}>
           {locale === "ar"
-            ? "تم تصميم Maze ليتم دمجه بواسطة شخص أو وكيل برمجي. دليل الدمج الكامل موجود في ملف MAZE_INTEGRATION.md داخل المستودع."
-            : "Maze is designed to be integrated by a human or a coding agent. The full integration guide lives in MAZE_INTEGRATION.md in the repo."}
+            ? "تم تصميم Pollex ليتم دمجه بواسطة شخص أو وكيل برمجي. دليل الدمج الكامل موجود في ملف MAZE_INTEGRATION.md داخل المستودع."
+            : "Pollex is designed to be integrated by a human or a coding agent. The full integration guide lives in MAZE_INTEGRATION.md in the repo."}
         </p>
         <div style={{ display: "flex", gap: 10 }}>
           <Link className="btn btn-primary btn-lg" href="/signin">{locale === "ar" ? "افتح مساحة العمل" : "Open workspace"}</Link>

@@ -249,7 +249,7 @@ function readinessLabel(state?: string | null) {
 }
 
 function traitSourceLabel(sourceType: LiquidTraitDefinition["sourceType"]) {
-  if (sourceType === "maze_computed") return "Maze computed";
+  if (sourceType === "maze_computed") return "Pollex computed";
   if (sourceType === "manual_test") return "Manual test";
   return "App profile";
 }
@@ -624,6 +624,9 @@ function ProfileTraitValueInput({
   onChange: (patch: Partial<ProfileDraftRow>) => void;
 }) {
   const valueType = trait?.valueType ?? row.valueType;
+  const selectOptions = (trait?.exampleValues ?? [])
+    .filter(Boolean)
+    .map((value) => ({ value, label: value }));
   if (!row.traitKey) {
     return <input className="liquid-ops-input liquid-ops-table-input" placeholder="Choose a trait first" disabled />;
   }
@@ -669,12 +672,25 @@ function ProfileTraitValueInput({
       />
     );
   }
+  if (valueType === "select") {
+    return (
+      <LiquidSelect
+        compact
+        value={row.value}
+        options={selectOptions}
+        placeholder={trait?.sourceType === "maze_computed" ? "Choose computed value" : "Choose option"}
+        onChange={(nextValue) => onChange({ value: nextValue })}
+        disabled={selectOptions.length === 0}
+      />
+    );
+  }
   return (
     <input
       className="liquid-ops-input liquid-ops-table-input"
       value={row.value}
       onChange={(event) => onChange({ value: event.target.value })}
-      placeholder={valueType === "select" ? "Option value" : "Value"}
+      placeholder={trait?.sourceType === "maze_computed" ? "Computed value is fixed by Pollex" : "Value"}
+      disabled={trait?.sourceType === "maze_computed"}
     />
   );
 }
@@ -1006,7 +1022,7 @@ export function LiquidStudio({
       return false;
     }
     if (sortedObservedScreens.length === 0) {
-      setError("Liquid needs at least one observed Maze screen before you can create keys.");
+      setError("Liquid needs at least one observed Pollex screen before you can create keys.");
       return false;
     }
     if (!keyDraft.screenKey) {
@@ -1098,7 +1114,7 @@ export function LiquidStudio({
       return false;
     }
     if (traitDraft.sourceType === "maze_computed") {
-      setError("Maze-computed traits are built in. Create an app or manual test trait instead.");
+      setError("Pollex-computed traits are built in. Create an app or manual test trait instead.");
       return false;
     }
     setBusy("trait");
@@ -1138,7 +1154,7 @@ export function LiquidStudio({
   async function deleteTrait() {
     if (!traitDraft.id) return;
     if (traitDraft.sourceType === "maze_computed") {
-      setError("Maze-computed traits are built in and cannot be deleted.");
+      setError("Pollex-computed traits are built in and cannot be deleted.");
       return;
     }
     clearMessages();
@@ -1508,7 +1524,7 @@ export function LiquidStudio({
           <div className="liquid-ops-inline-create-head">
             <div className="liquid-ops-inline-create-copy">
               <strong>Create key</strong>
-              <span>Add one fallback string on a real Maze screen.</span>
+              <span>Add one fallback string on a real Pollex screen.</span>
             </div>
             </div>
             <div className="liquid-ops-inline-create-grid">
@@ -1711,7 +1727,7 @@ export function LiquidStudio({
       <section className="liquid-ops-surface liquid-ops-automation-strip">
         <SectionTitle
           title="Integration status"
-          body="Liquid stays lightweight in the app. Maze observes screens, records arriving traits, and highlights where personalization is still falling back."
+          body="Liquid stays lightweight in the app. Pollex observes screens, records arriving traits, and highlights where personalization is still falling back."
         />
         <div className="liquid-ops-automation-grid">
           <div className="liquid-ops-automation-item">
@@ -1727,7 +1743,7 @@ export function LiquidStudio({
             <span>{formatPercent(integrationStatus.appTraitCoverage)}</span>
           </div>
           <div className="liquid-ops-automation-item">
-            <strong>Maze trait coverage</strong>
+            <strong>Pollex trait coverage</strong>
             <span>{formatPercent(integrationStatus.computedTraitCoverage)}</span>
           </div>
           <div className="liquid-ops-automation-item">
@@ -1968,7 +1984,7 @@ export function LiquidStudio({
         <div className="liquid-ops-toolbar">
           <SectionTitle
             title="Content keys"
-            body="Create the text objects Liquid controls. Each key belongs to one observed Maze screen and owns a default fallback copy."
+            body="Create the text objects Liquid controls. Each key belongs to one observed Pollex screen and owns a default fallback copy."
           />
           <div className="liquid-ops-toolbar-actions">
             <div className="liquid-ops-search">
@@ -1999,7 +2015,7 @@ export function LiquidStudio({
           <div className="liquid-ops-surface liquid-ops-suggested-strip">
             <div className="liquid-ops-inline-meta">
               <strong>Suggested starting screens</strong>
-              <span>Start from a screen Maze is already observing.</span>
+              <span>Start from a screen Pollex is already observing.</span>
             </div>
             <div className="liquid-ops-chip-row">
               {suggestedScreens.map((screen) => (
@@ -2023,7 +2039,7 @@ export function LiquidStudio({
         {!hasObservedScreens ? (
           <EmptyState
             title="No observed screens yet"
-            body="Liquid keys must attach to real Maze screens. Send session data first, then come back here to assign copy to a screen your users actually visit."
+            body="Liquid keys must attach to real Pollex screens. Send session data first, then come back here to assign copy to a screen your users actually visit."
           />
         ) : filteredKeys.length === 0 ? (
           <EmptyState
@@ -2122,7 +2138,7 @@ export function LiquidStudio({
           <div className="liquid-ops-surface liquid-ops-stack">
             <div className="liquid-ops-note">
               <Tag tone="accent">System traits</Tag>
-              <span>Maze-computed traits appear automatically here. Create only app-backed or manual preview traits.</span>
+              <span>Pollex-computed traits appear automatically here. Create only app-backed or manual preview traits.</span>
             </div>
             {traitMode === "create" ? (
               <section className="liquid-ops-inline-create-card">

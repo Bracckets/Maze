@@ -1,6 +1,9 @@
 import Image from "next/image";
 import Link from "next/link";
 
+const LOGO_WIDTH = 380;
+const LOGO_HEIGHT = 72;
+
 export function Brand({
   compact = false,
   sidebar = false,
@@ -10,15 +13,14 @@ export function Brand({
   sidebar?: boolean;
   href?: string;
 }) {
-  const height = sidebar ? 28 : compact ? 36 : 34;
-  const width = Math.round((height * 1023) / 241);
-  const priority = !compact && !sidebar;
+  const height = sidebar ? 32 : compact ? 28 : 30;
+  const width = Math.round((height * LOGO_WIDTH) / LOGO_HEIGHT);
 
   return (
     <Link className="brand" href={href as "/" | "/dashboard"}>
       <Image
-        alt="Maze logo"
-        priority={priority}
+        alt="Pollex logo"
+        priority={!compact}
         src="/logo.png"
         width={width}
         height={height}

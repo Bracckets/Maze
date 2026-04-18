@@ -27,22 +27,24 @@ export default async function SettingsPage() {
   const locale = await getRequestLocale();
   const settings = await getWorkspaceSettings();
   const integrations = await getIntegrationStatus();
-  const workspaceSettings = "detail" in settings
-    ? null
-    : (settings as {
-        workspaceId: string;
-        workspaceName: string;
-        apiBaseUrl: string;
-        authProvider: string;
-        ingestionMode: string;
-        masking: string;
-        planId?: string | null;
-        planName?: string | null;
-      });
+  const workspaceSettings =
+    "detail" in settings
+      ? null
+      : (settings as {
+          workspaceId: string;
+          workspaceName: string;
+          apiBaseUrl: string;
+          authProvider: string;
+          ingestionMode: string;
+          masking: string;
+          planId?: string | null;
+          planName?: string | null;
+        });
   const apiBaseUrl = workspaceSettings?.apiBaseUrl ?? (locale === "ar" ? "سجّل الدخول لتحميل الإعدادات" : "Sign in to load settings");
 
   return (
     <DashboardShell
+      activePath="/settings"
       title={locale === "ar" ? "الإعدادات" : "Settings"}
       subtitle={locale === "ar" ? "أدر إعدادات الحزمة ومفاتيح API واتصالات الخدمات." : "Manage your SDK configuration, API keys, and service connections."}
     >
@@ -51,7 +53,7 @@ export default async function SettingsPage() {
           <Card>
             <div className="heading" style={{ marginBottom: 4 }}>{locale === "ar" ? "إعدادات الحزمة" : "SDK configuration"}</div>
             <p className="subtext" style={{ fontSize: "0.85rem", marginBottom: 20 }}>
-              {locale === "ar" ? "استخدم هذه القيم عند تهيئة حزمة Maze داخل تطبيق الجوال." : "Use these values when initializing the Maze SDK in your mobile app."}
+              {locale === "ar" ? "استخدم هذه القيم عند تهيئة حزمة Pollex داخل تطبيق الجوال." : "Use these values when initializing the Pollex SDK in your mobile app."}
             </p>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 18 }}>
               <Tag tone="green">{workspaceSettings?.planName ?? (locale === "ar" ? "لا توجد باقة نشطة" : "No active plan")}</Tag>
@@ -59,23 +61,29 @@ export default async function SettingsPage() {
             </div>
 
             <WorkspaceSettingsEditor
-              initialSettings={workspaceSettings ? {
-                apiBaseUrl: workspaceSettings.apiBaseUrl,
-                authProvider: workspaceSettings.authProvider,
-                ingestionMode: workspaceSettings.ingestionMode,
-                masking: workspaceSettings.masking,
-              } : {
-                apiBaseUrl,
-                authProvider: "maze-backend",
-                ingestionMode: "batched",
-                masking: "strict",
-              }}
+              initialSettings={
+                workspaceSettings
+                  ? {
+                      apiBaseUrl: workspaceSettings.apiBaseUrl,
+                      authProvider: workspaceSettings.authProvider,
+                      ingestionMode: workspaceSettings.ingestionMode,
+                      masking: workspaceSettings.masking,
+                    }
+                  : {
+                      apiBaseUrl,
+                      authProvider: "maze-backend",
+                      ingestionMode: "batched",
+                      masking: "strict",
+                    }
+              }
             />
             <div className="field">
               <label>{locale === "ar" ? "مفتاح مساحة العمل" : "Workspace key"}</label>
               <input readOnly value={locale === "ar" ? "استخدم مفتاح API المولد أدناه" : "Use a generated API key below"} />
               <p className="field-hint" style={{ fontSize: "0.78rem", color: "var(--text-3)", marginTop: 4 }}>
-                {locale === "ar" ? "ولّد مفتاحاً في قسم مفاتيح API واستخدمه في تهيئة الحزمة." : "Generate a key in the API Keys section and use it in your SDK initialization."}
+                {locale === "ar"
+                  ? "ولّد مفتاحًا في قسم مفاتيح API واستخدمه في تهيئة الحزمة."
+                  : "Generate a key in the API Keys section and use it in your SDK initialization."}
               </p>
             </div>
           </Card>
@@ -83,7 +91,9 @@ export default async function SettingsPage() {
           <Card>
             <div className="heading" style={{ marginBottom: 4 }}>{locale === "ar" ? "اتصالات الخدمات" : "Service connections"}</div>
             <p className="subtext" style={{ fontSize: "0.85rem", marginBottom: 18 }}>
-              {locale === "ar" ? "هذه المسارات تعتمد على خلفية Maze والجلسة الحالية لمساحة العمل." : "These routes are backed by your Maze backend and current workspace session."}
+              {locale === "ar"
+                ? "هذه المسارات تعتمد على خلفية Pollex والجلسة الحالية لمساحة العمل."
+                : "These routes are backed by your Pollex backend and current workspace session."}
             </p>
 
             {integrations.services.map((service) => (
@@ -106,7 +116,9 @@ export default async function SettingsPage() {
         <Card accent>
           <div className="heading" style={{ marginBottom: 4 }}>API keys</div>
           <p className="subtext" style={{ fontSize: "0.85rem", marginBottom: 20 }}>
-            {locale === "ar" ? "ولّد مفاتيح لمصادقة حزمة الجوال وتكاملات الخلفية. تُعرض المفاتيح مرة واحدة فقط، لذا خزّنها بأمان." : "Generate keys to authenticate your mobile SDK and backend integrations. Keys are shown once, so store them securely."}
+            {locale === "ar"
+              ? "ولّد مفاتيح لمصادقة حزمة الجوال وتكاملات الخلفية. تُعرض المفاتيح مرة واحدة فقط، لذا خزّنها بأمان."
+              : "Generate keys to authenticate your mobile SDK and backend integrations. Keys are shown once, so store them securely."}
           </p>
           <ApiKeyManager />
         </Card>

@@ -355,7 +355,7 @@ export function LandingHeroVisual() {
                 onTouchCancel={stopHesitation}
                 whileTap={{ scale: 0.985 }}
               >
-                {locale === "ar" ? "سجّل الدخول إلى Maze" : "Sign in to Maze"}
+                {locale === "ar" ? "سجّل الدخول إلى Pollex" : "Sign in to Pollex"}
               </motion.button>
                 <div className="signal-screen-hint">
                   {locale === "ar"

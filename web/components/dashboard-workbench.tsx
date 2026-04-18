@@ -1,10 +1,27 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import {
+  Area,
+  AreaChart,
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Pie,
+  PieChart,
+  PolarAngleAxis,
+  RadialBar,
+  RadialBarChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 
 import type { Insight, Issue, SessionSummary } from "@/lib/site-data";
 
-import { Card, Tag, StatusDot } from "@/components/ui";
+import { Card, StatusDot, Tag } from "@/components/ui";
 
 type IntegrationService = {
   name: string;
@@ -19,11 +36,33 @@ type Props = {
   integrations: IntegrationService[];
 };
 
-type InspectRow =
-  | { title: string; rows: Array<[string, string]> }
-  | null;
+type DashboardTab = "charts" | "data" | "insights" | "integrations";
+type DataTab = "sessions" | "issues";
 
-const toneMap: Record<string, "red" | "amber" | "green"> = {
+type ChartTooltipProps = {
+  active?: boolean;
+  label?: string;
+  payload?: Array<{
+    color?: string;
+    dataKey?: string;
+    name?: string;
+    value?: number | string;
+  }>;
+};
+
+const tabLabels: Record<DashboardTab, string> = {
+  charts: "Charts",
+  data: "Data",
+  insights: "Insights",
+  integrations: "Integrations",
+};
+
+const dataTabLabels: Record<DataTab, string> = {
+  sessions: "Sessions",
+  issues: "Issues",
+};
+
+const issueToneMap: Record<string, "red" | "amber" | "green" | "default"> = {
   rage_tap: "red",
   drop_off: "red",
   slow_response: "amber",
@@ -40,10 +79,7 @@ const integrationToneMap: Record<string, "online" | "degraded" | "offline"> = {
   offline: "offline",
 };
 
-const integrationTagToneMap: Record<
-  string,
-  "green" | "amber" | "red" | "default"
-> = {
+const integrationTagToneMap: Record<string, "green" | "amber" | "red" | "default"> = {
   healthy: "green",
   configured: "green",
   connected: "green",
@@ -52,24 +88,18 @@ const integrationTagToneMap: Record<
   offline: "red",
 };
 
-const expandedPanelMeta = {
-  sessions: {
-    title: "All Sessions",
-    description: "Review every captured session in one calmer workspace and inspect the details only when needed.",
-  },
-  issues: {
-    title: "All Friction Issues",
-    description: "Scan the full issue list, then open any row for the specific context behind the signal.",
-  },
-  insights: {
-    title: "All Insights",
-    description: "Browse the highest-signal explanations from your workspace in a lighter, easier-to-scan sheet.",
-  },
-  integrations: {
-    title: "All Integrations",
-    description: "Check connected services, paths, and current status without leaving the dashboard surface.",
-  },
-} as const;
+const chartPalette = {
+  line: "#dfeafc",
+  area: "rgba(186, 208, 239, 0.48)",
+  areaSecondary: "rgba(226, 192, 123, 0.44)",
+  bar: "#efe8d8",
+  barSoft: "#b0c6eb",
+  amber: "#e2c07b",
+  red: "#e59080",
+  green: "#99d7b2",
+  grid: "rgba(255,255,255,0.08)",
+  axis: "rgba(187,184,178,0.72)",
+};
 
 function toCsv(headers: string[], rows: string[][]) {
   const escape = (value: string) => `"${value.replace(/"/g, '""')}"`;
@@ -99,50 +129,143 @@ function formatTime(value: string) {
   }).format(date);
 }
 
+function formatShortTime(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+  return new Intl.DateTimeFormat(undefined, {
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(date);
+}
+
+function ChartTooltip({ active, label, payload }: ChartTooltipProps) {
+  if (!active || !payload || payload.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="pollex-chart-tooltip">
+      {label ? <strong>{label}</strong> : null}
+      {payload.map((entry) => (
+        <div className="pollex-chart-tooltip-row" key={`${entry.dataKey}-${entry.name}`}>
+          <span className="pollex-chart-tooltip-dot" style={{ backgroundColor: entry.color ?? chartPalette.line }} />
+          <span>{entry.name ?? entry.dataKey}</span>
+          <strong>{entry.value ?? 0}</strong>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function getInsightKey(insight: Insight, index: number) {
+  return [
+    insight.title,
+    insight.screen,
+    insight.issue_type,
+    insight.frequency,
+    insight.impact,
+    index,
+  ].join("-");
+}
+
 export function DashboardWorkbench({
   insights,
   issues,
   sessions,
   integrations,
 }: Props) {
-  const [expandedPanel, setExpandedPanel] = useState<
-    "sessions" | "issues" | "insights" | "integrations" | null
-  >(null);
-  const [inspectRow, setInspectRow] = useState<InspectRow>(null);
+  const [activeTab, setActiveTab] = useState<DashboardTab>("charts");
+  const [activeDataTab, setActiveDataTab] = useState<DataTab>("sessions");
 
   const totalSessions = sessions.length;
   const dropOffs = sessions.filter((session) => session.dropped_off).length;
-  const completionRate =
-    totalSessions > 0
-      ? Math.round(((totalSessions - dropOffs) / totalSessions) * 100)
-      : 0;
-  const activeScreens = new Set(
-    sessions.map((session) => session.last_screen).filter(Boolean),
-  ).size;
+  const completionRate = totalSessions > 0 ? Math.round(((totalSessions - dropOffs) / totalSessions) * 100) : 0;
+  const activeScreens = new Set(sessions.map((session) => session.last_screen).filter(Boolean)).size;
   const topIssue = issues[0];
-  const expandedMeta = expandedPanel ? expandedPanelMeta[expandedPanel] : null;
 
-  useEffect(() => {
-    if (!expandedPanel && !inspectRow) {
-      return;
-    }
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key !== "Escape") {
+  const sessionBuckets = useMemo(() => {
+    const buckets = new Map<string, { sessions: number; dropOffs: number }>();
+    sessions.forEach((session) => {
+      const date = new Date(session.start_time);
+      if (Number.isNaN(date.getTime())) {
         return;
       }
+      const key = new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" }).format(date);
+      const current = buckets.get(key) ?? { sessions: 0, dropOffs: 0 };
+      current.sessions += 1;
+      if (session.dropped_off) {
+        current.dropOffs += 1;
+      }
+      buckets.set(key, current);
+    });
 
-      if (inspectRow) {
-        setInspectRow(null);
+    return Array.from(buckets.entries())
+      .slice(-7)
+      .map(([label, value]) => ({
+        label,
+        sessions: value.sessions,
+        dropOffs: value.dropOffs,
+      }));
+  }, [sessions]);
+
+  const screenActivity = useMemo(() => {
+    const buckets = new Map<string, number>();
+    sessions.forEach((session) => {
+      const label = session.last_screen ?? "unknown";
+      buckets.set(label, (buckets.get(label) ?? 0) + 1);
+    });
+    return Array.from(buckets.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 6)
+      .map(([screen, value]) => ({ screen, value }));
+  }, [sessions]);
+
+  const issueMix = useMemo(() => {
+    const buckets = new Map<string, number>();
+    issues.forEach((issue) => {
+      buckets.set(issue.type, (buckets.get(issue.type) ?? 0) + issue.frequency);
+    });
+    return Array.from(buckets.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([type, value]) => ({ type: type.replace(/_/g, " "), value }));
+  }, [issues]);
+
+  const completionSplit = useMemo(
+    () => [
+      { name: "Completed", value: Math.max(totalSessions - dropOffs, 0), color: chartPalette.green },
+      { name: "Dropped off", value: dropOffs, color: chartPalette.red },
+    ],
+    [dropOffs, totalSessions],
+  );
+
+  const integrationHealth = useMemo(() => {
+    const buckets = { healthy: 0, degraded: 0, offline: 0 };
+    integrations.forEach((integration) => {
+      if (integration.status === "healthy" || integration.status === "configured" || integration.status === "connected") {
+        buckets.healthy += 1;
         return;
       }
+      if (integration.status === "offline") {
+        buckets.offline += 1;
+        return;
+      }
+      buckets.degraded += 1;
+    });
 
-      setExpandedPanel(null);
-    }
+    return [
+      { name: "Healthy", value: buckets.healthy, fill: chartPalette.green },
+      { name: "Degraded", value: buckets.degraded, fill: chartPalette.amber },
+      { name: "Offline", value: buckets.offline, fill: chartPalette.red },
+    ];
+  }, [integrations]);
 
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [expandedPanel, inspectRow]);
+  const radialCompletion = useMemo(
+    () => [{ name: "Completion", value: completionRate, fill: chartPalette.line }],
+    [completionRate],
+  );
 
   const sessionCsv = useMemo(
     () =>
@@ -196,537 +319,442 @@ export function DashboardWorkbench({
     () =>
       toCsv(
         ["name", "path", "status"],
-        integrations.map((service) => [service.name, service.path, service.status]),
+        integrations.map((integration) => [integration.name, integration.path, integration.status]),
       ),
     [integrations],
   );
 
   return (
-    <>
-      <section className="ops-hero">
-        <div>
-          <p className="eyebrow">Live workspace</p>
-          <h2 className="ops-title">Behavior intelligence for your active product surface</h2>
-          <p className="ops-copy">
-            Track completion, pinpoint friction, and inspect the exact rows behind every
-            signal without leaving the dashboard.
-          </p>
-        </div>
-        <div className="ops-hero-grid">
-          <div className="ops-pulse">
-            <span className="ops-pulse-ring" />
-            <span className="ops-pulse-core" />
-            <div className="ops-pulse-copy">
-              <strong>{completionRate}%</strong>
-              <span>completion this window</span>
-            </div>
-          </div>
-          <div className="ops-mini-metrics">
-            <div>
-              <span>Sessions</span>
-              <strong>{totalSessions}</strong>
-            </div>
-            <div>
-              <span>Friction issues</span>
-              <strong>{issues.length}</strong>
-            </div>
-            <div>
-              <span>Active screens</span>
-              <strong>{activeScreens}</strong>
-            </div>
-          </div>
-        </div>
-      </section>
+    <section className="pollex-dashboard">
+      <div className="pollex-tabbar" role="tablist" aria-label="Dashboard views">
+        {(Object.keys(tabLabels) as DashboardTab[]).map((tab) => (
+          <button
+            key={tab}
+            type="button"
+            role="tab"
+            aria-selected={activeTab === tab}
+            className={`pollex-tab ${activeTab === tab ? "active" : ""}`.trim()}
+            onClick={() => setActiveTab(tab)}
+          >
+            {tabLabels[tab]}
+          </button>
+        ))}
+      </div>
 
-      <div className="ops-kpis">
-        <Card className="kpi-panel">
-          <p className="metric-label">Sessions tracked</p>
-          <p className="metric-num">{totalSessions}</p>
-          <p className="metric-delta">Updated from the current event stream</p>
+      <div className="pollex-stat-grid">
+        <Card className="pollex-stat-card">
+          <span>Sessions</span>
+          <strong>{totalSessions}</strong>
+          <em>Live traffic in the current workspace</em>
         </Card>
-        <Card className="kpi-panel">
-          <p className="metric-label">Completion rate</p>
-          <p className="metric-num">{completionRate}%</p>
-          <p className="metric-delta">{dropOffs} sessions ended before success</p>
+        <Card className="pollex-stat-card">
+          <span>Completion</span>
+          <strong>{completionRate}%</strong>
+          <em>{dropOffs} sessions ended before success</em>
         </Card>
-        <Card className="kpi-panel">
-          <p className="metric-label">Primary friction</p>
-          <p className="metric-num" style={{ fontSize: "1.8rem" }}>
-            {topIssue ? topIssue.type.replace(/_/g, " ") : "None"}
-          </p>
-          <p className="metric-delta">
-            {topIssue ? `${topIssue.frequency} events on ${topIssue.screen ?? "unknown"}` : "No friction detected"}
-          </p>
+        <Card className="pollex-stat-card">
+          <span>Primary friction</span>
+          <strong>{topIssue ? topIssue.type.replace(/_/g, " ") : "No issue"}</strong>
+          <em>{topIssue ? `${topIssue.frequency} recent events` : "Nothing urgent surfaced"}</em>
         </Card>
-        <Card className="kpi-panel">
-          <p className="metric-label">Surfaces watched</p>
-          <p className="metric-num">{activeScreens}</p>
-          <p className="metric-delta">Distinct screens active in recent traffic</p>
+        <Card className="pollex-stat-card">
+          <span>Active screens</span>
+          <strong>{activeScreens}</strong>
+          <em>Observed surfaces in recent sessions</em>
         </Card>
       </div>
 
-      <div className="dashboard-grid">
-        <div className="dashboard-primary">
-          <Card className="ops-panel">
-            <div className="panel-head">
+      {activeTab === "charts" ? (
+        <div className="pollex-dashboard-grid">
+          <Card className="pollex-surface pollex-surface-large">
+            <div className="pollex-surface-head">
               <div>
-                <div className="heading">Session stream</div>
-                <p className="panel-copy">
-                  Review the latest captured sessions, inspect timestamps, and export the full table.
-                </p>
+                <h2 className="heading">Session volume</h2>
+                <p className="panel-copy">Traffic and drop-off movement across the latest capture window.</p>
               </div>
-              <div className="panel-actions">
-                <button className="btn btn-ghost btn-sm" onClick={() => downloadCsv("maze-sessions.csv", sessionCsv)}>
-                  Export CSV
-                </button>
-                <button className="btn btn-primary btn-sm" onClick={() => setExpandedPanel("sessions")}>
-                  Expand
-                </button>
-              </div>
+              <Tag tone="accent">{sessionBuckets.length} points</Tag>
             </div>
-            <div className="table-shell">
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>Session</th>
-                    <th>Device</th>
-                    <th>Screen</th>
-                    <th>Status</th>
-                    <th>Started</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {sessions.slice(0, 6).map((session) => (
-                    <tr
-                      key={session.session_id}
-                      onClick={() =>
-                        setInspectRow({
-                          title: `Session ${session.session_id.slice(0, 8)}`,
-                          rows: [
-                            ["Session ID", session.session_id],
-                            ["Device", session.device_id],
-                            ["Last screen", session.last_screen ?? "unknown"],
-                            ["Status", session.dropped_off ? "Dropped off" : "Completed"],
-                            ["Started", formatTime(session.start_time)],
-                            ["Ended", formatTime(session.end_time)],
-                          ],
-                        })
-                      }
-                    >
-                      <td>{session.session_id.slice(0, 8)}</td>
-                      <td>{session.device_id}</td>
-                      <td>{session.last_screen ?? "unknown"}</td>
-                      <td>
-                        <Tag tone={session.dropped_off ? "amber" : "green"}>
-                          {session.dropped_off ? "Dropped off" : "Completed"}
-                        </Tag>
-                      </td>
-                      <td>{formatTime(session.start_time)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="pollex-chart-shell pollex-chart-shell-tall">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={sessionBuckets} margin={{ top: 10, right: 8, left: -18, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="pollexSessionsArea" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={chartPalette.area} stopOpacity={0.8} />
+                      <stop offset="100%" stopColor={chartPalette.area} stopOpacity={0.02} />
+                    </linearGradient>
+                    <linearGradient id="pollexDropOffArea" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={chartPalette.areaSecondary} stopOpacity={0.65} />
+                      <stop offset="100%" stopColor={chartPalette.areaSecondary} stopOpacity={0.02} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid stroke={chartPalette.grid} strokeDasharray="3 6" vertical={false} />
+                  <XAxis axisLine={false} dataKey="label" tick={{ fill: chartPalette.axis, fontSize: 12 }} tickLine={false} />
+                  <YAxis axisLine={false} tick={{ fill: chartPalette.axis, fontSize: 12 }} tickLine={false} width={34} />
+                  <Tooltip content={<ChartTooltip />} cursor={{ stroke: "rgba(255,255,255,0.12)" }} />
+                  <Area
+                    type="monotone"
+                    dataKey="sessions"
+                    name="Sessions"
+                    stroke={chartPalette.line}
+                    strokeWidth={2}
+                    fill="url(#pollexSessionsArea)"
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="dropOffs"
+                    name="Drop-offs"
+                    stroke={chartPalette.amber}
+                    strokeWidth={2}
+                    fill="url(#pollexDropOffArea)"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
             </div>
-            {sessions.length === 0 ? (
-              <p className="empty-copy">
-                No sessions ingested yet. Once SDK traffic arrives, the stream will populate automatically.
-              </p>
-            ) : null}
           </Card>
 
-          <Card className="ops-panel">
-            <div className="panel-head">
+          <Card className="pollex-surface pollex-surface-large">
+            <div className="pollex-surface-head">
               <div>
-                <div className="heading">Friction registry</div>
-                <p className="panel-copy">
-                  Ranked product issues inferred from recent events, ready for inspection or export.
-                </p>
+                <h2 className="heading">Friction mix</h2>
+                <p className="panel-copy">Issue types ranked by total frequency, with the loudest problems first.</p>
               </div>
-              <div className="panel-actions">
-                <button className="btn btn-ghost btn-sm" onClick={() => downloadCsv("maze-issues.csv", issueCsv)}>
-                  Export CSV
-                </button>
-                <button className="btn btn-primary btn-sm" onClick={() => setExpandedPanel("issues")}>
-                  Expand
-                </button>
-              </div>
+              <button className="btn btn-ghost btn-sm" onClick={() => downloadCsv("pollex-issues.csv", issueCsv)}>
+                Export CSV
+              </button>
             </div>
-            <div className="table-shell">
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>Type</th>
-                    <th>Screen</th>
-                    <th>Frequency</th>
-                    <th>Affected</th>
-                    <th>Severity</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {issues.slice(0, 6).map((issue) => (
-                    <tr
-                      key={issue.id}
-                      onClick={() =>
-                        setInspectRow({
-                          title: issue.type.replace(/_/g, " "),
-                          rows: [
-                            ["Issue ID", issue.id],
-                            ["Type", issue.type],
-                            ["Screen", issue.screen ?? "unknown"],
-                            ["Element", issue.element_id ?? "n/a"],
-                            ["Frequency", String(issue.frequency)],
-                            ["Affected users", String(issue.affected_users_count)],
-                            ["Severity", issue.severity],
-                          ],
-                        })
-                      }
+            <div className="pollex-chart-shell pollex-chart-shell-tall">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={issueMix} layout="vertical" margin={{ top: 10, right: 10, left: 8, bottom: 0 }}>
+                  <CartesianGrid stroke={chartPalette.grid} horizontal={false} strokeDasharray="3 6" />
+                  <XAxis axisLine={false} tick={{ fill: chartPalette.axis, fontSize: 12 }} tickLine={false} type="number" />
+                  <YAxis
+                    axisLine={false}
+                    dataKey="type"
+                    tick={{ fill: chartPalette.axis, fontSize: 12 }}
+                    tickLine={false}
+                    type="category"
+                    width={110}
+                  />
+                  <Tooltip content={<ChartTooltip />} cursor={{ fill: "rgba(255,255,255,0.04)" }} />
+                  <Bar dataKey="value" name="Events" radius={[0, 12, 12, 0]} fill={chartPalette.barSoft} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </Card>
+
+          <Card className="pollex-surface">
+            <div className="pollex-surface-head">
+              <h2 className="heading">Top screens</h2>
+              <Tag>{screenActivity.length} tracked</Tag>
+            </div>
+            <div className="pollex-chart-shell">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={screenActivity} margin={{ top: 10, right: 8, left: -18, bottom: 0 }}>
+                  <CartesianGrid stroke={chartPalette.grid} strokeDasharray="3 6" vertical={false} />
+                  <XAxis axisLine={false} dataKey="screen" tick={{ fill: chartPalette.axis, fontSize: 12 }} tickLine={false} />
+                  <YAxis axisLine={false} tick={{ fill: chartPalette.axis, fontSize: 12 }} tickLine={false} width={34} />
+                  <Tooltip content={<ChartTooltip />} cursor={{ fill: "rgba(255,255,255,0.04)" }} />
+                  <Bar dataKey="value" name="Sessions" radius={[10, 10, 0, 0]} fill={chartPalette.bar} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </Card>
+
+          <Card className="pollex-surface">
+            <div className="pollex-surface-head">
+              <h2 className="heading">Completion split</h2>
+              <Tag tone={completionRate >= 70 ? "green" : "amber"}>{completionRate}% stable</Tag>
+            </div>
+            <div className="pollex-chart-shell pollex-chart-shell-centered pollex-chart-shell-compact">
+              <div className="pollex-chart-viewport pollex-chart-viewport-compact">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={completionSplit}
+                      dataKey="value"
+                      innerRadius={34}
+                      outerRadius={52}
+                      paddingAngle={4}
+                      stroke="rgba(24,24,24,0.5)"
+                      strokeWidth={2}
                     >
-                      <td>
-                        <Tag tone={toneMap[issue.type] ?? "default"}>
-                          {issue.type.replace(/_/g, " ")}
-                        </Tag>
-                      </td>
-                      <td>{issue.screen ?? "unknown"}</td>
-                      <td>{issue.frequency}</td>
-                      <td>{issue.affected_users_count}</td>
-                      <td>{issue.severity}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                      {completionSplit.map((entry) => (
+                        <Cell key={entry.name} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip content={<ChartTooltip />} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="pollex-chart-legend">
+                {completionSplit.map((entry) => (
+                  <div className="pollex-chart-legend-row" key={entry.name}>
+                    <span className="pollex-chart-tooltip-dot" style={{ backgroundColor: entry.color }} />
+                    <span>{entry.name}</span>
+                    <strong>{entry.value}</strong>
+                  </div>
+                ))}
+              </div>
             </div>
-            {issues.length === 0 ? (
-              <p className="empty-copy">No friction issues detected yet.</p>
-            ) : null}
+          </Card>
+
+          <Card className="pollex-surface">
+            <div className="pollex-surface-head">
+              <h2 className="heading">Workspace health</h2>
+              <Tag tone={integrations.some((service) => service.status === "offline") ? "amber" : "green"}>
+                {integrations.some((service) => service.status === "offline") ? "Attention" : "Healthy"}
+              </Tag>
+            </div>
+            <div className="pollex-chart-shell pollex-chart-shell-centered">
+              <ResponsiveContainer width="100%" height="100%">
+                <RadialBarChart
+                  data={radialCompletion}
+                  innerRadius="68%"
+                  outerRadius="100%"
+                  startAngle={90}
+                  endAngle={-270}
+                  barSize={18}
+                >
+                  <PolarAngleAxis type="number" domain={[0, 100]} tick={false} />
+                  <RadialBar background dataKey="value" cornerRadius={999} />
+                  <text x="50%" y="48%" textAnchor="middle" dominantBaseline="middle" className="pollex-radial-value">
+                    {completionRate}%
+                  </text>
+                  <text x="50%" y="62%" textAnchor="middle" dominantBaseline="middle" className="pollex-radial-label">
+                    completion
+                  </text>
+                </RadialBarChart>
+              </ResponsiveContainer>
+              <div className="pollex-chart-legend">
+                {integrationHealth.map((entry) => (
+                  <div className="pollex-chart-legend-row" key={entry.name}>
+                    <span className="pollex-chart-tooltip-dot" style={{ backgroundColor: entry.fill }} />
+                    <span>{entry.name}</span>
+                    <strong>{entry.value}</strong>
+                  </div>
+                ))}
+              </div>
+            </div>
           </Card>
         </div>
+      ) : null}
 
-        <div className="dashboard-secondary">
-          <Card accent className="ops-panel ops-panel-accent">
-            <div className="panel-head">
+      {activeTab === "data" ? (
+        <div className="pollex-dashboard-grid pollex-dashboard-grid-data">
+          <Card className="pollex-surface pollex-surface-large pollex-surface-full">
+            <div className="pollex-surface-head">
               <div>
-                <div className="heading">Top insights</div>
-                <p className="panel-copy">
-                  The highest-signal explanations generated from your current workspace.
-                </p>
+                <h2 className="heading">Workspace data</h2>
+                <p className="panel-copy">Switch between session and issue feeds without leaving the data surface.</p>
               </div>
-              <div className="panel-actions">
-                <button className="btn btn-ghost btn-sm" onClick={() => downloadCsv("maze-insights.csv", insightCsv)}>
-                  Export
-                </button>
-                <button className="btn btn-primary btn-sm" onClick={() => setExpandedPanel("insights")}>
-                  Expand
-                </button>
+              <div className="pollex-tabbar pollex-tabbar-subtle" role="tablist" aria-label="Data views">
+                {(Object.keys(dataTabLabels) as DataTab[]).map((tab) => (
+                  <button
+                    key={tab}
+                    type="button"
+                    role="tab"
+                    aria-selected={activeDataTab === tab}
+                    className={`pollex-tab ${activeDataTab === tab ? "active" : ""}`.trim()}
+                    onClick={() => setActiveDataTab(tab)}
+                  >
+                    {dataTabLabels[tab]}
+                  </button>
+                ))}
               </div>
             </div>
-
-            <div className="insight-stack">
-              {insights.length > 0 ? (
-                insights.slice(0, 4).map((insight) => (
-                  <button
-                    type="button"
-                    className="insight-card insight-button"
-                    key={`${insight.issue_type}-${insight.screen}-${insight.title}`}
-                    onClick={() =>
-                      setInspectRow({
-                        title: insight.title,
-                        rows: [
-                          ["Screen", insight.screen],
-                          ["Issue", insight.issue_type],
-                          ["Frequency", String(insight.frequency)],
-                          ["Affected users", String(insight.affected_users_count)],
-                          ["Impact", insight.impact],
-                          ["Suggestions", insight.suggestions.join("; ") || "n/a"],
-                        ],
-                      })
-                    }
-                  >
-                    <div className="insight-title">{insight.title}</div>
-                    <div className="insight-body">{insight.impact}</div>
-                    <div className="insight-footer">
-                      <Tag>{insight.screen}</Tag>
-                      <Tag tone="accent">{insight.frequency} events</Tag>
-                    </div>
+            {activeDataTab === "sessions" ? (
+              <>
+                <div className="pollex-surface-head">
+                  <div>
+                    <h3 className="heading">Recent sessions</h3>
+                    <p className="panel-copy">The latest captured sessions, kept minimal and easy to scan.</p>
+                  </div>
+                  <button className="btn btn-ghost btn-sm" onClick={() => downloadCsv("pollex-sessions.csv", sessionCsv)}>
+                    Export CSV
                   </button>
+                </div>
+                <div className="table-shell">
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>Session</th>
+                        <th>Device</th>
+                        <th>Screen</th>
+                        <th>Status</th>
+                        <th>Started</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sessions.slice(0, 10).map((session) => (
+                        <tr key={session.session_id}>
+                          <td>{session.session_id.slice(0, 8)}</td>
+                          <td>{session.device_id}</td>
+                          <td>{session.last_screen ?? "unknown"}</td>
+                          <td>
+                            <Tag tone={session.dropped_off ? "amber" : "green"}>
+                              {session.dropped_off ? "Dropped off" : "Completed"}
+                            </Tag>
+                          </td>
+                          <td>{formatTime(session.start_time)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="pollex-surface-head">
+                  <div>
+                    <h3 className="heading">Detected issues</h3>
+                    <p className="panel-copy">Current friction events and their severity, without extra dashboard noise.</p>
+                  </div>
+                  <button className="btn btn-ghost btn-sm" onClick={() => downloadCsv("pollex-issues.csv", issueCsv)}>
+                    Export CSV
+                  </button>
+                </div>
+                <div className="table-shell">
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>Type</th>
+                        <th>Screen</th>
+                        <th>Frequency</th>
+                        <th>Affected</th>
+                        <th>Severity</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {issues.slice(0, 10).map((issue) => (
+                        <tr key={issue.id}>
+                          <td>
+                            <Tag tone={issueToneMap[issue.type] ?? "default"}>{issue.type.replace(/_/g, " ")}</Tag>
+                          </td>
+                          <td>{issue.screen ?? "unknown"}</td>
+                          <td>{issue.frequency}</td>
+                          <td>{issue.affected_users_count}</td>
+                          <td>{issue.severity}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
+          </Card>
+        </div>
+      ) : null}
+
+      {activeTab === "insights" ? (
+        <div className="pollex-dashboard-grid">
+          <Card className="pollex-surface pollex-surface-large">
+            <div className="pollex-surface-head">
+              <div>
+                <h2 className="heading">Priority insights</h2>
+                <p className="panel-copy">The most actionable explanations currently surfaced from behavioral signals.</p>
+              </div>
+              <button className="btn btn-ghost btn-sm" onClick={() => downloadCsv("pollex-insights.csv", insightCsv)}>
+                Export CSV
+              </button>
+            </div>
+            <div className="pollex-insight-grid">
+              {insights.length > 0 ? (
+                insights.slice(0, 6).map((insight, index) => (
+                  <article className="pollex-insight-card" key={getInsightKey(insight, index)}>
+                    <div className="pollex-insight-topline">
+                      <Tag tone="accent">{insight.screen}</Tag>
+                      <Tag>{insight.frequency} events</Tag>
+                    </div>
+                    <h3>{insight.title}</h3>
+                    <p>{insight.impact}</p>
+                  </article>
                 ))
               ) : (
-                <div className="insight-card">
-                  <div className="insight-title">No insights yet</div>
-                  <div className="insight-body">
-                    Once traffic arrives, Maze will surface behavioral patterns and recommended next actions here.
-                  </div>
-                </div>
+                <p className="empty-copy">Pollex will surface product insights here once the workspace has enough signal.</p>
               )}
             </div>
           </Card>
 
-          <Card className="ops-panel">
-            <div className="panel-head">
-              <div>
-                <div className="heading">Integrations</div>
-                <p className="panel-copy">Connection health across your current product instrumentation.</p>
-              </div>
-              <div className="panel-actions">
-                <button className="btn btn-ghost btn-sm" onClick={() => downloadCsv("maze-integrations.csv", integrationCsv)}>
-                  Export
-                </button>
-                <button className="btn btn-primary btn-sm" onClick={() => setExpandedPanel("integrations")}>
-                  Expand
-                </button>
-              </div>
+          <Card className="pollex-surface">
+            <div className="pollex-surface-head">
+              <h2 className="heading">Suggested next moves</h2>
             </div>
+            <div className="pollex-note-stack">
+              {insights.slice(0, 4).map((insight, index) => (
+                <div key={`${getInsightKey(insight, index)}-notes`}>
+                  <strong>{insight.title}</strong>
+                  <p>{insight.suggestions[0] ?? "Review the session evidence and tighten the target flow."}</p>
+                </div>
+              ))}
+            </div>
+          </Card>
 
-            <div className="integration-stack">
-              {integrations.map((service) => (
-                <button
-                  key={service.name}
-                  type="button"
-                  className="list-row inspectable-row"
-                  onClick={() =>
-                    setInspectRow({
-                      title: service.name,
-                      rows: [
-                        ["Service", service.name],
-                        ["Path", service.path],
-                        ["Status", service.status],
-                      ],
-                    })
-                  }
-                >
-                  <div>
-                    <div className="integration-name">{service.name}</div>
-                    <div className="integration-path">{service.path}</div>
-                  </div>
-                  <div className="integration-state">
-                    <StatusDot status={integrationToneMap[service.status] ?? "degraded"} />
-                    <Tag tone={integrationTagToneMap[service.status] ?? "default"}>
-                      {service.status}
-                    </Tag>
-                  </div>
-                </button>
+          <Card className="pollex-surface">
+            <div className="pollex-surface-head">
+              <h2 className="heading">Latest sessions</h2>
+            </div>
+            <div className="pollex-note-stack">
+              {sessions.slice(0, 4).map((session) => (
+                <div key={`${session.session_id}-summary`}>
+                  <strong>{session.last_screen ?? "unknown"}</strong>
+                  <p>{formatShortTime(session.start_time)} from device {session.device_id}</p>
+                </div>
               ))}
             </div>
           </Card>
         </div>
-      </div>
-
-      {expandedPanel ? (
-        <div className="overlay-shell" onClick={() => setExpandedPanel(null)}>
-          <div
-            aria-describedby="expanded-panel-copy"
-            aria-labelledby="expanded-panel-title"
-            aria-modal="true"
-            className="overlay-panel overlay-wide"
-            onClick={(event) => event.stopPropagation()}
-            role="dialog"
-          >
-            <div className="overlay-head">
-              <div>
-                <div className="heading" id="expanded-panel-title">
-                  {expandedMeta?.title}
-                </div>
-                <p className="panel-copy" id="expanded-panel-copy">
-                  {expandedMeta?.description}
-                </p>
-              </div>
-              <button
-                aria-label={`Close ${expandedMeta?.title ?? "expanded panel"}`}
-                className="btn btn-ghost btn-sm"
-                onClick={() => setExpandedPanel(null)}
-                type="button"
-              >
-                Close
-              </button>
-            </div>
-
-            {expandedPanel === "sessions" ? (
-              <div className="table-shell">
-                <table className="data-table">
-                  <thead>
-                    <tr>
-                      <th>Session</th>
-                      <th>Device</th>
-                      <th>Screen</th>
-                      <th>Status</th>
-                      <th>Started</th>
-                      <th>Ended</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sessions.map((session) => (
-                      <tr
-                        key={session.session_id}
-                        onClick={() =>
-                          setInspectRow({
-                            title: `Session ${session.session_id.slice(0, 8)}`,
-                            rows: [
-                              ["Session ID", session.session_id],
-                              ["Device", session.device_id],
-                              ["Last screen", session.last_screen ?? "unknown"],
-                              ["Status", session.dropped_off ? "Dropped off" : "Completed"],
-                              ["Started", formatTime(session.start_time)],
-                              ["Ended", formatTime(session.end_time)],
-                            ],
-                          })
-                        }
-                      >
-                        <td>{session.session_id.slice(0, 8)}</td>
-                        <td>{session.device_id}</td>
-                        <td>{session.last_screen ?? "unknown"}</td>
-                        <td>{session.dropped_off ? "Dropped off" : "Completed"}</td>
-                        <td>{formatTime(session.start_time)}</td>
-                        <td>{formatTime(session.end_time)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : null}
-
-            {expandedPanel === "issues" ? (
-              <div className="table-shell">
-                <table className="data-table">
-                  <thead>
-                    <tr>
-                      <th>Type</th>
-                      <th>Screen</th>
-                      <th>Frequency</th>
-                      <th>Affected</th>
-                      <th>Severity</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {issues.map((issue) => (
-                      <tr
-                        key={issue.id}
-                        onClick={() =>
-                          setInspectRow({
-                            title: issue.type.replace(/_/g, " "),
-                            rows: [
-                              ["Issue ID", issue.id],
-                              ["Type", issue.type],
-                              ["Screen", issue.screen ?? "unknown"],
-                              ["Element", issue.element_id ?? "n/a"],
-                              ["Frequency", String(issue.frequency)],
-                              ["Affected users", String(issue.affected_users_count)],
-                              ["Severity", issue.severity],
-                            ],
-                          })
-                        }
-                      >
-                        <td>{issue.type.replace(/_/g, " ")}</td>
-                        <td>{issue.screen ?? "unknown"}</td>
-                        <td>{issue.frequency}</td>
-                        <td>{issue.affected_users_count}</td>
-                        <td>{issue.severity}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : null}
-
-            {expandedPanel === "insights" ? (
-              <div className="overlay-insight-grid">
-                {insights.map((insight) => (
-                  <button
-                    type="button"
-                    className="insight-card insight-button"
-                    key={`${insight.issue_type}-${insight.screen}-${insight.title}-expanded`}
-                    onClick={() =>
-                      setInspectRow({
-                        title: insight.title,
-                        rows: [
-                          ["Screen", insight.screen],
-                          ["Issue", insight.issue_type],
-                          ["Frequency", String(insight.frequency)],
-                          ["Affected users", String(insight.affected_users_count)],
-                          ["Impact", insight.impact],
-                          ["Suggestions", insight.suggestions.join("; ") || "n/a"],
-                        ],
-                      })
-                    }
-                  >
-                    <div className="insight-title">{insight.title}</div>
-                    <div className="insight-body">{insight.impact}</div>
-                    <div className="insight-footer">
-                      <Tag>{insight.screen}</Tag>
-                      <Tag tone="accent">{insight.frequency} events</Tag>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            ) : null}
-
-            {expandedPanel === "integrations" ? (
-              <div className="integration-stack">
-                {integrations.map((service) => (
-                  <button
-                    key={`${service.name}-expanded`}
-                    type="button"
-                    className="list-row inspectable-row"
-                    onClick={() =>
-                      setInspectRow({
-                        title: service.name,
-                        rows: [
-                          ["Service", service.name],
-                          ["Path", service.path],
-                          ["Status", service.status],
-                        ],
-                      })
-                    }
-                  >
-                    <div>
-                      <div className="integration-name">{service.name}</div>
-                      <div className="integration-path">{service.path}</div>
-                    </div>
-                    <div className="integration-state">
-                      <StatusDot status={integrationToneMap[service.status] ?? "degraded"} />
-                      <Tag tone={integrationTagToneMap[service.status] ?? "default"}>
-                        {service.status}
-                      </Tag>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            ) : null}
-          </div>
-        </div>
       ) : null}
 
-      {inspectRow ? (
-        <div className="overlay-shell" onClick={() => setInspectRow(null)}>
-          <div
-            aria-labelledby="inspect-row-title"
-            aria-modal="true"
-            className="overlay-panel overlay-narrow"
-            onClick={(event) => event.stopPropagation()}
-            role="dialog"
-          >
-            <div className="overlay-head">
-              <div className="heading" id="inspect-row-title">
-                {inspectRow.title}
+      {activeTab === "integrations" ? (
+        <div className="pollex-dashboard-grid">
+          <Card className="pollex-surface pollex-surface-large">
+            <div className="pollex-surface-head">
+              <div>
+                <h2 className="heading">Connected services</h2>
+                <p className="panel-copy">Instrumentation and operational endpoints in one quiet view.</p>
               </div>
-              <button
-                aria-label={`Close details for ${inspectRow.title}`}
-                className="btn btn-ghost btn-sm"
-                onClick={() => setInspectRow(null)}
-                type="button"
-              >
-                Close
+              <button className="btn btn-ghost btn-sm" onClick={() => downloadCsv("pollex-integrations.csv", integrationCsv)}>
+                Export CSV
               </button>
             </div>
-            <div className="inspect-grid">
-              {inspectRow.rows.map(([label, value]) => (
-                <div className="inspect-row" key={`${inspectRow.title}-${label}`}>
-                  <span>{label}</span>
-                  <strong>{value}</strong>
+            <div className="pollex-ranked-list">
+              {integrations.map((integration) => (
+                <div className="pollex-ranked-row" key={integration.name}>
+                  <div>
+                    <strong>{integration.name}</strong>
+                    <span>{integration.path}</span>
+                  </div>
+                  <div className="pollex-inline-status">
+                    <StatusDot status={integrationToneMap[integration.status] ?? "degraded"} />
+                    <Tag tone={integrationTagToneMap[integration.status] ?? "default"}>{integration.status}</Tag>
+                  </div>
                 </div>
               ))}
             </div>
-          </div>
+          </Card>
+
+          <Card className="pollex-surface">
+            <div className="pollex-surface-head">
+              <h2 className="heading">Workspace health</h2>
+            </div>
+            <div className="pollex-note-stack">
+              <p>{integrations.filter((integration) => integration.status === "healthy" || integration.status === "connected").length} services are stable.</p>
+              <p>{integrations.filter((integration) => integration.status === "degraded" || integration.status === "attention").length} services need review.</p>
+              <p>{integrations.filter((integration) => integration.status === "offline").length} services are offline.</p>
+            </div>
+          </Card>
+
+          <Card className="pollex-surface">
+            <div className="pollex-surface-head">
+              <h2 className="heading">Why this view stays quiet</h2>
+            </div>
+            <div className="pollex-note-stack">
+              <p>Only service state, path, and actionability stay visible in the primary scan.</p>
+              <p>Everything else can live in docs or detailed settings instead of crowding the workspace.</p>
+            </div>
+          </Card>
         </div>
       ) : null}
-    </>
+    </section>
   );
 }
