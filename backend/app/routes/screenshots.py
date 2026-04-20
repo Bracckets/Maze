@@ -58,6 +58,7 @@ async def upload_screenshot(
 def get_screenshots(
     screen: str | None = Query(default=None),
     session_id: str | None = Query(default=None),
+    device_class: str | None = Query(default=None),
     latest: bool = Query(default=False),
     limit: int = Query(default=10, ge=1, le=50),
     account: dict = Depends(get_current_account),
@@ -68,6 +69,7 @@ def get_screenshots(
         workspace_id=account["workspace_id"],
         screen=screen,
         session_id=session_id,
+        device_class=device_class,
         limit=1 if latest else limit,
     )
     return [ScreenshotRefOut(**row) for row in rows]

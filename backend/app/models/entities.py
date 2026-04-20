@@ -22,6 +22,8 @@ class SessionSummary:
     end_time: datetime
     last_screen: str | None
     dropped_off: bool
+    platform: str | None
+    device_class: str
 
 
 @dataclass(slots=True)

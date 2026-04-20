@@ -364,8 +364,9 @@ export function DashboardWorkbench({
         </Card>
       </div>
 
-      {activeTab === "charts" ? (
-        <div className="pollex-dashboard-grid">
+      <div className="pollex-dashboard-stage">
+        {activeTab === "charts" ? (
+          <div className="pollex-dashboard-grid">
           <Card className="pollex-surface pollex-surface-large">
             <div className="pollex-surface-head">
               <div>
@@ -460,7 +461,7 @@ export function DashboardWorkbench({
             </div>
           </Card>
 
-          <Card className="pollex-surface">
+          <Card className="pollex-surface pollex-surface-fill-right">
             <div className="pollex-surface-head">
               <h2 className="heading">Completion split</h2>
               <Tag tone={completionRate >= 70 ? "green" : "amber"}>{completionRate}% stable</Tag>
@@ -536,11 +537,11 @@ export function DashboardWorkbench({
               </div>
             </div>
           </Card>
-        </div>
-      ) : null}
+          </div>
+        ) : null}
 
-      {activeTab === "data" ? (
-        <div className="pollex-dashboard-grid pollex-dashboard-grid-data">
+        {activeTab === "data" ? (
+          <div className="pollex-dashboard-grid pollex-dashboard-grid-data">
           <Card className="pollex-surface pollex-surface-large pollex-surface-full">
             <div className="pollex-surface-head">
               <div>
@@ -642,11 +643,11 @@ export function DashboardWorkbench({
               </>
             )}
           </Card>
-        </div>
-      ) : null}
+          </div>
+        ) : null}
 
-      {activeTab === "insights" ? (
-        <div className="pollex-dashboard-grid">
+        {activeTab === "insights" ? (
+          <div className="pollex-dashboard-grid">
           <Card className="pollex-surface pollex-surface-large">
             <div className="pollex-surface-head">
               <div>
@@ -702,11 +703,11 @@ export function DashboardWorkbench({
               ))}
             </div>
           </Card>
-        </div>
-      ) : null}
+          </div>
+        ) : null}
 
-      {activeTab === "integrations" ? (
-        <div className="pollex-dashboard-grid">
+        {activeTab === "integrations" ? (
+          <div className="pollex-dashboard-grid">
           <Card className="pollex-surface pollex-surface-large">
             <div className="pollex-surface-head">
               <div>
@@ -753,8 +754,9 @@ export function DashboardWorkbench({
               <p>Everything else can live in docs or detailed settings instead of crowding the workspace.</p>
             </div>
           </Card>
-        </div>
-      ) : null}
+          </div>
+        ) : null}
+      </div>
     </section>
   );
 }

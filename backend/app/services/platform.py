@@ -16,9 +16,42 @@ from app.services.privacy import sanitize_metadata
 from app.services.security import generate_api_key, hash_api_key
 from app.settings import settings
 
+DEVICE_CLASS_PHONE = "phone"
+DEVICE_CLASS_DESKTOP = "desktop"
+WEB_PHONE_MAX_WIDTH = 768
+
 
 def normalize_email(email: str) -> str:
     return email.strip().lower()
+
+
+def normalize_platform(platform: str | None) -> str | None:
+    if platform is None:
+        return None
+    normalized = platform.strip().lower()
+    return normalized or None
+
+
+def classify_device_class(platform: str | None, screen_width: float | None) -> str:
+    normalized_platform = normalize_platform(platform)
+    if normalized_platform in {"ios", "android"}:
+        return DEVICE_CLASS_PHONE
+    if normalized_platform == "web":
+        if screen_width is not None and screen_width >= WEB_PHONE_MAX_WIDTH:
+            return DEVICE_CLASS_DESKTOP
+        return DEVICE_CLASS_PHONE
+    return DEVICE_CLASS_PHONE
+
+
+def select_heatmap_device_class(requested: str | None, available: list[str]) -> str:
+    normalized_requested = requested.strip().lower() if requested else None
+    if normalized_requested in available:
+        return normalized_requested
+    if DEVICE_CLASS_PHONE in available:
+        return DEVICE_CLASS_PHONE
+    if available:
+        return available[0]
+    return DEVICE_CLASS_PHONE
 
 
 def ensure_partition_for_timestamp(db: Session, occurred_at: datetime) -> None:
@@ -576,6 +609,9 @@ def ingest_events(db: Session, workspace_id: str, api_key_id: str, events: list[
             db.commit()
             raise ValueError("device_id is required.")
 
+        platform = normalize_platform(event.get("platform"))
+        device_class = classify_device_class(platform, event.get("screen_width"))
+
         ensure_partition_for_timestamp(db, event["occurred_at"])
         inserted_session = db.execute(
             text(
@@ -585,6 +621,8 @@ def ingest_events(db: Session, workspace_id: str, api_key_id: str, events: list[
                     workspace_id,
                     device_id,
                     app_version,
+                    platform,
+                    device_class,
                     screen_width,
                     screen_height,
                     started_at,
@@ -595,6 +633,8 @@ def ingest_events(db: Session, workspace_id: str, api_key_id: str, events: list[
                     CAST(:workspace_id AS uuid),
                     :device_id,
                     :app_version,
+                    :platform,
+                    :device_class,
                     :screen_width,
                     :screen_height,
                     :occurred_at,
@@ -604,6 +644,8 @@ def ingest_events(db: Session, workspace_id: str, api_key_id: str, events: list[
                 DO UPDATE SET
                     device_id = EXCLUDED.device_id,
                     app_version = COALESCE(EXCLUDED.app_version, sessions.app_version),
+                    platform = COALESCE(EXCLUDED.platform, sessions.platform),
+                    device_class = COALESCE(EXCLUDED.device_class, sessions.device_class, 'phone'),
                     screen_width = COALESCE(EXCLUDED.screen_width, sessions.screen_width),
                     screen_height = COALESCE(EXCLUDED.screen_height, sessions.screen_height),
                     started_at = LEAST(sessions.started_at, EXCLUDED.started_at),
@@ -616,6 +658,8 @@ def ingest_events(db: Session, workspace_id: str, api_key_id: str, events: list[
                 "workspace_id": workspace_id,
                 "device_id": device_id,
                 "app_version": event.get("app_version"),
+                "platform": platform,
+                "device_class": device_class,
                 "screen_width": event.get("screen_width"),
                 "screen_height": event.get("screen_height"),
                 "occurred_at": event["occurred_at"],
@@ -767,6 +811,8 @@ def list_workspace_sessions(db: Session, workspace_id: str, limit: int | None = 
             SELECT
                 s.id::text AS session_id,
                 s.device_id,
+                s.platform,
+                COALESCE(s.device_class, 'phone') AS device_class,
                 s.started_at AS start_time,
                 COALESCE(s.ended_at, s.started_at) AS end_time,
                 latest.screen AS last_screen
@@ -797,6 +843,8 @@ def list_workspace_sessions(db: Session, workspace_id: str, limit: int | None = 
             end_time=row["end_time"],
             last_screen=row["last_screen"],
             dropped_off=(row["last_screen"] or "") != "success",
+            platform=row["platform"],
+            device_class=row["device_class"],
         )
         for row in rows
     ]
@@ -1029,7 +1077,32 @@ def issue_to_insight(issue: IssueSummary) -> dict:
     }
 
 
-def build_heatmap_points(db: Session, workspace_id: str, screen: str) -> list[dict[str, float | int]]:
+def list_available_heatmap_device_classes(db: Session, workspace_id: str, screen: str) -> list[str]:
+    rows = db.execute(
+        text(
+            """
+            SELECT DISTINCT COALESCE(s.device_class, 'phone') AS device_class
+            FROM events e
+            JOIN sessions s ON s.id = e.session_id
+            WHERE e.workspace_id = CAST(:workspace_id AS uuid)
+              AND e.screen = :screen
+              AND e.event_type = 'tap'
+              AND e.x IS NOT NULL
+              AND e.y IS NOT NULL
+            ORDER BY CASE COALESCE(s.device_class, 'phone') WHEN 'phone' THEN 0 ELSE 1 END
+            """
+        ),
+        {"workspace_id": workspace_id, "screen": screen},
+    ).scalars().all()
+    return [row for row in rows if row in {DEVICE_CLASS_PHONE, DEVICE_CLASS_DESKTOP}]
+
+
+def build_heatmap_points(
+    db: Session,
+    workspace_id: str,
+    screen: str,
+    device_class: str | None = None,
+) -> list[dict[str, float | int]]:
     rows = db.execute(
         text(
             """
@@ -1037,19 +1110,32 @@ def build_heatmap_points(db: Session, workspace_id: str, screen: str) -> list[di
                 ROUND(x::numeric, 2)::float8 AS x,
                 ROUND(y::numeric, 2)::float8 AS y,
                 COUNT(*)::int AS count
-            FROM events
-            WHERE workspace_id = CAST(:workspace_id AS uuid)
-              AND screen = :screen
-              AND event_type = 'tap'
-              AND x IS NOT NULL
-              AND y IS NOT NULL
+            FROM events e
+            JOIN sessions s ON s.id = e.session_id
+            WHERE e.workspace_id = CAST(:workspace_id AS uuid)
+              AND e.screen = :screen
+              AND e.event_type = 'tap'
+              AND e.x IS NOT NULL
+              AND e.y IS NOT NULL
+              AND (:device_class IS NULL OR COALESCE(s.device_class, 'phone') = :device_class)
             GROUP BY 1, 2
             ORDER BY count DESC, x ASC, y ASC
             """
         ),
-        {"workspace_id": workspace_id, "screen": screen},
+        {"workspace_id": workspace_id, "screen": screen, "device_class": device_class},
     ).mappings().all()
     return [dict(row) for row in rows]
+
+
+def build_heatmap_payload(db: Session, workspace_id: str, screen: str, requested_device_class: str | None) -> dict:
+    available = list_available_heatmap_device_classes(db, workspace_id, screen)
+    active_device_class = select_heatmap_device_class(requested_device_class, available)
+    return {
+        "screen": screen,
+        "deviceClass": active_device_class,
+        "availableDeviceClasses": available or [active_device_class],
+        "points": build_heatmap_points(db, workspace_id, screen, active_device_class),
+    }
 
 
 def build_heatmap_scenario(db: Session, workspace_id: str) -> dict:
@@ -1346,6 +1432,8 @@ def serialize_session(session: SessionSummary) -> dict:
         "end_time": session.end_time,
         "last_screen": session.last_screen,
         "dropped_off": session.dropped_off,
+        "platform": session.platform,
+        "device_class": session.device_class,
     }
 
 
@@ -1481,32 +1569,37 @@ def list_workspace_screenshots(
     workspace_id: str,
     screen: str | None = None,
     session_id: str | None = None,
+    device_class: str | None = None,
     limit: int = 10,
 ) -> list[dict]:
     purge_expired_screenshots(db)
     query = """
         SELECT
-            id::text AS screenshot_id,
-            session_id::text AS session_id,
-            screen,
-            content_type,
-            width,
-            height,
-            byte_size,
-            uploaded_at,
-            expires_at
+            screenshot_assets.id::text AS screenshot_id,
+            screenshot_assets.session_id::text AS session_id,
+            screenshot_assets.screen,
+            screenshot_assets.content_type,
+            screenshot_assets.width,
+            screenshot_assets.height,
+            screenshot_assets.byte_size,
+            screenshot_assets.uploaded_at,
+            screenshot_assets.expires_at
         FROM screenshot_assets
-        WHERE workspace_id = CAST(:workspace_id AS uuid)
-          AND expires_at > now()
+        LEFT JOIN sessions ON sessions.id = screenshot_assets.session_id
+        WHERE screenshot_assets.workspace_id = CAST(:workspace_id AS uuid)
+          AND screenshot_assets.expires_at > now()
     """
     params: dict[str, str | int] = {"workspace_id": workspace_id, "limit": limit}
     if screen is not None:
-        query += " AND screen = :screen"
+        query += " AND screenshot_assets.screen = :screen"
         params["screen"] = screen
     if session_id is not None:
-        query += " AND session_id = CAST(:session_id AS uuid)"
+        query += " AND screenshot_assets.session_id = CAST(:session_id AS uuid)"
         params["session_id"] = session_id
-    query += " ORDER BY uploaded_at DESC LIMIT :limit"
+    if device_class is not None:
+        query += " AND COALESCE(sessions.device_class, 'phone') = :device_class"
+        params["device_class"] = device_class
+    query += " ORDER BY screenshot_assets.uploaded_at DESC LIMIT :limit"
 
     rows = db.execute(text(query), params).mappings().all()
 

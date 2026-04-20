@@ -1,20 +1,20 @@
-# MAZE_INTEGRATION
+# POLLEX_INTEGRATION
 
-Follow this document when integrating Maze into a mobile app.
+Follow this document when integrating Pollex into a mobile app.
 
-Maze now covers two connected responsibilities:
+Pollex now covers two connected responsibilities:
 
 1. Behavior telemetry and optional session capture
 2. Liquid runtime bundle resolution for app content
 
-The goal is one coherent Maze setup, not two separate SDK stories.
+The goal is one coherent Pollex setup, not two separate SDK stories.
 
 ## Core integration contract
 
 At runtime the app should:
 
-1. configure Maze once at launch
-2. continue sending telemetry with `Maze.screen(...)` and `Maze.track(...)`
+1. configure Pollex once at launch
+2. continue sending telemetry with `Pollex.screen(...)` and `Pollex.track(...)`
 3. identify a screen using a stable `screenKey`
 4. resolve one Liquid bundle for that screen
 5. pass stable app or account traits when available
@@ -27,15 +27,15 @@ Developers should only need to do four app-specific things:
 - pass stable identity or account traits that the app already knows
 - map returned Liquid content to existing UI labels and safe attributes
 
-Maze computes behavior traits on the server. The app should not try to recreate those client-side.
+Pollex computes behavior traits on the server. The app should not try to recreate those client-side.
 
 ## Compliance first
 
-Maze session capture remains optional.
+Pollex session capture remains optional.
 
 Default rules:
 
-- telemetry is allowed after the host app configures Maze
+- telemetry is allowed after the host app configures Pollex
 - screen capture is off by default
 - screen capture may only be enabled after explicit user consent and visible in-app disclosure
 
@@ -48,46 +48,46 @@ Never enable capture by default on:
 - payment
 - kyc_id_upload
 
-## 1. Install the Maze SDK
+## 1. Install the Pollex SDK
 
 ### iOS
 
 Use Swift Package Manager:
 
 ```text
-https://github.com/maze/ios-sdk
+https://github.com/pollex/ios-sdk
 ```
 
 Import:
 
 ```swift
-import Maze
+import Pollex
 ```
 
 ### Android
 
-Add the Maze SDK to the application module:
+Add the Pollex SDK to the application module:
 
 ```kotlin
-implementation("com.maze:sdk:1.0.0")
+implementation("com.pollex:sdk:1.0.0")
 ```
 
 Import:
 
 ```kotlin
-import com.maze.sdk.Maze
-import com.maze.sdk.MazeConfig
+import com.pollex.sdk.Pollex
+import com.pollex.sdk.PollexConfig
 ```
 
-## 2. Configure Maze once
+## 2. Configure Pollex once
 
-Maze uses the same workspace API key for telemetry and Liquid bundle resolution.
+Pollex uses the same workspace API key for telemetry and Liquid bundle resolution.
 
 ### iOS
 
 ```swift
-Maze.configure(
-    MazeConfig(
+Pollex.configure(
+    PollexConfig(
         apiKey: "YOUR_API_KEY",
         deviceId: "app-scoped-device-id",
         endpoint: URL(string: "https://api.yourdomain.com/events")!,
@@ -99,8 +99,8 @@ Maze.configure(
 ### Android
 
 ```kotlin
-Maze.configure(
-    MazeConfig(
+Pollex.configure(
+    PollexConfig(
         apiKey = "YOUR_API_KEY",
         deviceId = "app-scoped-device-id",
         endpoint = "https://api.yourdomain.com/events",
@@ -112,9 +112,9 @@ Maze.configure(
 
 Notes:
 
-- configure Maze exactly once
+- configure Pollex exactly once
 - use HTTPS in production
-- the SDK derives the Liquid runtime endpoint from the Maze backend host unless explicitly overridden
+- the SDK derives the Liquid runtime endpoint from the Pollex backend host unless explicitly overridden
 
 ## 3. Define stable screen keys and content keys
 
@@ -139,11 +139,11 @@ Liquid only replaces content values and safe presentation attributes.
 ### Screen tracking
 
 ```swift
-Maze.screen("checkout_paywall")
+Pollex.screen("checkout_paywall")
 ```
 
 ```kotlin
-Maze.screen("checkout_paywall")
+Pollex.screen("checkout_paywall")
 ```
 
 Recommended placement:
@@ -156,7 +156,7 @@ Recommended placement:
 ### Interaction tracking
 
 ```swift
-Maze.track(
+Pollex.track(
     event: "tap",
     screen: "checkout_paywall",
     elementId: "primary_cta"
@@ -164,7 +164,7 @@ Maze.track(
 ```
 
 ```kotlin
-Maze.track(
+Pollex.track(
     event = "tap",
     screen = "checkout_paywall",
     elementId = "primary_cta"
@@ -180,7 +180,7 @@ The preferred runtime model is one bundle request per screen, not many per-key r
 ### iOS
 
 ```swift
-Maze.resolveLiquidBundle(
+Pollex.resolveLiquidBundle(
     screen: "checkout_paywall",
     locale: "en-US",
     subjectId: userId,
@@ -202,7 +202,7 @@ Maze.resolveLiquidBundle(
 ### Android
 
 ```kotlin
-Maze.resolveLiquidBundle(
+Pollex.resolveLiquidBundle(
     screen = "checkout_paywall",
     locale = "en-US",
     subjectId = userId,
@@ -237,8 +237,8 @@ Liquid matches profiles against a merged runtime context.
 That context is built from:
 
 1. traits the app sends with the resolve request
-2. traits Maze already stored for the same `subjectId`
-3. Maze-computed behavior traits
+2. traits Pollex already stored for the same `subjectId`
+3. Pollex-computed behavior traits
 4. preview-only overrides inside dashboard preview
 
 Examples of app-provided traits:
@@ -248,7 +248,7 @@ Examples of app-provided traits:
 - `user.language`
 - `account.tier`
 
-Examples of Maze-computed traits:
+Examples of Pollex-computed traits:
 
 - `maze.intent_level`
 - `maze.usage_depth`
@@ -256,7 +256,7 @@ Examples of Maze-computed traits:
 - `maze.paywall_fatigue`
 - `maze.onboarding_stage`
 
-Maze does not infer sensitive identity traits such as age or gender from behavior.
+Pollex does not infer sensitive identity traits such as age or gender from behavior.
 
 ## 7. Render returned content
 
@@ -302,7 +302,7 @@ Preview behavior:
 
 ## 9. Draft, staging, and publish workflow
 
-Inside Maze:
+Inside Pollex:
 
 - create or update keys and default copy
 - define trait sources and reusable profiles
@@ -314,14 +314,14 @@ Inside Maze:
 
 Only published keys and published bundles are served to production runtime.
 
-## 10. Integration status you should expect in Maze
+## 10. Integration status you should expect in Pollex
 
 The Liquid dashboard now reports:
 
 - whether observed screens exist
 - whether runtime bundle resolves are happening
 - app trait coverage
-- Maze-computed trait coverage
+- Pollex-computed trait coverage
 - fallback-only live keys
 - personalized traffic share
 
@@ -341,13 +341,13 @@ If the host app enables capture at all, it must:
 Examples:
 
 ```swift
-Maze.setSessionCaptureEnabled(true)
-Maze.setCaptureBlockedScreens(["login", "signup", "otp_verification", "payment"])
+Pollex.setSessionCaptureEnabled(true)
+Pollex.setCaptureBlockedScreens(["login", "signup", "otp_verification", "payment"])
 ```
 
 ```kotlin
-Maze.setSessionCaptureEnabled(true)
-Maze.setCaptureBlockedScreens(setOf("login", "signup", "otp_verification", "payment"))
+Pollex.setSessionCaptureEnabled(true)
+Pollex.setCaptureBlockedScreens(setOf("login", "signup", "otp_verification", "payment"))
 ```
 
 ## 12. Data safety rules

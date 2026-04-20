@@ -4,8 +4,9 @@ This repo now runs against PostgreSQL and includes:
 
 - `backend`: FastAPI auth, workspace management, API keys, ingestion, issues, insights, and heatmaps
 - `web`: Next.js marketing site plus sign up, sign in, dashboard, settings, profile, and heatmap views
-- `ios-sdk`: Swift SDK that batches authenticated event uploads
-- `android-sdk`: Kotlin SDK that batches authenticated event uploads
+- `ios-sdk`: Swift Pollex SDK that batches authenticated event uploads
+- `android-sdk`: Kotlin Pollex SDK that batches authenticated event uploads
+- `web-sdk`: TypeScript Pollex SDK for browser telemetry and Liquid runtime resolution
 
 ## What Changed
 
@@ -151,8 +152,8 @@ The masking rule is now applied during event ingestion before metadata is stored
 Configure with:
 
 ```kotlin
-Maze.configure(
-    MazeConfig(
+Pollex.configure(
+    PollexConfig(
         apiKey = "mz_live_...",
         deviceId = "android-device-001",
         endpoint = "http://10.0.2.2:8000/events",
@@ -172,8 +173,8 @@ Notes:
 Configure with:
 
 ```swift
-Maze.configure(
-    MazeConfig(
+Pollex.configure(
+    PollexConfig(
         apiKey: "mz_live_...",
         deviceId: "ios-device-001",
         endpoint: URL(string: "http://127.0.0.1:8000/events")!,

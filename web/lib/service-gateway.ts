@@ -457,13 +457,22 @@ export async function getUsage(month?: string) {
   return backendRequest<UsageResponse | { detail?: string }>(`/usage${suffix}`, "GET");
 }
 
-export async function getScreenshots(params?: { screen?: string; session_id?: string; latest?: boolean; limit?: number }) {
+export async function getScreenshots(params?: {
+  screen?: string;
+  session_id?: string;
+  device_class?: "phone" | "desktop";
+  latest?: boolean;
+  limit?: number;
+}) {
   const query = new URLSearchParams();
   if (params?.screen) {
     query.set("screen", params.screen);
   }
   if (params?.session_id) {
     query.set("session_id", params.session_id);
+  }
+  if (params?.device_class) {
+    query.set("device_class", params.device_class);
   }
   if (params?.latest !== undefined) {
     query.set("latest", String(params.latest));

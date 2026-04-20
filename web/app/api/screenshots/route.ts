@@ -2,6 +2,19 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { backendBaseUrl } from "@/lib/service-gateway";
 
+async function readJsonSafely(response: Response) {
+  const text = await response.text();
+  if (!text) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(text) as unknown;
+  } catch {
+    return null;
+  }
+}
+
 export async function GET(request: NextRequest) {
   const token = request.cookies.get("maze_session_token")?.value;
   if (!token) {
@@ -16,6 +29,6 @@ export async function GET(request: NextRequest) {
     },
     cache: "no-store",
   });
-  const data = await response.json();
+  const data = (await readJsonSafely(response)) ?? [];
   return NextResponse.json(data, { status: response.status });
 }

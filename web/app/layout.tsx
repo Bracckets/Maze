@@ -1,5 +1,3 @@
-import "./globals.css";
-import "./apple-rehaul.css";
 import "./pollex.css";
 import type { Metadata } from "next";
 import { ReactNode } from "react";
@@ -12,8 +10,11 @@ export const metadata: Metadata = {
   title: "Pollex - Product Signal Intelligence",
   description: "Pollex helps teams inspect friction, usage, and behavioral signal with a calmer, more actionable workspace.",
   icons: {
-    icon: "favicon-32x32.png",
-    apple: "/apple-touch-icon.png",
+    icon: [
+      { url: "/pollex-shapes/x_line.png", type: "image/png" },
+    ],
+    shortcut: "/pollex-shapes/x_line.png",
+    apple: "/pollex-shapes/x_line.png",
   },
 };
 

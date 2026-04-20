@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "com.maze.sdk"
+    namespace = "com.pollex.sdk"
     compileSdk = 35
 
     defaultConfig {

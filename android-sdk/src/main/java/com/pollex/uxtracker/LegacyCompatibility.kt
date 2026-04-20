@@ -1,18 +1,18 @@
-package com.maze.uxtracker
+package com.pollex.uxtracker
 
-import com.maze.sdk.Maze
+import com.pollex.sdk.Pollex
 
-typealias MazeConfig = com.maze.sdk.MazeConfig
-typealias MazeSession = com.maze.sdk.MazeSession
+typealias PollexConfig = com.pollex.sdk.PollexConfig
+typealias PollexSession = com.pollex.sdk.PollexSession
 
-@Deprecated("Use com.maze.sdk.Maze instead.")
+@Deprecated("Use com.pollex.sdk.Pollex instead.")
 object UXTracker {
-    fun configure(config: MazeConfig) {
-        Maze.configure(config)
+    fun configure(config: PollexConfig) {
+        Pollex.configure(config)
     }
 
     fun screen(name: String) {
-        Maze.screen(name)
+        Pollex.screen(name)
     }
 
     fun track(
@@ -23,7 +23,7 @@ object UXTracker {
         x: Float? = null,
         y: Float? = null
     ) {
-        Maze.track(
+        Pollex.track(
             event = event,
             screen = screen,
             elementId = elementId,
@@ -34,6 +34,6 @@ object UXTracker {
     }
 
     fun setSessionCaptureEnabled(enabled: Boolean) {
-        Maze.setSessionCaptureEnabled(enabled)
+        Pollex.setSessionCaptureEnabled(enabled)
     }
 }

@@ -1,1 +1,1 @@
-rootProject.name = "ux-tracker"
+rootProject.name = "pollex-sdk"

@@ -2,24 +2,24 @@
 import PackageDescription
 
 let package = Package(
-    name: "Maze",
+    name: "Pollex",
     platforms: [
         .iOS(.v15)
     ],
     products: [
-        .library(name: "Maze", targets: ["Maze"]),
+        .library(name: "Pollex", targets: ["Pollex"]),
         .library(name: "UXTracker", targets: ["UXTracker"])
     ],
     targets: [
         .target(
-            name: "Maze",
+            name: "Pollex",
             resources: [
                 .process("Resources")
             ]
         ),
         .target(
             name: "UXTracker",
-            dependencies: ["Maze"]
+            dependencies: ["Pollex"]
         )
     ]
 )

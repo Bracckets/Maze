@@ -1,17 +1,17 @@
-@_exported import Maze
+@_exported import Pollex
 
-@available(*, deprecated, message: "Use Maze.configure(...) and Maze.track(...) instead.")
+@available(*, deprecated, message: "Use Pollex.configure(...) and Pollex.track(...) instead.")
 public final class UXTracker: @unchecked Sendable {
     public static let shared = UXTracker()
 
     private init() {}
 
-    public func configure(_ config: MazeConfig) {
-        Maze.configure(config)
+    public func configure(_ config: PollexConfig) {
+        Pollex.configure(config)
     }
 
     public func screen(_ name: String) {
-        Maze.screen(name)
+        Pollex.screen(name)
     }
 
     public func track(
@@ -22,7 +22,7 @@ public final class UXTracker: @unchecked Sendable {
         x: CGFloat? = nil,
         y: CGFloat? = nil
     ) {
-        Maze.track(
+        Pollex.track(
             event: event,
             screen: screen,
             elementId: elementId,

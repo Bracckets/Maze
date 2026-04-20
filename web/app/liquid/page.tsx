@@ -27,11 +27,10 @@ export default async function LiquidPage() {
   return (
     <DashboardShell
       activePath="/liquid"
-      title="Liquid"
-      subtitle="Define fallback copy, map it to observed screens, stage changes, and monitor how Liquid variants perform."
+      title="Liquid UI"
       headerAction={
         <Link className="btn btn-ghost btn-sm" href="/docs#liquid-workflow">
-          How to use
+          Liquid docs
         </Link>
       }
     >

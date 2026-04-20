@@ -1,0 +1,594 @@
+
+> mobile-ux-dashboard@0.1.0 dev
+> next dev
+
+   ▲ Next.js 15.3.8
+   - Local:        http://localhost:3000
+   - Network:      http://192.168.8.136:3000
+   - Environments: .env
+   - Experiments (use with caution):
+     ✓ typedRoutes
+
+ ✓ Starting...
+ ✓ Ready in 3.7s
+ ○ Compiling / ...
+ ✓ Compiled / in 1608ms (790 modules)
+ GET / 200 in 2371ms
+ ○ Compiling /_not-found ...
+ ✓ Compiled /_not-found in 642ms (794 modules)
+ GET /.well-known/appspecific/com.chrome.devtools.json 404 in 837ms
+ GET / 200 in 378ms
+ ○ Compiling /signin ...
+ ✓ Compiled /signin in 978ms (800 modules)
+ GET /signin 200 in 1376ms
+ ○ Compiling /signup ...
+ ✓ Compiled /signup in 607ms (808 modules)
+ GET /signup 200 in 844ms
+ ○ Compiling /dashboard ...
+ ✓ Compiled /dashboard in 2.7s (1815 modules)
+ GET /dashboard 200 in 3729ms
+ ○ Compiling /usage ...
+ ✓ Compiled /usage in 1212ms (1824 modules)
+ GET /usage 200 in 1769ms
+ ○ Compiling /heatmap ...
+ ✓ Compiled /heatmap in 591ms (1834 modules)
+ GET /heatmap 200 in 891ms
+ ○ Compiling /api/screenshots ...
+ ✓ Compiled /api/screenshots in 918ms (1855 modules)
+ ○ Compiling /liquid ...
+ ✓ Compiled /liquid in 1032ms (1863 modules)
+ GET /liquid 200 in 1395ms
+ ○ Compiling /profile ...
+ ✓ Compiled /profile in 801ms (1874 modules)
+ GET /profile 200 in 1079ms
+ ○ Compiling /settings ...
+ ✓ Compiled /settings in 905ms (1885 modules)
+ GET /settings 200 in 1236ms
+ ○ Compiling /api/workspace/api-keys ...
+ ✓ Compiled /api/workspace/api-keys in 697ms (1887 modules)
+ ○ Compiling /docs ...
+ ✓ Compiled /docs in 796ms (1892 modules)
+ GET /docs 200 in 1019ms
+ ○ Compiling /pricing ...
+ ✓ Compiled /pricing in 673ms (1894 modules)
+ GET /pricing 200 in 870ms
+ ○ Compiling /privacy ...
+ ✓ Compiled /privacy in 1061ms (1896 modules)
+ GET /privacy 200 in 1359ms
+ ○ Compiling /terms ...
+ ✓ Compiled /terms in 965ms (1892 modules)
+ GET /terms 200 in 1180ms
+ ✓ Compiled in 1967ms (1325 modules)
+ GET / 200 in 290ms
+ ✓ Compiled in 652ms (1325 modules)
+ GET / 200 in 231ms
+ ✓ Compiled in 394ms (1325 modules)
+ GET / 200 in 124ms
+ GET / 200 in 243ms
+ ✓ Compiled /dashboard in 236ms (963 modules)
+ GET /dashboard 200 in 789ms
+ GET / 200 in 539ms
+ ○ Compiling /liquid ...
+ ✓ Compiled /liquid in 770ms (969 modules)
+ GET /liquid 200 in 1039ms
+ GET / 200 in 254ms
+ ○ Compiling /docs ...
+ ✓ Compiled /docs in 637ms (974 modules)
+ GET /docs 200 in 907ms
+ GET / 200 in 253ms
+ ✓ Compiled /signin in 398ms (981 modules)
+ GET /signin 200 in 742ms
+ GET / 200 in 406ms
+ ✓ Compiled /settings in 452ms (989 modules)
+ GET /settings 200 in 982ms
+ GET / 200 in 509ms
+ ○ Compiling /api/workspace/api-keys ...
+ ✓ Compiled /api/workspace/api-keys in 693ms (1007 modules)
+ ✓ Compiled /usage in 314ms (1013 modules)
+ GET /usage 200 in 763ms
+ GET / 200 in 430ms
+ GET /dashboard 200 in 75ms
+ ✓ Compiled /heatmap in 287ms (1020 modules)
+ GET /heatmap 200 in 602ms
+ GET /dashboard 200 in 295ms
+ ✓ Compiled /api/screenshots in 273ms (1022 modules)
+ ✓ Compiled (1024 modules)
+ GET /usage 200 in 74ms
+ GET /heatmap 200 in 66ms
+ GET /api/heatmap?screen=welcome&device_class=phone 500 in 32ms
+ GET /api/heatmap?screen=welcome&device_class=phone 500 in 247ms
+ GET /api/screenshots?screen=welcome&latest=true&device_class=phone 200 in 257ms
+ GET /api/screenshots?screen=welcome&latest=true&device_class=phone 200 in 275ms
+ GET /liquid 200 in 76ms
+ GET /heatmap 200 in 58ms
+ GET /api/heatmap?screen=welcome&device_class=phone 500 in 37ms
+ GET /api/heatmap?screen=welcome&device_class=phone 500 in 55ms
+ GET /api/screenshots?screen=welcome&latest=true&device_class=phone 200 in 68ms
+ GET /api/screenshots?screen=welcome&latest=true&device_class=phone 200 in 90ms
+ ✓ Compiled /profile in 396ms (1032 modules)
+ GET /profile 200 in 511ms
+ GET /profile 200 in 56ms
+ GET /liquid 200 in 78ms
+ GET /settings 200 in 61ms
+ GET /api/workspace/api-keys 200 in 34ms
+ GET /api/workspace/api-keys 200 in 72ms
+ ✓ Compiled /pricing in 339ms (1034 modules)
+ GET /pricing 200 in 466ms
+ GET /pricing 200 in 61ms
+ GET /pricing 200 in 175ms
+ ○ Compiling /_not-found ...
+ ✓ Compiled /_not-found in 992ms (1884 modules)
+ GET /.well-known/appspecific/com.chrome.devtools.json 404 in 1136ms
+ GET /profile 200 in 52ms
+ GET /dashboard 200 in 66ms
+ ✓ Compiled /docs in 276ms (985 modules)
+ GET /docs 200 in 598ms
+ ✓ Compiled in 1036ms (1852 modules)
+ GET /docs 200 in 180ms
+ GET /dashboard 200 in 472ms
+ GET /dashboard 200 in 56ms
+ ✓ Compiled /usage in 323ms (983 modules)
+ GET /usage 200 in 494ms
+ GET /usage 200 in 107ms
+ ✓ Compiled /heatmap in 266ms (990 modules)
+ GET /heatmap 200 in 397ms
+ ✓ Compiled /api/screenshots in 493ms (1008 modules)
+ ✓ Compiled (1010 modules)
+ GET /api/heatmap?screen=welcome&device_class=phone 500 in 965ms
+ GET /api/heatmap?screen=welcome&device_class=phone 500 in 978ms
+ GET /api/screenshots?screen=welcome&latest=true&device_class=phone 200 in 994ms
+ GET /api/screenshots?screen=welcome&latest=true&device_class=phone 200 in 995ms
+ ✓ Compiled /liquid in 236ms (1008 modules)
+ GET /liquid 200 in 422ms
+ GET /liquid 200 in 55ms
+ GET /dashboard 200 in 106ms
+ ○ Compiling /_not-found ...
+ ✓ Compiled /_not-found in 1491ms (1838 modules)
+ GET /.well-known/appspecific/com.chrome.devtools.json 404 in 1801ms
+ GET /dashboard 200 in 309ms
+ ✓ Compiled in 746ms (1852 modules)
+ GET /dashboard 200 in 138ms
+ GET /dashboard 200 in 56ms
+ ✓ Compiled / in 313ms (991 modules)
+ GET /dashboard 200 in 344ms
+ GET / 200 in 692ms
+ GET /.well-known/appspecific/com.chrome.devtools.json 404 in 64ms
+ GET /liquid 200 in 183ms
+ GET / 200 in 140ms
+ GET /.well-known/appspecific/com.chrome.devtools.json 404 in 72ms
+ GET / 200 in 172ms
+ GET /.well-known/appspecific/com.chrome.devtools.json 404 in 57ms
+ GET / 200 in 159ms
+ GET /.well-known/appspecific/com.chrome.devtools.json 404 in 79ms
+ GET / 200 in 162ms
+ GET /.well-known/appspecific/com.chrome.devtools.json 404 in 70ms
+ GET /dashboard 200 in 50ms
+ ✓ Compiled in 1249ms (1849 modules)
+ GET /dashboard 200 in 271ms
+ GET /dashboard 200 in 377ms
+ ○ Compiling /usage ...
+ ✓ Compiled /usage in 801ms (988 modules)
+ GET /usage 200 in 1070ms
+ GET /usage 200 in 71ms
+ GET /heatmap 200 in 61ms
+ ✓ Compiled /api/screenshots in 451ms (1006 modules)
+ ✓ Compiled (1008 modules)
+ GET /api/heatmap?screen=welcome&device_class=phone 500 in 864ms
+ GET /api/heatmap?screen=welcome&device_class=phone 500 in 879ms
+ GET /api/screenshots?screen=welcome&latest=true&device_class=phone 200 in 956ms
+ GET /api/screenshots?screen=welcome&latest=true&device_class=phone 200 in 954ms
+ GET /usage 200 in 139ms
+ GET /heatmap 200 in 68ms
+ GET /api/heatmap?screen=welcome&device_class=phone 500 in 28ms
+ GET /api/heatmap?screen=welcome&device_class=phone 500 in 45ms
+ GET /api/screenshots?screen=welcome&latest=true&device_class=phone 200 in 78ms
+ GET /api/screenshots?screen=welcome&latest=true&device_class=phone 200 in 106ms
+ GET /liquid 200 in 72ms
+ ○ Compiling /_not-found ...
+ ✓ Compiled /_not-found in 1294ms (1862 modules)
+ GET /.well-known/appspecific/com.chrome.devtools.json 404 in 1537ms
+ GET /liquid 200 in 407ms
+ GET /liquid 200 in 164ms
+ GET /.well-known/appspecific/com.chrome.devtools.json 404 in 51ms
+ GET /dashboard 200 in 57ms
+ GET /dashboard 200 in 348ms
+ GET /.well-known/appspecific/com.chrome.devtools.json 404 in 46ms
+ GET /.well-known/appspecific/com.chrome.devtools.json 404 in 62ms
+ GET / 200 in 174ms
+ GET /.well-known/appspecific/com.chrome.devtools.json 404 in 74ms
+ GET /dashboard 200 in 57ms
+ ✓ Compiled in 1324ms (1856 modules)
+ GET /dashboard 200 in 228ms
+ GET /heatmap 200 in 74ms
+ ✓ Compiled /api/heatmap in 364ms (1002 modules)
+ ✓ Compiled (1004 modules)
+ GET /api/screenshots?screen=welcome&latest=true&device_class=phone 200 in 800ms
+ GET /api/screenshots?screen=welcome&latest=true&device_class=phone 200 in 816ms
+ GET /api/heatmap?screen=welcome&device_class=phone 500 in 820ms
+ GET /api/heatmap?screen=welcome&device_class=phone 500 in 834ms
+ GET /liquid 200 in 177ms
+ GET /dashboard 200 in 73ms
+ GET /usage 200 in 76ms
+ ✓ Compiled in 1494ms (1852 modules)
+ GET /heatmap 200 in 1621ms
+ GET /heatmap 200 in 66ms
+ ✓ Compiled /api/screenshots in 204ms (1002 modules)
+ ✓ Compiled (1004 modules)
+ GET /api/heatmap?screen=welcome&device_class=phone 500 in 564ms
+ GET /api/heatmap?screen=welcome&device_class=phone 500 in 577ms
+ GET /api/screenshots?screen=welcome&latest=true&device_class=phone 200 in 597ms
+ GET /api/screenshots?screen=welcome&latest=true&device_class=phone 200 in 603ms
+ GET /liquid 200 in 117ms
+ ✓ Compiled in 2s (1858 modules)
+ GET /dashboard 200 in 176ms
+ ○ Compiling /profile ...
+ ✓ Compiled /profile in 713ms (992 modules)
+ GET /profile 200 in 948ms
+ GET /profile 200 in 44ms
+ ○ Compiling /api/auth/signout ...
+ ✓ Compiled /api/auth/signout in 851ms (1864 modules)
+ POST /api/auth/signout 200 in 980ms
+ ✓ Compiled /signin in 317ms (1016 modules)
+ GET /signin 200 in 434ms
+ GET /signin 200 in 27ms
+ GET /signin 200 in 28ms
+ ✓ Compiled /api/auth/signin in 394ms (1872 modules)
+ POST /api/auth/signin 200 in 1023ms
+ GET /dashboard 200 in 541ms
+ GET /dashboard 200 in 475ms
+ GET /usage 200 in 62ms
+ GET /heatmap 200 in 408ms
+ ✓ Compiled /api/heatmap in 244ms (1020 modules)
+ ✓ Compiled (1022 modules)
+ GET /api/screenshots?screen=kyc_form&latest=true&device_class=phone 200 in 557ms
+ GET /api/screenshots?screen=kyc_form&latest=true&device_class=phone 200 in 562ms
+ GET /api/heatmap?screen=kyc_form&device_class=phone 500 in 570ms
+ GET /api/heatmap?screen=kyc_form&device_class=phone 500 in 585ms
+ GET /usage 200 in 75ms
+ GET /heatmap 200 in 413ms
+ GET /api/heatmap?screen=kyc_form&device_class=phone 500 in 28ms
+ GET /api/heatmap?screen=kyc_form&device_class=phone 500 in 176ms
+ GET /api/screenshots?screen=kyc_form&latest=true&device_class=phone 200 in 178ms
+ GET /api/screenshots?screen=kyc_form&latest=true&device_class=phone 200 in 182ms
+ GET /liquid 200 in 374ms
+ ○ Compiling /api/liquid/[...path] ...
+ ✓ Compiled /api/liquid/[...path] in 718ms (1868 modules)
+ PUT /api/liquid/traits/1eb2e0fa-aba4-4577-8fbc-1572010dcfab 200 in 4456ms
+ PUT /api/liquid/traits/1eb2e0fa-aba4-4577-8fbc-1572010dcfab 200 in 2323ms
+ PUT /api/liquid/traits/1eb2e0fa-aba4-4577-8fbc-1572010dcfab 200 in 305ms
+ PUT /api/liquid/profiles/f0f6cda7-8cf3-4da3-aa9d-99e11be5eca7 200 in 49ms
+ PUT /api/liquid/variants/0c795bc8-18cc-4904-b306-21c1c496be7c 200 in 111ms
+ PUT /api/liquid/variants/0c795bc8-18cc-4904-b306-21c1c496be7c 200 in 92ms
+ POST /api/liquid/keys/7f4a1c4f-8090-4697-b673-5e8e5a03b4ce/publish 200 in 201ms
+ GET /api/liquid/integration-status 200 in 24ms
+ PUT /api/liquid/variants/6b521c28-809c-4451-90cb-ecc277419b3e 200 in 50ms
+ ○ Compiling /_not-found ...
+ ✓ Compiled /_not-found in 1731ms (1859 modules)
+ GET /.well-known/appspecific/com.chrome.devtools.json 404 in 1954ms
+ GET /liquid 200 in 377ms
+ ○ Compiling /heatmap ...
+ ✓ Compiled /heatmap in 549ms (990 modules)
+ GET /heatmap 200 in 1165ms
+ ✓ Compiled /api/screenshots in 266ms (1008 modules)
+ ✓ Compiled (1010 modules)
+ GET /api/heatmap?screen=kyc_form&device_class=phone 500 in 634ms
+ GET /api/heatmap?screen=kyc_form&device_class=phone 500 in 649ms
+ GET /api/screenshots?screen=kyc_form&latest=true&device_class=phone 200 in 666ms
+ GET /api/screenshots?screen=kyc_form&latest=true&device_class=phone 200 in 669ms
+ GET /usage 200 in 120ms
+ GET /dashboard 200 in 418ms
+ ○ Compiling /profile ...
+ ✓ Compiled /profile in 751ms (1018 modules)
+ GET /profile 200 in 936ms
+ GET /dashboard 200 in 406ms
+ ○ Compiling /_not-found ...
+ ✓ Compiled /_not-found in 1578ms (1876 modules)
+ GET /.well-known/appspecific/com.chrome.devtools.json 404 in 1846ms
+ GET /profile 200 in 72ms
+ GET /dashboard 200 in 415ms
+ GET /usage 200 in 58ms
+ GET /heatmap 200 in 417ms
+ GET /api/heatmap?screen=kyc_form&device_class=phone 500 in 37ms
+ GET /api/screenshots?screen=kyc_form&latest=true&device_class=phone 500 in 230ms
+ GET /api/screenshots?screen=kyc_form&latest=true&device_class=phone 200 in 233ms
+ GET /api/heatmap?screen=kyc_form&device_class=phone 500 in 237ms
+ GET /liquid 200 in 449ms
+ GET /profile 200 in 31ms
+ ○ Compiling /settings ...
+ ✓ Compiled /settings in 664ms (1016 modules)
+ GET /settings 200 in 886ms
+ GET /settings 200 in 81ms
+ ○ Compiling /api/workspace/api-keys ...
+ ✓ Compiled /api/workspace/api-keys in 681ms (1018 modules)
+ GET /api/workspace/api-keys 200 in 844ms
+ GET /api/workspace/api-keys 200 in 852ms
+ GET /heatmap 200 in 640ms
+ GET /api/heatmap?screen=kyc_form&device_class=phone 500 in 35ms
+ GET /api/heatmap?screen=kyc_form&device_class=phone 500 in 165ms
+ GET /api/screenshots?screen=kyc_form&latest=true&device_class=phone 200 in 167ms
+ GET /api/screenshots?screen=kyc_form&latest=true&device_class=phone 200 in 173ms
+ GET /usage 200 in 57ms
+ GET /dashboard 200 in 437ms
+ GET /usage 200 in 44ms
+ GET /heatmap 200 in 370ms
+ GET /api/heatmap?screen=kyc_form&device_class=phone 500 in 25ms
+ GET /api/heatmap?screen=kyc_form&device_class=phone 500 in 197ms
+ GET /api/screenshots?screen=kyc_form&latest=true&device_class=phone 200 in 203ms
+ GET /api/screenshots?screen=kyc_form&latest=true&device_class=phone 200 in 202ms
+ GET /usage 200 in 52ms
+ GET /dashboard 200 in 405ms
+ GET /usage 200 in 46ms
+ GET /heatmap 200 in 393ms
+ GET /api/heatmap?screen=kyc_form&device_class=phone 500 in 28ms
+ GET /api/heatmap?screen=kyc_form&device_class=phone 500 in 172ms
+ GET /api/screenshots?screen=kyc_form&latest=true&device_class=phone 200 in 174ms
+ GET /api/screenshots?screen=kyc_form&latest=true&device_class=phone 200 in 177ms
+ GET /liquid 200 in 587ms
+ GET /profile 200 in 43ms
+ GET /liquid 200 in 415ms
+ GET /heatmap 200 in 423ms
+ GET /api/heatmap?screen=kyc_form&device_class=phone 500 in 37ms
+ GET /api/screenshots?screen=kyc_form&latest=true&device_class=phone 500 in 193ms
+ GET /api/heatmap?screen=kyc_form&device_class=phone 500 in 196ms
+ GET /api/screenshots?screen=kyc_form&latest=true&device_class=phone 200 in 201ms
+ GET /liquid 200 in 452ms
+ GET /heatmap 200 in 538ms
+ GET /api/heatmap?screen=kyc_form&device_class=phone 500 in 41ms
+ GET /api/heatmap?screen=kyc_form&device_class=phone 500 in 50ms
+ GET /api/screenshots?screen=kyc_form&latest=true&device_class=phone 200 in 63ms
+ GET /api/screenshots?screen=kyc_form&latest=true&device_class=phone 200 in 68ms
+ GET /api/heatmap?screen=welcome&device_class=phone 500 in 22ms
+ GET /api/screenshots?screen=welcome&latest=true&device_class=phone 200 in 37ms
+ GET /api/heatmap?screen=login&device_class=phone 500 in 28ms
+ GET /api/screenshots?screen=login&latest=true&device_class=phone 200 in 39ms
+ GET /api/heatmap?screen=success&device_class=phone 500 in 23ms
+ GET /api/screenshots?screen=success&latest=true&device_class=phone 200 in 37ms
+ GET /api/heatmap?screen=kyc_form&device_class=phone 500 in 20ms
+ GET /api/screenshots?screen=kyc_form&latest=true&device_class=phone 200 in 37ms
+ GET /liquid 200 in 429ms
+ GET /profile 200 in 45ms
+ GET /settings 200 in 70ms
+ GET /api/workspace/api-keys 200 in 24ms
+ GET /api/workspace/api-keys 200 in 29ms
+ GET /profile 200 in 33ms
+ GET /heatmap 200 in 355ms
+ GET /api/heatmap?screen=kyc_form&device_class=phone 500 in 37ms
+ GET /api/heatmap?screen=kyc_form&device_class=phone 500 in 47ms
+ GET /api/screenshots?screen=kyc_form&latest=true&device_class=phone 200 in 56ms
+ GET /api/screenshots?screen=kyc_form&latest=true&device_class=phone 200 in 66ms
+ GET /dashboard 200 in 420ms
+ GET /usage 200 in 54ms
+ GET /dashboard 200 in 386ms
+ GET /usage 200 in 49ms
+ GET /heatmap 200 in 342ms
+ GET /api/heatmap?screen=kyc_form&device_class=phone 500 in 25ms
+ GET /api/heatmap?screen=kyc_form&device_class=phone 500 in 240ms
+ GET /api/screenshots?screen=kyc_form&latest=true&device_class=phone 200 in 242ms
+ GET /api/screenshots?screen=kyc_form&latest=true&device_class=phone 200 in 246ms
+ GET /liquid 200 in 384ms
+ ✓ Compiled in 2.4s (1836 modules)
+ ✓ Compiled in 1206ms (1836 modules)
+ ✓ Compiled in 1564ms (1836 modules)
+ ✓ Compiled in 778ms (1836 modules)
+ ✓ Compiled in 1071ms (1836 modules)
+ ✓ Compiled in 2s (1836 modules)
+ GET /liquid 200 in 809ms
+ ○ Compiling /_not-found ...
+ ✓ Compiled /_not-found in 1183ms (1840 modules)
+ GET /.well-known/appspecific/com.chrome.devtools.json 404 in 1352ms
+ ✓ Compiled in 1337ms (1840 modules)
+ GET /heatmap 200 in 491ms
+ ○ Compiling /api/screenshots ...
+ ✓ Compiled /api/screenshots in 755ms (1001 modules)
+ ✓ Compiled (1003 modules)
+ GET /api/heatmap?screen=kyc_form&device_class=phone 500 in 1206ms
+ GET /api/heatmap?screen=kyc_form&device_class=phone 500 in 1307ms
+ GET /api/screenshots?screen=kyc_form&latest=true&device_class=phone 200 in 1309ms
+ GET /api/screenshots?screen=kyc_form&latest=true&device_class=phone 200 in 1311ms
+ GET /heatmap 200 in 651ms
+ GET /liquid 200 in 588ms
+ ✓ Compiled in 1823ms (1860 modules)
+ ✓ Compiled in 1545ms (1860 modules)
+ ✓ Compiled in 1402ms (1860 modules)
+ ✓ Compiled in 1040ms (1860 modules)
+ ✓ Compiled in 744ms (982 modules)
+ GET /liquid 200 in 233ms
+ GET /liquid 200 in 586ms
+ ○ Compiling /_not-found ...
+ ✓ Compiled /_not-found in 1134ms (1840 modules)
+ GET /.well-known/appspecific/com.chrome.devtools.json 404 in 1310ms
+ GET /dashboard 200 in 440ms
+ ✓ Compiled in 1306ms (1854 modules)
+ GET /dashboard 200 in 125ms
+ GET /liquid 200 in 433ms
+ GET /liquid 200 in 598ms
+ GET /.well-known/appspecific/com.chrome.devtools.json 404 in 77ms
+ ✓ Compiled in 1719ms (1854 modules)
+ GET /liquid 200 in 125ms
+ GET /liquid 200 in 529ms
+ GET /.well-known/appspecific/com.chrome.devtools.json 404 in 78ms
+ ✓ Compiled in 1653ms (1854 modules)
+ GET /liquid 200 in 106ms
+ ○ Compiling / ...
+ ✓ Compiled / in 553ms (993 modules)
+ GET /liquid 200 in 402ms
+ GET /.well-known/appspecific/com.chrome.devtools.json 404 in 97ms
+ GET / 200 in 1115ms
+ GET /dashboard 200 in 407ms
+ GET /heatmap 200 in 364ms
+ ○ Compiling /api/screenshots ...
+ ✓ Compiled /api/screenshots in 1010ms (1004 modules)
+ ✓ Compiled (1006 modules)
+ GET /api/heatmap?screen=kyc_form&device_class=phone 500 in 1386ms
+ GET /api/heatmap?screen=kyc_form&device_class=phone 500 in 1485ms
+ GET /api/screenshots?screen=kyc_form&latest=true&device_class=phone 200 in 1477ms
+ GET /api/screenshots?screen=kyc_form&latest=true&device_class=phone 200 in 1490ms
+ GET /liquid 200 in 1270ms
+ ✓ Compiled in 2.3s (1840 modules)
+ ✓ Compiled in 1182ms (1854 modules)
+ GET /liquid 200 in 238ms
+ ✓ Compiled in 1124ms (1840 modules)
+ ○ Compiling /api/liquid/[...path] ...
+ ✓ Compiled /api/liquid/[...path] in 603ms (1004 modules)
+ POST /api/liquid/keys/7f4a1c4f-8090-4697-b673-5e8e5a03b4ce/publish 200 in 796ms
+ GET /api/liquid/integration-status 200 in 19ms
+ ✓ Compiled in 1556ms (1858 modules)
+ ✓ Compiled in 748ms (1872 modules)
+ GET /liquid 200 in 194ms
+ ✓ Compiled in 1006ms (1854 modules)
+ GET /liquid 200 in 216ms
+ GET /liquid 200 in 573ms
+ ○ Compiling /_not-found ...
+ ✓ Compiled /_not-found in 1175ms (1844 modules)
+ GET /.well-known/appspecific/com.chrome.devtools.json 404 in 1338ms
+ GET /dashboard 200 in 485ms
+ GET /heatmap 200 in 479ms
+ ○ Compiling /api/screenshots ...
+ ✓ Compiled /api/screenshots in 920ms (1005 modules)
+ ✓ Compiled in 0ms (1007 modules)
+ ✓ Compiled in 1ms (1007 modules)
+ ✓ Compiled in 1ms (1007 modules)
+ GET /api/heatmap?screen=kyc_form&device_class=phone 500 in 1821ms
+ GET /api/heatmap?screen=kyc_form&device_class=phone 500 in 1817ms
+ GET /api/screenshots?screen=kyc_form&latest=true&device_class=phone 200 in 2205ms
+ GET /api/screenshots?screen=kyc_form&latest=true&device_class=phone 200 in 2198ms
+ GET /dashboard 200 in 1537ms
+ ○ Compiling /usage ...
+ ✓ Compiled /usage in 1024ms (1013 modules)
+ GET /usage 200 in 1170ms
+ GET /usage 200 in 72ms
+ GET /heatmap 200 in 738ms
+ GET /liquid 200 in 399ms
+ GET /usage 200 in 70ms
+ GET /heatmap 200 in 423ms
+ GET /api/heatmap?screen=kyc_form&device_class=phone 500 in 51ms
+ GET /api/heatmap?screen=kyc_form&device_class=phone 500 in 64ms
+ GET /api/screenshots?screen=kyc_form&latest=true&device_class=phone 200 in 86ms
+ GET /api/screenshots?screen=kyc_form&latest=true&device_class=phone 200 in 93ms
+ GET /api/screenshots?screen=welcome&latest=true&device_class=phone 200 in 27ms
+ GET /api/heatmap?screen=welcome&device_class=phone 500 in 32ms
+ GET /api/heatmap?screen=login&device_class=phone 500 in 23ms
+ GET /api/screenshots?screen=login&latest=true&device_class=phone 200 in 38ms
+ GET /api/heatmap?screen=kyc_form&device_class=phone 500 in 22ms
+ GET /api/screenshots?screen=kyc_form&latest=true&device_class=phone 200 in 37ms
+ GET /liquid 200 in 456ms
+ ✓ Compiled in 1943ms (1363 modules)
+ ✓ Compiled in 1332ms (1377 modules)
+ GET /liquid 200 in 166ms
+ ○ Compiling /dashboard ...
+ ✓ Compiled /dashboard in 724ms (992 modules)
+ GET /dashboard 200 in 60ms
+ GET /dashboard 200 in 1402ms
+ GET /usage 200 in 60ms
+ GET /dashboard 200 in 503ms
+ GET /usage 200 in 51ms
+ GET /heatmap 200 in 439ms
+ ✓ Compiled /api/screenshots in 263ms (1002 modules)
+ ✓ Compiled (1004 modules)
+ GET /api/heatmap?screen=kyc_form&device_class=phone 500 in 704ms
+ GET /api/heatmap?screen=kyc_form&device_class=phone 500 in 718ms
+ GET /api/screenshots?screen=kyc_form&latest=true&device_class=phone 200 in 736ms
+ GET /api/screenshots?screen=kyc_form&latest=true&device_class=phone 200 in 744ms
+ GET /liquid 200 in 656ms
+ ✓ Compiled /profile in 285ms (1012 modules)
+ GET /profile 200 in 391ms
+ ○ Compiling /settings ...
+ ✓ Compiled /settings in 1056ms (1020 modules)
+ GET /settings 200 in 1232ms
+ GET /settings 200 in 75ms
+ ✓ Compiled /api/workspace/api-keys in 349ms (1022 modules)
+ GET /api/workspace/api-keys 200 in 415ms
+ GET /api/workspace/api-keys 200 in 423ms
+ GET /profile 200 in 58ms
+ GET /settings 200 in 70ms
+ GET /api/workspace/api-keys 200 in 33ms
+ GET /api/workspace/api-keys 200 in 42ms
+ GET /profile 200 in 34ms
+ GET /liquid 200 in 445ms
+ GET /liquid 200 in 572ms
+ ○ Compiling /_not-found ...
+ ✓ Compiled /_not-found in 1282ms (1859 modules)
+ GET /.well-known/appspecific/com.chrome.devtools.json 404 in 1409ms
+ ✓ Compiled in 1545ms (1859 modules)
+ ✓ Compiled in 1242ms (1873 modules)
+ GET /liquid 200 in 194ms
+ ✓ Compiled in 1965ms (1837 modules)
+ ✓ Compiled in 1606ms (1837 modules)
+ GET /liquid 200 in 725ms
+ ○ Compiling /_not-found ...
+ ✓ Compiled /_not-found in 950ms (1841 modules)
+ GET /.well-known/appspecific/com.chrome.devtools.json 404 in 1115ms
+ ✓ Compiled in 977ms (1841 modules)
+ ✓ Compiled in 1714ms (1855 modules)
+ GET /liquid 200 in 114ms
+ ○ Compiling /heatmap ...
+ ✓ Compiled /heatmap in 1944ms (990 modules)
+ GET /heatmap 200 in 54ms
+ ○ Compiling /api/screenshots ...
+ GET /heatmap 200 in 3118ms
+ ✓ Compiled /api/screenshots in 885ms (1008 modules)
+ ✓ Compiled (1010 modules)
+ GET /api/heatmap?screen=kyc_form&device_class=phone 500 in 1285ms
+ GET /api/heatmap?screen=kyc_form&device_class=phone 500 in 1305ms
+ GET /api/screenshots?screen=kyc_form&latest=true&device_class=phone 200 in 1390ms
+ GET /api/screenshots?screen=kyc_form&latest=true&device_class=phone 200 in 1387ms
+ GET /dashboard 200 in 555ms
+ GET /usage 200 in 69ms
+ GET /heatmap 200 in 384ms
+ GET /api/heatmap?screen=kyc_form&device_class=phone 500 in 31ms
+ GET /api/heatmap?screen=kyc_form&device_class=phone 500 in 45ms
+ GET /api/screenshots?screen=kyc_form&latest=true&device_class=phone 200 in 59ms
+ GET /api/screenshots?screen=kyc_form&latest=true&device_class=phone 200 in 64ms
+ GET /liquid 200 in 425ms
+ GET /heatmap 200 in 397ms
+ GET /api/heatmap?screen=kyc_form&device_class=phone 500 in 27ms
+ GET /api/heatmap?screen=kyc_form&device_class=phone 500 in 179ms
+ GET /api/screenshots?screen=kyc_form&latest=true&device_class=phone 200 in 181ms
+ GET /api/screenshots?screen=kyc_form&latest=true&device_class=phone 200 in 186ms
+ GET /liquid 200 in 418ms
+ ✓ Compiled in 2.3s (1864 modules)
+ ✓ Compiled in 1200ms (1878 modules)
+ GET /liquid 200 in 151ms
+ ✓ Compiled in 1521ms (1852 modules)
+ GET /liquid 200 in 232ms
+ ✓ Compiled in 1773ms (1852 modules)
+ GET /liquid 200 in 179ms
+ ○ Compiling /api/liquid/[...path] ...
+ ✓ Compiled /api/liquid/[...path] in 675ms (1002 modules)
+ POST /api/liquid/preview/bundles/resolve 200 in 994ms
+ GET /api/liquid/integration-status 200 in 21ms
+ POST /api/liquid/preview/bundles/resolve 200 in 41ms
+ GET /api/liquid/integration-status 200 in 17ms
+ POST /api/liquid/keys/7f4a1c4f-8090-4697-b673-5e8e5a03b4ce/demote 200 in 44ms
+ GET /api/liquid/integration-status 200 in 18ms
+ POST /api/liquid/keys/7f4a1c4f-8090-4697-b673-5e8e5a03b4ce/publish 200 in 62ms
+ GET /api/liquid/integration-status 200 in 20ms
+ POST /api/liquid/keys/7f4a1c4f-8090-4697-b673-5e8e5a03b4ce/publish 200 in 47ms
+ GET /api/liquid/integration-status 200 in 18ms
+ GET /liquid 200 in 591ms
+ ○ Compiling /_not-found ...
+ ✓ Compiled /_not-found in 959ms (1860 modules)
+ GET /.well-known/appspecific/com.chrome.devtools.json 404 in 1133ms
+ ✓ Compiled in 1750ms (1860 modules)
+ DELETE /api/liquid/profiles/f0f6cda7-8cf3-4da3-aa9d-99e11be5eca7 204 in 65ms
+ DELETE /api/liquid/profiles/9c9acda0-dc82-4acc-b276-35edd61e8f62 204 in 29ms
+ ✓ Compiled in 2.5s (1838 modules)
+ GET /heatmap 200 in 2300ms
+ ○ Compiling /api/screenshots ...
+ ✓ Compiled /api/screenshots in 833ms (1002 modules)
+ ✓ Compiled (1004 modules)
+ GET /api/heatmap?screen=kyc_form&device_class=phone 500 in 1397ms
+ GET /api/heatmap?screen=kyc_form&device_class=phone 500 in 1425ms
+ GET /api/screenshots?screen=kyc_form&latest=true&device_class=phone 200 in 1440ms
+ GET /api/screenshots?screen=kyc_form&latest=true&device_class=phone 200 in 1445ms
+ GET /liquid 200 in 890ms
+ ✓ Compiled in 1204ms (1872 modules)
+ GET /liquid 200 in 548ms
+ ○ Compiling / ...
+ ✓ Compiled / in 753ms (994 modules)
+ GET /liquid 200 in 485ms
+ GET / 200 in 1299ms
+ ○ Compiling /_not-found ...
+ ✓ Compiled /_not-found in 590ms (1852 modules)
+ GET /.well-known/appspecific/com.chrome.devtools.json 404 in 747ms
+ GET /dashboard 200 in 463ms

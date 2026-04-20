@@ -106,6 +106,8 @@ CREATE TABLE sessions (
     device_id    TEXT NOT NULL,
 
     app_version   TEXT,
+    platform      TEXT,
+    device_class  TEXT NOT NULL DEFAULT 'phone',
     screen_width  FLOAT,
     screen_height FLOAT,
 
@@ -114,6 +116,7 @@ CREATE TABLE sessions (
 );
 
 CREATE INDEX idx_sessions_workspace ON sessions(workspace_id);
+CREATE INDEX idx_sessions_workspace_device_class ON sessions(workspace_id, device_class, started_at DESC);
 
 -- =========================
 -- EVENTS (PARTITIONED + IDEMPOTENT)

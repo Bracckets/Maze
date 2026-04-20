@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, startTransition, useDeferredValue, useState, type CSSProperties, type ReactNode } from "react";
+import { Fragment, startTransition, useDeferredValue, useMemo, useState, type CSSProperties, type ReactNode } from "react";
 
 import { Tag } from "@/components/ui";
 import type {
@@ -21,8 +21,8 @@ type Props = {
   initialIntegrationStatus: LiquidIntegrationStatus;
 };
 
-type LiquidTab = "keys" | "rules" | "staging" | "analytics";
-type RulesTab = "profiles" | "traits" | "variants";
+type LiquidTab = "keys" | "profiles" | "variants" | "traits" | "staging" | "insights" | "rules" | "analytics";
+type EntityPanelMode = "closed" | "create" | "edit" | "delete";
 
 type KeyDraft = {
   id: string | null;
@@ -114,12 +114,25 @@ type SelectOption = {
   label: string;
 };
 
-const TABS: Array<{ id: LiquidTab; label: string }> = [
-  { id: "keys", label: "Keys" },
-  { id: "rules", label: "Rules" },
-  { id: "staging", label: "Staging" },
-  { id: "analytics", label: "Analytics" },
+const TABS: Array<{ id: LiquidTab; label: string; icon: "key" | "profile" | "variant" | "trait" | "staging" | "insight" }> = [
+  { id: "keys", label: "Keys", icon: "key" },
+  { id: "profiles", label: "Profiles", icon: "profile" },
+  { id: "variants", label: "Variants", icon: "variant" },
+  { id: "traits", label: "Traits", icon: "trait" },
+  { id: "staging", label: "Staging", icon: "staging" },
+  { id: "insights", label: "Insights", icon: "insight" },
 ];
+
+const TAB_DESCRIPTIONS: Record<LiquidTab, string> = {
+  keys: "Create fallback copy and anchor every key to a screen users already visit.",
+  profiles: "Browse and tune saved audiences without losing sight of readiness or attached traits.",
+  variants: "See how fallback copy branches into profile-specific overrides for every key.",
+  traits: "Define reusable profile signals, coverage, and source-of-truth mapping.",
+  staging: "Inspect draft versus live state before you push personalized copy into production.",
+  insights: "Watch coverage, fallback share, and modeled lift across every Liquid key.",
+  rules: "Define reusable audience logic with traits, profiles, and profile-specific variants.",
+  analytics: "Watch coverage, fallback share, and modeled lift across every Liquid key.",
+};
 
 const PROFILE_COLORS = ["#7fb6ff", "#6ef2c0", "#f9c56d", "#c6a8ff", "#ff8ba7"];
 const TRAIT_VALUE_TYPES: Array<{ value: TraitValueType; label: string }> = [
@@ -716,13 +729,19 @@ export function LiquidStudio({
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
   const [selectedTraitId, setSelectedTraitId] = useState<string | null>(null);
   const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null);
-  const [rulesTab, setRulesTab] = useState<RulesTab>("profiles");
+  const [rulesTab, setRulesTab] = useState<"profiles" | "traits" | "variants">("profiles");
+  const [keyPanelMode, setKeyPanelMode] = useState<EntityPanelMode>("closed");
+  const [profilePanelMode, setProfilePanelMode] = useState<EntityPanelMode>("closed");
+  const [traitPanelMode, setTraitPanelMode] = useState<EntityPanelMode>("closed");
+  const [variantPanelMode, setVariantPanelMode] = useState<EntityPanelMode>("closed");
   const [keyMode, setKeyMode] = useState<"create" | "edit">("edit");
   const [traitMode, setTraitMode] = useState<"create" | "edit">("edit");
   const [profileMode, setProfileMode] = useState<"create" | "edit">("edit");
   const [variantMode, setVariantMode] = useState<"create" | "edit">("edit");
   const [keySearch, setKeySearch] = useState("");
-  const [analyticsSearch, setAnalyticsSearch] = useState("");
+  const [insightsSearch, setInsightsSearch] = useState("");
+  const analyticsSearch = insightsSearch;
+  const setAnalyticsSearch = setInsightsSearch;
   const [keyDraft, setKeyDraft] = useState<KeyDraft>(emptyKeyDraft(sortedObservedScreens[0] ?? ""));
   const [traitDraft, setTraitDraft] = useState<TraitDraft>(emptyTraitDraft());
   const [profileDraft, setProfileDraft] = useState<ProfileDraft>(emptyProfileDraft());
@@ -741,7 +760,7 @@ export function LiquidStudio({
     error: null,
   });
   const deferredKeySearch = useDeferredValue(keySearch);
-  const deferredAnalyticsSearch = useDeferredValue(analyticsSearch);
+  const deferredInsightsSearch = useDeferredValue(insightsSearch);
 
   const activeKeyId = selectedKeyId && keys.some((key) => key.id === selectedKeyId) ? selectedKeyId : null;
   const activeProfileId = selectedProfileId && profiles.some((profile) => profile.id === selectedProfileId) ? selectedProfileId : null;
@@ -759,7 +778,7 @@ export function LiquidStudio({
   });
 
   const metricRows = analyticsRows(keys, detailsById, profiles).filter((row) => {
-    const query = deferredAnalyticsSearch.trim().toLowerCase();
+    const query = deferredInsightsSearch.trim().toLowerCase();
     if (!query) return true;
     return [row.key, row.screen].join(" ").toLowerCase().includes(query);
   });
@@ -782,6 +801,21 @@ export function LiquidStudio({
   const traitDefinitionByKey = new Map(traits.map((trait) => [trait.traitKey, trait]));
   const keyOptions = keys.map((key) => ({ value: key.id, label: key.key }));
   const profileOptions = profiles.map((profile) => ({ value: profile.id, label: profile.name }));
+  const liveKeyCount = keys.filter((key) => keyState(detailsById[key.id] ?? null) === "Live").length;
+  const readyProfileCount = profiles.filter((profile) => profile.readiness?.state === "ready").length;
+  const variantCount = Object.values(detailsById).reduce(
+    (count, detail) => count + detail.variants.filter((variant) => variant.stage === "draft" && variant.segmentId).length,
+    0,
+  );
+  const flatVariants = keys.flatMap((key) => {
+    const detail = detailsById[key.id] ?? null;
+    return (detail?.variants.filter((variant) => variant.stage === "draft" && variant.segmentId) ?? []).map((variant) => ({
+      key,
+      detail,
+      variant,
+      profile: profiles.find((profile) => profile.id === variant.segmentId) ?? null,
+    }));
+  });
   const keyDraftBaseline = keyMode === "create" ? emptyKeyDraft(sortedObservedScreens[0] ?? "") : buildKeyDraft(selectedKeyDetail, sortedObservedScreens);
   const traitDraftBaseline = traitMode === "create" ? emptyTraitDraft() : buildTraitDraft(selectedTrait);
   const profileDraftBaseline = profileMode === "create" ? emptyProfileDraft() : buildProfileDraft(selectedProfile);
@@ -1099,6 +1133,7 @@ export function LiquidStudio({
       setSelectedKeyId(null);
       setKeyMode("create");
       setKeyDraft(emptyKeyDraft(sortedObservedScreens[0] ?? ""));
+      setKeyPanelMode("closed");
       setNotice("Key removed.");
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : "Could not delete this key.");
@@ -1165,6 +1200,7 @@ export function LiquidStudio({
       setSelectedTraitId(null);
       setTraitMode("create");
       setTraitDraft(emptyTraitDraft());
+      setTraitPanelMode("closed");
       setNotice("Trait removed.");
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : "Could not delete this trait.");
@@ -1227,6 +1263,7 @@ export function LiquidStudio({
       setProfileDraft(emptyProfileDraft());
       setTraitComposer(null);
       resetTraitDragState();
+      setProfilePanelMode("closed");
       setNotice("Profile removed.");
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : "Could not delete this profile.");
@@ -1282,6 +1319,7 @@ export function LiquidStudio({
       setSelectedVariantId(null);
       setVariantMode("create");
       setVariantDraft(buildVariantDraft(detail, activeProfileId));
+      setVariantPanelMode("closed");
       setNotice("Profile copy removed.");
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : "Could not delete this profile copy.");
@@ -1385,109 +1423,97 @@ export function LiquidStudio({
     setProfileDraft((current) => ({ ...current, traits: current.traits.filter((_, itemIndex) => itemIndex !== index) }));
   }
 
-  async function persistKeyEditor() {
-    if (!isKeyDraftDirty()) return true;
-    return saveKey();
-  }
-
-  async function persistTraitEditor() {
-    if (!isTraitDraftDirty()) return true;
-    return saveTrait();
-  }
-
-  async function persistProfileEditor() {
-    let nextDraft = profileDraft;
-    if (traitComposer) {
-      const composed = saveTraitComposer();
-      if (composed === false) return false;
-      nextDraft = composed;
-    }
-    if (!isProfileDraftDirty(nextDraft)) return true;
-    return saveProfile(nextDraft);
-  }
-
-  async function persistVariantEditor() {
-    const normalized = normalizeVariantDraftValue(variantDraft);
-    if (variantMode === "create" && !variantDraft.id) {
-      if (!isCompleteVariantDraft(variantDraft)) {
-        resetVariantEditor();
-        clearMessages();
-        return true;
-      }
-    }
-    if (!isVariantDraftDirty()) return true;
-    if (!normalized.keyId || !normalized.profileId || !normalized.text.trim()) {
-      if (variantMode === "edit" && variantDraft.id) {
-        setVariantDraft(variantDraftBaseline);
-      } else {
-        resetVariantEditor();
-      }
-      clearMessages();
-      return true;
-    }
-    return saveVariant();
-  }
-
-  async function persistActiveWorkspace() {
-    if (activeTab === "keys") return persistKeyEditor();
-    if (activeTab === "rules") {
-      if (rulesTab === "traits") return persistTraitEditor();
-      if (rulesTab === "profiles") return persistProfileEditor();
-      if (rulesTab === "variants") return persistVariantEditor();
-    }
-    return true;
-  }
-
   async function requestActiveTabChange(nextTab: LiquidTab) {
     if (nextTab === activeTab) return;
-    const didPersist = await persistActiveWorkspace();
-    if (!didPersist) return;
     startTransition(() => setActiveTab(nextTab));
   }
 
-  async function requestRulesTabChange(nextTab: RulesTab) {
-    if (nextTab === rulesTab) return;
-    const didPersist = await persistActiveWorkspace();
-    if (!didPersist) return;
+  async function requestOpenKeyPanel(nextPanel: Exclude<EntityPanelMode, "closed">, keyId: string | null = null) {
+    clearMessages();
+    if (nextPanel === "create") selectKey(null, "create");
+    else selectKey(keyId, "edit");
+    setKeyPanelMode(nextPanel);
+  }
+
+  async function requestOpenTraitPanel(nextPanel: Exclude<EntityPanelMode, "closed">, traitId: string | null = null) {
+    clearMessages();
+    if (nextPanel === "create") selectTrait(null);
+    else selectTrait(traitId);
+    setTraitPanelMode(nextPanel);
+  }
+
+  async function requestOpenProfilePanel(nextPanel: Exclude<EntityPanelMode, "closed">, profileId: string | null = null) {
+    clearMessages();
+    if (nextPanel === "create") selectProfile(null);
+    else selectProfile(profileId);
+    setProfilePanelMode(nextPanel);
+  }
+
+  async function requestOpenVariantPanel(
+    nextPanel: Exclude<EntityPanelMode, "closed">,
+    keyId: string | null = activeKeyId ?? keys[0]?.id ?? null,
+    profileId: string | null = activeProfileId ?? profiles[0]?.id ?? null,
+    variantId: string | null = null,
+  ) {
+    clearMessages();
+    selectVariant(keyId, profileId, nextPanel === "create" ? null : variantId);
+    setVariantPanelMode(nextPanel);
+  }
+
+  async function requestCloseKeyPanel() {
+    setSelectedKeyId(null);
+    setKeyMode("edit");
+    setKeyDraft(emptyKeyDraft(sortedObservedScreens[0] ?? ""));
+    setKeyPanelMode("closed");
+    clearMessages();
+  }
+
+  async function requestCloseProfilePanel() {
+    closeProfileEditor();
+    setProfilePanelMode("closed");
+    clearMessages();
+  }
+
+  async function requestCloseTraitPanel() {
+    setSelectedTraitId(null);
+    setTraitMode("create");
+    setTraitDraft(emptyTraitDraft());
+    setTraitPanelMode("closed");
+    clearMessages();
+  }
+
+  async function requestCloseVariantPanel() {
+    resetVariantEditor();
+    setVariantPanelMode("closed");
+    clearMessages();
+  }
+
+  async function requestRulesTabChange(nextTab: "profiles" | "traits" | "variants") {
     setRulesTab(nextTab);
   }
 
   async function requestSelectKey(keyId: string | null, nextMode: "create" | "edit" = "edit") {
-    const didPersist = await persistKeyEditor();
-    if (!didPersist) return;
-    selectKey(keyId, nextMode);
+    return requestOpenKeyPanel(nextMode === "create" ? "create" : "edit", keyId);
   }
 
   async function requestSelectTrait(traitId: string | null) {
-    const didPersist = await persistTraitEditor();
-    if (!didPersist) return;
-    selectTrait(traitId);
+    return requestOpenTraitPanel(traitId ? "edit" : "create", traitId);
   }
 
   async function requestSelectProfile(profileId: string | null) {
-    const didPersist = await persistProfileEditor();
-    if (!didPersist) return;
-    selectProfile(profileId);
+    return requestOpenProfilePanel(profileId ? "edit" : "create", profileId);
   }
 
   async function requestSelectVariant(keyId: string | null, profileId: string | null, variantId: string | null = null) {
-    const didPersist = await persistVariantEditor();
-    if (!didPersist) return;
-    selectVariant(keyId, profileId, variantId);
+    return requestOpenVariantPanel(variantId ? "edit" : "create", keyId, profileId, variantId);
   }
 
   async function requestCloseKeyEditor() {
-    const didPersist = await persistKeyEditor();
-    if (!didPersist) return;
-    setSelectedKeyId(null);
-    setKeyMode("edit");
-    setKeyDraft(emptyKeyDraft(sortedObservedScreens[0] ?? ""));
+    return requestCloseKeyPanel();
   }
 
   async function requestCloseProfileEditor() {
-    const didPersist = await persistProfileEditor();
-    if (!didPersist) return;
-    closeProfileEditor();
+    return requestCloseProfilePanel();
   }
 
   function draftProfileVariantRows() {
@@ -2496,36 +2522,846 @@ export function LiquidStudio({
     return null;
   }
 
-  return (
-    <div className="liquid-ops-shell">
-      <div className="liquid-ops-main">
-        <div className="liquid-ops-tabs">
-          {TABS.map((tab) => (
-            <button key={tab.id} type="button" className={activeTab === tab.id ? "active" : ""} onClick={() => void requestActiveTabChange(tab.id)}>
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        {notice ? <div className="liquid-ops-banner success">{notice}</div> : null}
-        {error ? <div className="liquid-ops-banner error">{error}</div> : null}
-        {activeTab === "staging" ? (
-          <div className="liquid-ops-editor-zone">
-            <div className="liquid-ops-editor-head">
-              <span>Selected staging context</span>
+  function renderOverview() {
+    return (
+      <section className="liquid-ops-overview">
+        <div className="liquid-ops-overview-copy">
+          <div className="liquid-ops-overview-kicker">Liquid workspace</div>
+          <div className="liquid-ops-overview-title-row">
+            <div>
+              <h2 className="page-title">Personalization without losing the default path.</h2>
               <p className="panel-copy">
-                Review the selected key and decide whether it should stay draft or move live.
+                Liquid now sits inside the same Pollex system: quieter chrome, clearer state, and one place to manage
+                fallback copy, rules, staging, and runtime signal.
               </p>
             </div>
-            {renderInspector()}
+            <div className="liquid-ops-overview-focus">
+              <span>Current focus</span>
+              <strong>{selectedTabLabel}</strong>
+              <p>{TAB_DESCRIPTIONS[activeTab]}</p>
+            </div>
           </div>
-        ) : null}
+        </div>
 
-        {activeTab === "keys" ? renderKeysTab() : null}
-        {activeTab === "rules" ? renderRulesTab() : null}
-        {activeTab === "staging" ? renderStagingTab() : null}
-        {activeTab === "analytics" ? renderAnalyticsTab() : null}
+        <div className="liquid-ops-overview-metrics">
+          <div className="liquid-ops-overview-metric">
+            <span>Observed screens</span>
+            <strong>{formatNumber(integrationStatus.observedScreensCount)}</strong>
+            <p>Real product surfaces available for copy mapping.</p>
+          </div>
+          <div className="liquid-ops-overview-metric">
+            <span>Live keys</span>
+            <strong>{formatNumber(liveKeyCount)}</strong>
+            <p>Keys currently shipping beyond draft state.</p>
+          </div>
+          <div className="liquid-ops-overview-metric">
+            <span>Ready profiles</span>
+            <strong>{formatNumber(readyProfileCount)}</strong>
+            <p>Saved audiences already safe for live traffic.</p>
+          </div>
+          <div className="liquid-ops-overview-metric">
+            <span>Profile variants</span>
+            <strong>{formatNumber(variantCount)}</strong>
+            <p>Audience-specific copy branches prepared in draft.</p>
+          </div>
+        </div>
+
+        <div className="liquid-ops-overview-rail">
+          <div className="liquid-ops-overview-status">
+            <span>Personalized traffic</span>
+            <strong>{formatPercent(integrationStatus.personalizedTrafficShare)}</strong>
+          </div>
+          <div className="liquid-ops-overview-status">
+            <span>Fallback-only live keys</span>
+            <strong>{formatNumber(integrationStatus.fallbackOnlyKeyCount)}</strong>
+          </div>
+          <div className="liquid-ops-overview-status">
+            <span>Trait coverage</span>
+            <strong>
+              {formatPercent(integrationStatus.appTraitCoverage)} app / {formatPercent(integrationStatus.computedTraitCoverage)} Pollex
+            </strong>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  function PollexIcon({ icon }: { icon: "key" | "profile" | "variant" | "trait" | "staging" | "insight" | "add" | "edit" | "delete" | "close" | "preview" | "publish" }) {
+    const props = { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.8, strokeLinecap: "round" as const, strokeLinejoin: "round" as const, "aria-hidden": true };
+    if (icon === "key") return <svg {...props}><circle cx="8.5" cy="12" r="3.2" /><path d="M11.7 12h7.3" /><path d="M16 12v2" /><path d="M18.8 12v1.6" /></svg>;
+    if (icon === "profile") return <svg {...props}><circle cx="12" cy="8" r="3.2" /><path d="M5.5 18.5c1.8-3 4.1-4.5 6.5-4.5s4.7 1.5 6.5 4.5" /></svg>;
+    if (icon === "variant") return <svg {...props}><path d="M7 5v7c0 2.6 2.4 4 5 4h5" /><path d="M7 5h5" /><path d="M14 16h5" /><path d="M16.5 8.5 19 6l2.5 2.5" /></svg>;
+    if (icon === "trait") return <svg {...props}><circle cx="6" cy="12" r="2" /><circle cx="18" cy="7" r="2" /><circle cx="18" cy="17" r="2" /><path d="M8 12h5" /><path d="M13 12l3-3" /><path d="M13 12l3 3" /></svg>;
+    if (icon === "staging") return <svg {...props}><path d="M12 4v11" /><path d="m8 8 4-4 4 4" /><rect x="5" y="16" width="14" height="4" rx="1.5" /></svg>;
+    if (icon === "insight") return <svg {...props}><path d="M5 18h14" /><path d="M8 18v-5" /><path d="M12 18V8" /><path d="M16 18v-8" /></svg>;
+    if (icon === "add") return <svg {...props}><path d="M12 5v14" /><path d="M5 12h14" /></svg>;
+    if (icon === "edit") return <svg {...props}><path d="m4 20 4.5-1 9-9a2.1 2.1 0 0 0-3-3l-9 9L4 20Z" /><path d="m13.5 7.5 3 3" /></svg>;
+    if (icon === "delete") return <svg {...props}><path d="M5 7h14" /><path d="M9 7V5.8c0-.7.6-1.3 1.3-1.3h3.4c.7 0 1.3.6 1.3 1.3V7" /><path d="M8 9.5v8" /><path d="M12 9.5v8" /><path d="M16 9.5v8" /></svg>;
+    if (icon === "close") return <svg {...props}><path d="m6 6 12 12" /><path d="M18 6 6 18" /></svg>;
+    if (icon === "preview") return <svg {...props}><path d="M2.5 12s3.6-5.5 9.5-5.5S21.5 12 21.5 12 17.9 17.5 12 17.5 2.5 12 2.5 12Z" /><circle cx="12" cy="12" r="2.7" /></svg>;
+    return <svg {...props}><path d="M12 20V8" /><path d="m7.5 12 4.5-4.5 4.5 4.5" /><path d="M5 4.5h14" /></svg>;
+  }
+
+  function PollexIconButton({
+    icon,
+    label,
+    onClick,
+    tone = "default",
+    disabled = false,
+  }: {
+    icon: "edit" | "delete" | "close" | "preview" | "publish";
+    label: string;
+    onClick: () => void;
+    tone?: "default" | "danger";
+    disabled?: boolean;
+  }) {
+    return (
+      <button type="button" className={`liquid-pollex-icon-button ${tone === "danger" ? "is-danger" : ""}`.trim()} onClick={onClick} aria-label={label} title={label} disabled={disabled}>
+        <PollexIcon icon={icon} />
+      </button>
+    );
+  }
+
+  function PollexCommand({
+    icon,
+    label,
+    onClick,
+    disabled = false,
+  }: {
+    icon: "add" | "preview";
+    label: string;
+    onClick: () => void;
+    disabled?: boolean;
+  }) {
+    return (
+      <button type="button" className="liquid-pollex-command" onClick={onClick} disabled={disabled}>
+        <span className="liquid-pollex-command-glyph"><PollexIcon icon={icon} /></span>
+        <span>{label}</span>
+      </button>
+    );
+  }
+
+  function renderPollexTraitBuilder() {
+    return (
+      <div className="liquid-pollex-trait-builder">
+        {profileDraft.traits.map((row, index) => {
+          const trait = traitDefinitionByKey.get(row.traitKey) ?? null;
+          return (
+            <div key={`pollex-profile-${index}`} className="liquid-pollex-trait-builder-row">
+              <div className="liquid-pollex-trait-chip">
+                <strong>{trait?.label ?? row.traitKey}</strong>
+                <span>{TRAIT_VALUE_TYPES.find((item) => item.value === (trait?.valueType ?? row.valueType))?.label ?? row.valueType}</span>
+              </div>
+              <ProfileTraitValueInput row={row} trait={trait} onChange={(patch) => updateProfileTrait(index, patch)} />
+              <button className="btn btn-ghost btn-sm" type="button" onClick={() => removeProfileTraitRow(index)}>Remove</button>
+            </div>
+          );
+        })}
       </div>
+    );
+  }
+
+  function renderPollexTraitComposer() {
+    if (!traitComposer) return null;
+    const trait = traitDefinitionByKey.get(traitComposer.traitKey) ?? null;
+    if (!trait) return null;
+    const targetLabel =
+      traitComposer.targetProfileId === "create"
+        ? profileDraft.name.trim() || "new profile"
+        : profiles.find((profile) => profile.id === traitComposer.targetProfileId)?.name ?? "selected profile";
+    return (
+      <div className="liquid-pollex-composer">
+        <div className="liquid-pollex-composer-head">
+          <div>
+            <strong>{traitComposer.replaceIndex != null ? "Update trait" : "Add trait"}</strong>
+            <span>{trait.label} for {targetLabel}</span>
+          </div>
+          <Tag>{TRAIT_VALUE_TYPES.find((item) => item.value === trait.valueType)?.label ?? trait.valueType}</Tag>
+        </div>
+        <ProfileTraitValueInput row={traitComposer.row} trait={trait} onChange={(patch) => setTraitComposer((current) => (current ? { ...current, row: { ...current.row, ...patch } } : current))} />
+        <div className="liquid-pollex-sheet-actions">
+          <button className="btn btn-primary btn-sm" type="button" onClick={() => void saveTraitComposer()}>Apply</button>
+          <button className="btn btn-ghost btn-sm" type="button" onClick={cancelTraitComposer}>Cancel</button>
+        </div>
+      </div>
+    );
+  }
+
+  const RenderPollexSheet = useMemo(
+    () =>
+      function RenderPollexSheet({
+        title,
+        icon,
+        onClose,
+        children,
+        danger = false,
+      }: {
+        title: string;
+        icon: "key" | "profile" | "variant" | "trait" | "staging";
+        onClose: () => void;
+        children: ReactNode;
+        danger?: boolean;
+      }) {
+        return (
+          <aside className={`liquid-pollex-sheet ${danger ? "is-danger" : ""}`.trim()}>
+            <div className="liquid-pollex-sheet-head">
+              <div className="liquid-pollex-sheet-title">
+                <span className="liquid-pollex-sheet-icon"><PollexIcon icon={icon} /></span>
+                <strong>{title}</strong>
+              </div>
+              <PollexIconButton icon="close" label="Close panel" onClick={onClose} />
+            </div>
+            {children}
+          </aside>
+        );
+      },
+    [],
+  );
+
+  function renderPollexField({
+    label,
+    children,
+    wide = false,
+  }: {
+    label: string;
+    children: ReactNode;
+    wide?: boolean;
+  }) {
+    return (
+      <label className={`liquid-pollex-field ${wide ? "is-wide" : ""}`.trim()}>
+        <span>{label}</span>
+        {children}
+      </label>
+    );
+  }
+
+  function renderPollexToggle(checked: boolean, onToggle: () => void, activeLabel = "Active", inactiveLabel = "Paused") {
+    return (
+      <div className="liquid-pollex-toggle">
+        <button type="button" className={`liquid-pollex-switch ${checked ? "is-on" : ""}`.trim()} onClick={onToggle} aria-pressed={checked}>
+          <span />
+        </button>
+        <strong>{checked ? activeLabel : inactiveLabel}</strong>
+      </div>
+    );
+  }
+
+  function renderPollexKeySheet() {
+    if (keyPanelMode === "closed") return null;
+    if (keyPanelMode === "delete") {
+      return (
+        <div className="liquid-pollex-sheet-rail">
+          <RenderPollexSheet title="Delete Key" icon="key" onClose={() => void requestCloseKeyPanel()} danger>
+            <div className="liquid-pollex-delete-copy">
+              <p>Are you sure you want to delete “{keyDraft.key || "this key"}”? This action cannot be reversed.</p>
+            </div>
+            <div className="liquid-pollex-sheet-actions">
+              <button className="btn btn-ghost btn-sm" type="button" onClick={() => setKeyPanelMode("edit")}>Back</button>
+              <button className="btn btn-primary btn-sm liquid-pollex-danger-button" type="button" onClick={() => void deleteKey()} disabled={busy === "key-delete"}>Delete</button>
+            </div>
+          </RenderPollexSheet>
+        </div>
+      );
+    }
+    return (
+      <div className="liquid-pollex-sheet-rail">
+        <RenderPollexSheet title={keyPanelMode === "create" ? "Create Key" : "Edit Key"} icon="key" onClose={() => void requestCloseKeyPanel()}>
+          <div className="liquid-pollex-form-grid">
+            {renderPollexField({ label: "Key Name", children: <input className="liquid-ops-input" value={keyDraft.key} onChange={(event) => setKeyDraft((current) => ({ ...current, key: event.target.value }))} placeholder="hello_message" /> })}
+            {renderPollexField({ label: "Screen", children: <LiquidSelect value={keyDraft.screenKey} options={observedScreenOptions} placeholder="Choose screen" onChange={(nextValue) => setKeyDraft((current) => ({ ...current, screenKey: nextValue }))} /> })}
+            {renderPollexField({ label: "Default Text", wide: true, children: <textarea className="liquid-ops-input liquid-ops-textarea" value={keyDraft.defaultText} onChange={(event) => setKeyDraft((current) => ({ ...current, defaultText: event.target.value }))} placeholder="Hello, welcome to Pollex!" /> })}
+            {renderPollexField({ label: "Locale", children: <input className="liquid-ops-input" value={keyDraft.locale} onChange={(event) => setKeyDraft((current) => ({ ...current, locale: event.target.value }))} placeholder="en" /> })}
+            {renderPollexField({ label: "Status", children: renderPollexToggle(keyDraft.enabled, () => setKeyDraft((current) => ({ ...current, enabled: !current.enabled })), "Live ready", "Paused") })}
+          </div>
+          <div className="liquid-pollex-sheet-actions">
+            {keyPanelMode === "edit" ? <button className="btn btn-ghost btn-sm" type="button" onClick={() => setKeyPanelMode("delete")}>Delete</button> : null}
+            <button className="btn btn-ghost btn-sm" type="button" onClick={() => void requestCloseKeyPanel()}>Close</button>
+            <button className="btn btn-primary btn-sm" type="button" onClick={() => void saveKey()} disabled={busy === "key"}>{keyPanelMode === "create" ? "Create key" : "Save key"}</button>
+          </div>
+        </RenderPollexSheet>
+      </div>
+    );
+  }
+
+  function renderPollexProfileSheet() {
+    if (profilePanelMode === "closed") return null;
+    if (profilePanelMode === "delete") {
+      return (
+        <div className="liquid-pollex-sheet-rail">
+          <RenderPollexSheet title="Delete Profile" icon="profile" onClose={() => void requestCloseProfilePanel()} danger>
+            <div className="liquid-pollex-delete-copy">
+              <p>Delete “{profileDraft.name || "this profile"}”? Any profile-specific variants that depend on it will lose their audience anchor.</p>
+            </div>
+            <div className="liquid-pollex-sheet-actions">
+              <button className="btn btn-ghost btn-sm" type="button" onClick={() => setProfilePanelMode("edit")}>Back</button>
+              <button className="btn btn-primary btn-sm liquid-pollex-danger-button" type="button" onClick={() => void deleteProfile()} disabled={busy === "profile-delete"}>Delete</button>
+            </div>
+          </RenderPollexSheet>
+        </div>
+      );
+    }
+    return (
+      <div className="liquid-pollex-sheet-rail">
+        <RenderPollexSheet title={profilePanelMode === "create" ? "Create Profile" : "Edit Profile"} icon="profile" onClose={() => void requestCloseProfilePanel()}>
+          <div className="liquid-pollex-form-grid">
+            {renderPollexField({ label: "Profile Name", children: <input className="liquid-ops-input" value={profileDraft.name} onChange={(event) => setProfileDraft((current) => ({ ...current, name: event.target.value }))} placeholder="Power users" /> })}
+            {renderPollexField({ label: "Profile Key", children: <input className="liquid-ops-input" value={profileDraft.profileKey} onChange={(event) => setProfileDraft((current) => ({ ...current, profileKey: event.target.value }))} placeholder="power_users" /> })}
+            {renderPollexField({ label: "Description", wide: true, children: <textarea className="liquid-ops-input liquid-ops-textarea" value={profileDraft.description} onChange={(event) => setProfileDraft((current) => ({ ...current, description: event.target.value }))} placeholder="High-intent repeat visitors ready for tailored onboarding." /> })}
+            {renderPollexField({ label: "Status", children: renderPollexToggle(profileDraft.enabled, () => setProfileDraft((current) => ({ ...current, enabled: !current.enabled }))) })}
+          </div>
+          <div className="liquid-pollex-subsection">
+            <div className="liquid-pollex-subsection-head">
+              <strong>Traits</strong>
+              <span>{profileDraft.traits.length} attached</span>
+            </div>
+            {renderPollexTraitBuilder()}
+            {profileDraft.traits.length === 0 ? <div className="liquid-pollex-inline-callout">Drag a trait pill onto a profile card, or add one from the library below.</div> : null}
+            {renderPollexTraitComposer()}
+          </div>
+          <div className="liquid-pollex-sheet-actions">
+            {profilePanelMode === "edit" ? <button className="btn btn-ghost btn-sm" type="button" onClick={() => setProfilePanelMode("delete")}>Delete</button> : null}
+            <button className="btn btn-ghost btn-sm" type="button" onClick={() => void requestCloseProfilePanel()}>Close</button>
+            <button className="btn btn-primary btn-sm" type="button" onClick={() => void saveProfile()} disabled={busy === "profile"}>{profilePanelMode === "create" ? "Create profile" : "Save profile"}</button>
+          </div>
+        </RenderPollexSheet>
+      </div>
+    );
+  }
+
+  function renderPollexTraitSheet() {
+    if (traitPanelMode === "closed") return null;
+    if (traitPanelMode === "delete") {
+      return (
+        <div className="liquid-pollex-sheet-rail">
+          <RenderPollexSheet title="Delete Trait" icon="trait" onClose={() => void requestCloseTraitPanel()} danger>
+            <div className="liquid-pollex-delete-copy">
+              <p>Delete “{traitDraft.label || traitDraft.traitKey || "this trait"}”? Profiles using it will need to be updated.</p>
+            </div>
+            <div className="liquid-pollex-sheet-actions">
+              <button className="btn btn-ghost btn-sm" type="button" onClick={() => setTraitPanelMode("edit")}>Back</button>
+              <button className="btn btn-primary btn-sm liquid-pollex-danger-button" type="button" onClick={() => void deleteTrait()} disabled={busy === "trait-delete"}>Delete</button>
+            </div>
+          </RenderPollexSheet>
+        </div>
+      );
+    }
+    return (
+      <div className="liquid-pollex-sheet-rail">
+        <RenderPollexSheet title={traitPanelMode === "create" ? "Create Trait" : "Edit Trait"} icon="trait" onClose={() => void requestCloseTraitPanel()}>
+          <div className="liquid-pollex-form-grid">
+            {renderPollexField({ label: "Label", children: <input className="liquid-ops-input" value={traitDraft.label} onChange={(event) => setTraitDraft((current) => ({ ...current, label: event.target.value }))} placeholder="Plan tier" /> })}
+            {renderPollexField({ label: "Trait Key", children: <input className="liquid-ops-input" value={traitDraft.traitKey} onChange={(event) => setTraitDraft((current) => ({ ...current, traitKey: event.target.value }))} placeholder="plan_tier" /> })}
+            {renderPollexField({ label: "Value Type", children: <LiquidSelect value={traitDraft.valueType} options={TRAIT_VALUE_TYPES.map((type) => ({ value: type.value, label: type.label }))} onChange={(nextValue) => setTraitDraft((current) => ({ ...current, valueType: nextValue as TraitDraft["valueType"] }))} /> })}
+            {renderPollexField({ label: "Source", children: <LiquidSelect value={traitDraft.sourceType} options={TRAIT_SOURCE_OPTIONS.map((type) => ({ value: type.value, label: type.label }))} onChange={(nextValue) => setTraitDraft((current) => ({ ...current, sourceType: nextValue as TraitDraft["sourceType"] }))} /> })}
+            {renderPollexField({ label: "Source Key", wide: true, children: <input className="liquid-ops-input" value={traitDraft.sourceKey} onChange={(event) => setTraitDraft((current) => ({ ...current, sourceKey: event.target.value }))} placeholder="user.plan or account.region" /> })}
+            {renderPollexField({ label: "Description", wide: true, children: <textarea className="liquid-ops-input liquid-ops-textarea" value={traitDraft.description} onChange={(event) => setTraitDraft((current) => ({ ...current, description: event.target.value }))} placeholder="Reusable audience signal used across multiple experiences." /> })}
+            {renderPollexField({ label: "Example Values", wide: true, children: <input className="liquid-ops-input" value={traitDraft.exampleValues} onChange={(event) => setTraitDraft((current) => ({ ...current, exampleValues: event.target.value }))} placeholder="free, pro, enterprise" /> })}
+          </div>
+          <div className="liquid-pollex-sheet-actions">
+            {traitPanelMode === "edit" && traitDraft.sourceType !== "maze_computed" ? <button className="btn btn-ghost btn-sm" type="button" onClick={() => setTraitPanelMode("delete")}>Delete</button> : null}
+            <button className="btn btn-ghost btn-sm" type="button" onClick={() => void requestCloseTraitPanel()}>Close</button>
+            <button className="btn btn-primary btn-sm" type="button" onClick={() => void saveTrait()} disabled={busy === "trait"}>{traitPanelMode === "create" ? "Create trait" : "Save trait"}</button>
+          </div>
+        </RenderPollexSheet>
+      </div>
+    );
+  }
+
+  function renderPollexVariantSheet() {
+    if (variantPanelMode === "closed") return null;
+    if (variantPanelMode === "delete") {
+      return (
+        <div className="liquid-pollex-sheet-rail">
+          <RenderPollexSheet title="Delete Variant" icon="variant" onClose={() => void requestCloseVariantPanel()} danger>
+            <div className="liquid-pollex-delete-copy">
+              <p>Delete this profile-specific branch? The key will fall back to its default copy for that audience.</p>
+            </div>
+            <div className="liquid-pollex-sheet-actions">
+              <button className="btn btn-ghost btn-sm" type="button" onClick={() => setVariantPanelMode("edit")}>Back</button>
+              <button className="btn btn-primary btn-sm liquid-pollex-danger-button" type="button" onClick={() => void deleteVariant()} disabled={busy === "variant-delete"}>Delete</button>
+            </div>
+          </RenderPollexSheet>
+        </div>
+      );
+    }
+    return (
+      <div className="liquid-pollex-sheet-rail">
+        <RenderPollexSheet title={variantPanelMode === "create" ? "Create Variant" : "Edit Variant"} icon="variant" onClose={() => void requestCloseVariantPanel()}>
+          <div className="liquid-pollex-form-grid">
+            {renderPollexField({ label: "Key", children: <LiquidSelect value={variantDraft.keyId} options={keyOptions} placeholder="Choose key" onChange={(nextValue) => setVariantDraft((current) => ({ ...current, keyId: nextValue, locale: detailsById[nextValue]?.defaultLocale ?? current.locale }))} /> })}
+            {renderPollexField({ label: "Profile", children: <LiquidSelect value={variantDraft.profileId} options={profileOptions} placeholder="Choose profile" onChange={(nextValue) => setVariantDraft((current) => ({ ...current, profileId: nextValue }))} /> })}
+            {renderPollexField({ label: "Locale", children: <input className="liquid-ops-input" value={variantDraft.locale} onChange={(event) => setVariantDraft((current) => ({ ...current, locale: event.target.value }))} placeholder="en" /> })}
+            {renderPollexField({ label: "Status", children: renderPollexToggle(variantDraft.enabled, () => setVariantDraft((current) => ({ ...current, enabled: !current.enabled })), "Draft ready", "Paused") })}
+            {renderPollexField({ label: "Resolved Text", wide: true, children: <textarea className="liquid-ops-input liquid-ops-textarea" value={variantDraft.text} onChange={(event) => setVariantDraft((current) => ({ ...current, text: event.target.value }))} placeholder="Continue with Pro setup" /> })}
+          </div>
+          <div className="liquid-pollex-sheet-actions">
+            {variantPanelMode === "edit" ? <button className="btn btn-ghost btn-sm" type="button" onClick={() => setVariantPanelMode("delete")}>Delete</button> : null}
+            <button className="btn btn-ghost btn-sm" type="button" onClick={() => void requestCloseVariantPanel()}>Close</button>
+            <button className="btn btn-primary btn-sm" type="button" onClick={() => void saveVariant()} disabled={busy === "variant"}>{variantPanelMode === "create" ? "Create variant" : "Save variant"}</button>
+          </div>
+        </RenderPollexSheet>
+      </div>
+    );
+  }
+
+  function renderPollexStagingSheet() {
+    if (activeTab !== "staging" || !selectedKeyDetail) return null;
+    const previewMatchesSelection = previewState.detail?.id === selectedKeyDetail.id;
+    return (
+      <div className="liquid-pollex-sheet-rail">
+        <RenderPollexSheet title="Staging Context" icon="staging" onClose={() => setSelectedKeyId(null)}>
+          <div className="liquid-pollex-sheet-metrics">
+            <div><span>Key</span><strong>{selectedKeyDetail.key}</strong></div>
+            <div><span>State</span><strong>{keyState(selectedKeyDetail)}</strong></div>
+            <div><span>Live Revision</span><strong>{selectedKeyDetail.publishedRevision}</strong></div>
+            <div><span>Last Publish</span><strong>{formatDate(selectedKeyDetail.publishedAt)}</strong></div>
+          </div>
+          <div className="liquid-pollex-inline-callout">
+            {selectedKeyDetail.readiness?.blockingIssues?.[0] ?? "This key is ready for a draft-to-live decision."}
+          </div>
+          <div className="liquid-pollex-sheet-actions">
+            <button className="btn btn-ghost btn-sm" type="button" onClick={() => void runPreview(selectedKeyDetail, selectedKeyDetail.variants.find((variant) => variant.stage === "draft" && variant.segmentId)?.segmentId ?? null)}>Run preview</button>
+            <button className="btn btn-primary btn-sm" type="button" onClick={() => void publishKey(selectedKeyDetail.id)} disabled={busy === `publish-${selectedKeyDetail.id}`}>Push live</button>
+            <button className="btn btn-ghost btn-sm" type="button" onClick={() => void demoteKey(selectedKeyDetail.id)} disabled={selectedKeyDetail.publishedRevision === 0 || busy === `demote-${selectedKeyDetail.id}`}>Demote</button>
+          </div>
+          {previewMatchesSelection && previewState.error ? <div className="liquid-pollex-inline-callout is-danger">{previewState.error}</div> : null}
+          {previewMatchesSelection && previewState.result ? (
+            <div className="liquid-pollex-sheet-metrics">
+              <div><span>Matched Profiles</span><strong>{previewState.result.diagnostics.matchedProfileCount}</strong></div>
+              <div><span>Fallback Items</span><strong>{previewState.result.diagnostics.fallbackItemCount}</strong></div>
+              <div><span>Missing Traits</span><strong>{previewState.result.diagnostics.missingTraits.length}</strong></div>
+            </div>
+          ) : null}
+        </RenderPollexSheet>
+      </div>
+    );
+  }
+
+  function renderPollexTabs() {
+    return (
+      <div className="pollex-tabbar liquid-pollex-tabs" role="tablist" aria-label="Liquid views">
+        {TABS.map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            className={`pollex-tab ${activeTab === tab.id ? "active" : ""}`.trim()}
+            onClick={() => void requestActiveTabChange(tab.id)}
+          >
+            <PollexIcon icon={tab.icon} />
+            <span>{tab.label}</span>
+          </button>
+        ))}
+      </div>
+    );
+  }
+
+  function renderPollexFrame({
+    title,
+    subtitle,
+    action,
+    sheet,
+    children,
+  }: {
+    title: string;
+    subtitle?: string;
+    action?: ReactNode;
+    sheet?: ReactNode;
+    children: ReactNode;
+  }) {
+    return (
+      <section className="liquid-pollex-surface">
+        <div className="liquid-pollex-surface-head">
+          <div className="liquid-pollex-surface-copy">
+            <h2>{title}</h2>
+            {subtitle ? <p>{subtitle}</p> : null}
+          </div>
+          {action ? <div className="liquid-pollex-surface-action">{action}</div> : null}
+        </div>
+        <div className={`liquid-pollex-surface-layout ${sheet ? "has-sheet" : ""}`.trim()}>
+          <div className="liquid-pollex-surface-main">{children}</div>
+          {sheet}
+        </div>
+      </section>
+    );
+  }
+
+  function renderPollexEmpty(title: string, message: string) {
+    return (
+      <div className="liquid-pollex-empty">
+        <strong>{title}</strong>
+        <p>{message}</p>
+      </div>
+    );
+  }
+
+  function renderPollexKeysTab() {
+    const hasObservedScreens = sortedObservedScreens.length > 0;
+    return renderPollexFrame({
+      title: "Key Table",
+      subtitle: "Every user-facing copy surface starts here.",
+      action: <PollexCommand icon="add" label="Create Key" onClick={() => void requestOpenKeyPanel("create")} disabled={!hasObservedScreens} />,
+      sheet: renderPollexKeySheet(),
+      children: !hasObservedScreens ? (
+        renderPollexEmpty("Add records to start", "Liquid keys need at least one observed screen before they can be created.")
+      ) : filteredKeys.length === 0 ? (
+        renderPollexEmpty("Add records to start", "Create your first fallback string for a real screen. Variants can branch from it once profiles exist.")
+      ) : (
+        <div className="liquid-pollex-table-wrap">
+          <table className="data-table liquid-pollex-table">
+            <thead>
+              <tr>
+                <th>Key</th>
+                <th>Screen</th>
+                <th>Default Text</th>
+                <th>Locales</th>
+                <th>Readiness</th>
+                <th>State</th>
+                <th>Last Updated</th>
+                <th />
+              </tr>
+            </thead>
+            <tbody>
+              {filteredKeys.map((key) => {
+                const detail = detailsById[key.id] ?? null;
+                const state = keyState(detail);
+                return (
+                  <tr key={key.id} className={selectedKeyId === key.id && keyPanelMode !== "closed" ? "is-active" : ""}>
+                    <td><div className="liquid-pollex-cell"><strong>{key.key}</strong><span>{titleFromKey(key.key)}</span></div></td>
+                    <td>{getScreenKey(detail) || "Unassigned"}</td>
+                    <td className="liquid-pollex-copy-cell">{getDraftDefaultVariant(detail)?.content.text ?? "No fallback text yet"}</td>
+                    <td>{getLocaleCount(detail) || 1}</td>
+                    <td><Tag tone={readinessTone(key.readiness?.state)}>{readinessLabel(key.readiness?.state)}</Tag></td>
+                    <td><Tag tone={keyStateTone(state)}>{state}</Tag></td>
+                    <td>{formatDate(detail?.draftUpdatedAt ?? key.updatedAt)}</td>
+                    <td>
+                      <div className="liquid-pollex-row-actions">
+                        <PollexIconButton icon="edit" label="Edit key" onClick={() => void requestOpenKeyPanel("edit", key.id)} />
+                        <PollexIconButton icon="delete" label="Delete key" tone="danger" onClick={() => void requestOpenKeyPanel("delete", key.id)} />
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      ),
+    });
+  }
+
+  function renderPollexProfilesTab() {
+    return renderPollexFrame({
+      title: "Profiles",
+      subtitle: "Saved audiences should feel like browsing a cast, not parsing a spreadsheet.",
+      action: <PollexCommand icon="add" label="Create Profile" onClick={() => void requestOpenProfilePanel("create")} />,
+      sheet: renderPollexProfileSheet(),
+      children: (
+        <div className="liquid-pollex-stack">
+          <div className="liquid-pollex-library">
+            <div className="liquid-pollex-library-copy">
+              <strong>Trait Library</strong>
+              <span>Drag a pill onto a profile card to add it.</span>
+            </div>
+            <div className="liquid-pollex-pill-row">
+              {traits.map((trait) => (
+                <button
+                  key={trait.id}
+                  className={`liquid-pollex-trait-pill ${draggedTraitKey === trait.traitKey ? "is-dragging" : ""}`.trim()}
+                  type="button"
+                  draggable
+                  onDragStart={(event) => {
+                    event.dataTransfer.effectAllowed = "copy";
+                    event.dataTransfer.setData("text/plain", trait.traitKey);
+                    setDraggedTraitKey(trait.traitKey);
+                    clearMessages();
+                  }}
+                  onDragEnd={resetTraitDragState}
+                >
+                  <span>{trait.label}</span>
+                  <small>{traitSourceLabel(trait.sourceType)} · {TRAIT_VALUE_TYPES.find((item) => item.value === trait.valueType)?.label ?? trait.valueType}</small>
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="liquid-pollex-profile-grid">
+            {profiles.map((profile) => {
+              const isDropTarget = profileDropTarget === profile.id;
+              const variantTotal = profileVariantCount(profile.id);
+              return (
+                <article
+                  key={profile.id}
+                  className={`liquid-pollex-profile-card ${selectedProfileId === profile.id && profilePanelMode !== "closed" ? "is-selected" : ""} ${isDropTarget ? "is-drop-target" : ""}`.trim()}
+                  style={{ "--liquid-profile-accent": profileAccent(profile.id) } as CSSProperties}
+                  onDragOver={(event) => {
+                    if (!draggedTraitKey) return;
+                    event.preventDefault();
+                    setProfileDropTarget(profile.id);
+                  }}
+                  onDragLeave={(event) => {
+                    if (!event.currentTarget.contains(event.relatedTarget as Node | null) && profileDropTarget === profile.id) setProfileDropTarget(null);
+                  }}
+                  onDrop={(event) => {
+                    event.preventDefault();
+                    const traitKey = event.dataTransfer.getData("text/plain") || draggedTraitKey;
+                    if (traitKey) openTraitComposerForTarget(profile.id, traitKey);
+                  }}
+                >
+                  <div className="liquid-pollex-profile-accent" aria-hidden="true" />
+                  <div className="liquid-pollex-profile-card-head">
+                    <div className="liquid-pollex-cell"><strong>{profile.name}</strong><span>{profile.profileKey}</span></div>
+                    <Tag tone={readinessTone(profile.readiness?.state)}>{readinessLabel(profile.readiness?.state)}</Tag>
+                  </div>
+                  <p>{profile.description || "No description yet."}</p>
+                  <div className="liquid-pollex-profile-facts">
+                    <div><span>Traits</span><strong>{profile.traits.length}</strong></div>
+                    <div><span>Variants</span><strong>{variantTotal}</strong></div>
+                    <div><span>Updated</span><strong>{formatDate(profile.updatedAt)}</strong></div>
+                  </div>
+                  <div className="liquid-pollex-pill-row">
+                    {profile.traits.slice(0, 3).map((trait) => <Tag key={`${profile.id}-${trait.traitKey}`}>{trait.label}: {formatProfileTraitDisplayValue(trait)}</Tag>)}
+                    {profile.traits.length > 3 ? <Tag>+{profile.traits.length - 3} more</Tag> : null}
+                  </div>
+                  {profile.readiness?.blockingIssues?.[0] ? <div className="liquid-pollex-inline-callout">{profile.readiness.blockingIssues[0]}</div> : null}
+                  <div className="liquid-pollex-row-actions">
+                    <PollexIconButton icon="edit" label="Edit profile" onClick={() => void requestOpenProfilePanel("edit", profile.id)} />
+                    <PollexIconButton icon="delete" label="Delete profile" tone="danger" onClick={() => void requestOpenProfilePanel("delete", profile.id)} />
+                  </div>
+                </article>
+              );
+            })}
+            {profiles.length === 0 ? renderPollexEmpty("Add records to start", "Create a reusable audience so Liquid can branch copy with clearer intent.") : null}
+          </div>
+        </div>
+      ),
+    });
+  }
+
+  function renderPollexTraitsTab() {
+    const traitUsageCount = (traitKey: string) => profiles.reduce((count, profile) => count + profile.traits.filter((trait) => trait.traitKey === traitKey).length, 0);
+    return renderPollexFrame({
+      title: "Traits",
+      subtitle: "Traits keep their pill language in use, but are defined here as cards with source and coverage context.",
+      action: <PollexCommand icon="add" label="Create Trait" onClick={() => void requestOpenTraitPanel("create")} />,
+      sheet: renderPollexTraitSheet(),
+      children: (
+        <div className="liquid-pollex-trait-grid">
+          {traits.map((trait) => (
+            <article key={trait.id} className={`liquid-pollex-trait-card ${selectedTraitId === trait.id && traitPanelMode !== "closed" ? "is-selected" : ""}`.trim()}>
+              <div className="liquid-pollex-trait-card-head">
+                <div className="liquid-pollex-cell"><strong>{trait.label}</strong><span>{trait.traitKey}</span></div>
+                {isSystemTrait(trait) ? <Tag tone="accent">System</Tag> : <Tag tone={trait.enabled ? "green" : "amber"}>{trait.enabled ? "Active" : "Paused"}</Tag>}
+              </div>
+              <p>{trait.description || "No description yet."}</p>
+              <div className="liquid-pollex-pill-row">
+                <Tag>{traitSourceLabel(trait.sourceType)}</Tag>
+                <Tag>{TRAIT_VALUE_TYPES.find((item) => item.value === trait.valueType)?.label ?? trait.valueType}</Tag>
+                <Tag tone={readinessTone(trait.liveEligible ? (trait.coveragePercent < 40 ? "low_coverage" : "ready") : "test_only")}>{trait.liveEligible ? "Live eligible" : "Preview only"}</Tag>
+              </div>
+              <div className="liquid-pollex-profile-facts">
+                <div><span>Coverage</span><strong>{formatPercent(trait.coveragePercent)}</strong></div>
+                <div><span>Used In</span><strong>{traitUsageCount(trait.traitKey)}</strong></div>
+                <div><span>Source Key</span><strong>{trait.sourceKey || "Not mapped"}</strong></div>
+              </div>
+              <div className="liquid-pollex-row-actions">
+                {!isSystemTrait(trait) ? <PollexIconButton icon="edit" label="Edit trait" onClick={() => void requestOpenTraitPanel("edit", trait.id)} /> : null}
+                {!isSystemTrait(trait) ? <PollexIconButton icon="delete" label="Delete trait" tone="danger" onClick={() => void requestOpenTraitPanel("delete", trait.id)} /> : null}
+              </div>
+            </article>
+          ))}
+          {traits.length === 0 ? renderPollexEmpty("Add records to start", "Add reusable labels like region, plan, or lifecycle stage before composing audiences.") : null}
+        </div>
+      ),
+    });
+  }
+
+  function renderPollexVariantsTab() {
+    return renderPollexFrame({
+      title: "Variants",
+      subtitle: "Fallback remains the root. Profile-specific branches should show their hierarchy at a glance.",
+      action: <PollexCommand icon="add" label="Create Variant" onClick={() => void requestOpenVariantPanel("create")} disabled={keys.length === 0 || profiles.length === 0} />,
+      sheet: renderPollexVariantSheet(),
+      children: (
+        <div className="liquid-pollex-variant-groups">
+          {keys.map((key) => {
+            const detail = detailsById[key.id] ?? null;
+            const variants = flatVariants.filter((entry) => entry.key.id === key.id);
+            return (
+              <section key={key.id} className="liquid-pollex-variant-group">
+                <div className="liquid-pollex-variant-group-head">
+                  <div className="liquid-pollex-cell"><strong>{key.key}</strong><span>{getScreenKey(detail) || "Unassigned"} · {variants.length} branches</span></div>
+                  <div className="liquid-pollex-row-actions">
+                    <Tag tone={readinessTone(detail?.readiness?.state)}>{readinessLabel(detail?.readiness?.state)}</Tag>
+                    <button className="btn btn-ghost btn-sm" type="button" onClick={() => void requestOpenVariantPanel("create", key.id, variants[0]?.profile?.id ?? profiles[0]?.id ?? null)}>New branch</button>
+                  </div>
+                </div>
+                <div className="liquid-pollex-variant-root">
+                  <div className="liquid-pollex-variant-node">Fallback</div>
+                  <strong>{getDraftDefaultVariant(detail)?.content.text ?? "No fallback text yet"}</strong>
+                  <span>{detail?.defaultLocale ?? "en"} · {keyState(detail)}</span>
+                </div>
+                <div className="liquid-pollex-variant-branches">
+                  {variants.map(({ variant, profile }) => (
+                    <article key={variant.id} className={`liquid-pollex-variant-branch ${selectedVariantId === variant.id && variantPanelMode !== "closed" ? "is-selected" : ""}`.trim()}>
+                      <div className="liquid-pollex-variant-connector" aria-hidden="true" />
+                      <div className="liquid-pollex-variant-copy">
+                        <div className="liquid-pollex-cell"><strong>{profile?.name ?? "Removed profile"}</strong><span>{profile?.profileKey ?? "Unavailable"} · {variant.locale ?? detail?.defaultLocale ?? "en"}</span></div>
+                        <p>{variant.content.text}</p>
+                      </div>
+                      <div className="liquid-pollex-row-actions">
+                        <Tag tone={readinessTone(profile?.readiness?.state)}>{readinessLabel(profile?.readiness?.state)}</Tag>
+                        <PollexIconButton icon="edit" label="Edit variant" onClick={() => void requestOpenVariantPanel("edit", key.id, profile?.id ?? null, variant.id)} />
+                        <PollexIconButton icon="delete" label="Delete variant" tone="danger" onClick={() => void requestOpenVariantPanel("delete", key.id, profile?.id ?? null, variant.id)} />
+                      </div>
+                    </article>
+                  ))}
+                  {variants.length === 0 ? <div className="liquid-pollex-inline-callout">No profile-specific variants yet. This key still resolves to fallback only.</div> : null}
+                </div>
+              </section>
+            );
+          })}
+          {keys.length === 0 ? renderPollexEmpty("Add records to start", "Create a key before you add profile-specific branches.") : null}
+        </div>
+      ),
+    });
+  }
+
+  function renderPollexStagingTab() {
+    return renderPollexFrame({
+      title: "Staging Table",
+      subtitle: "One operational table for draft, live, readiness, and launch decisions.",
+      action: <PollexCommand icon="preview" label="Preview Selection" onClick={() => selectedKeyDetail ? void runPreview(selectedKeyDetail, selectedKeyDetail.variants.find((variant) => variant.stage === "draft" && variant.segmentId)?.segmentId ?? null) : undefined} disabled={!selectedKeyDetail} />,
+      sheet: renderPollexStagingSheet(),
+      children: (
+        <div className="liquid-pollex-table-wrap">
+          <table className="data-table liquid-pollex-table">
+            <thead>
+              <tr>
+                <th>Key</th>
+                <th>Screen</th>
+                <th>Draft</th>
+                <th>Live</th>
+                <th>Variants</th>
+                <th>Readiness</th>
+                <th>Last Publish</th>
+                <th />
+              </tr>
+            </thead>
+            <tbody>
+              {keys.map((key) => {
+                const detail = detailsById[key.id] ?? null;
+                const draftDefault = getDraftDefaultVariant(detail);
+                const liveDefault = getPublishedDefaultVariant(detail);
+                const variants = detail?.variants.filter((variant) => variant.stage === "draft" && variant.segmentId) ?? [];
+                return (
+                  <tr key={key.id} className={selectedKeyId === key.id && activeTab === "staging" ? "is-active" : ""} onClick={() => setSelectedKeyId(key.id)}>
+                    <td><strong>{key.key}</strong></td>
+                    <td>{getScreenKey(detail) || "Unassigned"}</td>
+                    <td className="liquid-pollex-copy-cell">{draftDefault?.content.text ?? "No draft fallback"}</td>
+                    <td className="liquid-pollex-copy-cell">{liveDefault?.content.text ?? "Nothing live yet"}</td>
+                    <td>{variants.length}</td>
+                    <td><Tag tone={readinessTone(detail?.readiness?.state)}>{readinessLabel(detail?.readiness?.state)}</Tag></td>
+                    <td>{formatDate(detail?.publishedAt)}</td>
+                    <td>
+                      <div className="liquid-pollex-row-actions">
+                        <PollexIconButton icon="preview" label="Preview key" onClick={() => detail ? void runPreview(detail, variants[0]?.segmentId ?? null) : undefined} />
+                        <PollexIconButton icon="publish" label="Push live" onClick={() => void publishKey(key.id)} disabled={busy === `publish-${key.id}`} />
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          {keys.length === 0 ? renderPollexEmpty("Add records to start", "Create a key first, then Liquid can show draft and live state side by side.") : null}
+        </div>
+      ),
+    });
+  }
+
+  function renderPollexInsightsTab() {
+    const blockedProfiles = profiles.filter((profile) => profile.readiness && profile.readiness.state !== "ready").slice(0, 4);
+    const blockedTraits = traits.filter((trait) => !trait.liveEligible || trait.coveragePercent < 45).slice(0, 4);
+    const fallbackKeys = keys.filter((key) => key.readiness?.state === "fallback_only" || key.readiness?.state === "low_coverage").slice(0, 4);
+    return renderPollexFrame({
+      title: "Insights",
+      subtitle: "Signal, blockers, and opportunity without drifting into a different product language.",
+      action: <div className="liquid-pollex-search"><input value={insightsSearch} onChange={(event) => setInsightsSearch(event.target.value)} placeholder="Search keys or screens" aria-label="Search insights" /></div>,
+      children: (
+        <div className="liquid-pollex-insights-grid">
+          <section className="liquid-pollex-panel">
+            <div className="liquid-pollex-panel-head"><strong>Signal Summary</strong><Tag tone="accent">Live</Tag></div>
+            <div className="liquid-pollex-profile-facts">
+              <div><span>Observed screens</span><strong>{formatNumber(integrationStatus.observedScreensCount)}</strong></div>
+              <div><span>Live keys</span><strong>{formatNumber(liveKeyCount)}</strong></div>
+              <div><span>Ready profiles</span><strong>{formatNumber(readyProfileCount)}</strong></div>
+            </div>
+          </section>
+          <section className="liquid-pollex-panel">
+            <div className="liquid-pollex-panel-head"><strong>Fallback Pressure</strong><Tag tone="amber">{fallbackKeys.length}</Tag></div>
+            <div className="liquid-pollex-ranked-list">
+              {fallbackKeys.map((key) => <div key={key.id} className="liquid-pollex-ranked-row"><div><strong>{key.key}</strong><span>{getScreenKey(detailsById[key.id] ?? null) || "Unassigned"}</span></div><Tag tone={readinessTone(key.readiness?.state)}>{readinessLabel(key.readiness?.state)}</Tag></div>)}
+              {fallbackKeys.length === 0 ? <span className="liquid-pollex-muted">Fallback pressure is low right now.</span> : null}
+            </div>
+          </section>
+          <section className="liquid-pollex-panel">
+            <div className="liquid-pollex-panel-head"><strong>Profiles Blocked</strong><Tag tone="amber">{blockedProfiles.length}</Tag></div>
+            <div className="liquid-pollex-ranked-list">
+              {blockedProfiles.map((profile) => <div key={profile.id} className="liquid-pollex-ranked-row"><div><strong>{profile.name}</strong><span>{profile.readiness?.blockingIssues?.[0] ?? readinessLabel(profile.readiness?.state)}</span></div><Tag tone={readinessTone(profile.readiness?.state)}>{readinessLabel(profile.readiness?.state)}</Tag></div>)}
+              {blockedProfiles.length === 0 ? <span className="liquid-pollex-muted">Every saved profile is live-safe.</span> : null}
+            </div>
+          </section>
+          <section className="liquid-pollex-panel">
+            <div className="liquid-pollex-panel-head"><strong>Trait Coverage</strong><Tag tone="accent">{blockedTraits.length}</Tag></div>
+            <div className="liquid-pollex-ranked-list">
+              {blockedTraits.map((trait) => <div key={trait.id} className="liquid-pollex-ranked-row"><div><strong>{trait.label}</strong><span>{traitSourceLabel(trait.sourceType)} · {trait.sourceKey || "Not mapped"}</span></div><span>{formatPercent(trait.coveragePercent)}</span></div>)}
+              {blockedTraits.length === 0 ? <span className="liquid-pollex-muted">Trait coverage looks healthy.</span> : null}
+            </div>
+          </section>
+          <section className="liquid-pollex-panel liquid-pollex-panel-wide">
+            <div className="liquid-pollex-panel-head"><strong>Modeled Lift</strong><Tag tone="accent">{metricRows.length}</Tag></div>
+            <div className="liquid-pollex-table-wrap">
+              <table className="data-table liquid-pollex-table">
+                <thead>
+                  <tr>
+                    <th>Key</th>
+                    <th>Screen</th>
+                    <th>Fallback Rate</th>
+                    <th>Liquid Rate</th>
+                    <th>Lift</th>
+                    <th>Winner</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {metricRows.map((row) => (
+                    <tr key={row.keyId}>
+                      <td>{row.key}</td>
+                      <td>{row.screen}</td>
+                      <td>{formatPercent(row.defaultRate)}</td>
+                      <td>{formatPercent(row.liquidRate)}</td>
+                      <td className={row.lift >= 0 ? "liquid-pollex-positive" : "liquid-pollex-negative"}>{row.lift >= 0 ? "+" : ""}{formatPercent(row.lift)}</td>
+                      <td>{row.winner}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+      ),
+    });
+  }
+
+  return (
+    <div className="liquid-pollex-shell">
+      {renderPollexTabs()}
+      {notice ? <div className="liquid-pollex-banner success">{notice}</div> : null}
+      {error ? <div className="liquid-pollex-banner error">{error}</div> : null}
+      {activeTab === "keys" ? renderPollexKeysTab() : null}
+      {activeTab === "profiles" ? renderPollexProfilesTab() : null}
+      {activeTab === "variants" ? renderPollexVariantsTab() : null}
+      {activeTab === "traits" ? renderPollexTraitsTab() : null}
+      {activeTab === "staging" ? renderPollexStagingTab() : null}
+      {activeTab === "insights" ? renderPollexInsightsTab() : null}
     </div>
   );
 }

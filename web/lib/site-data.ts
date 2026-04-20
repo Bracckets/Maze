@@ -21,6 +21,8 @@ export type HeatmapPoint = {
 
 export type HeatmapResponse = {
   screen: string;
+  deviceClass: "phone" | "desktop";
+  availableDeviceClasses: Array<"phone" | "desktop">;
   points: HeatmapPoint[];
 };
 
@@ -58,6 +60,8 @@ export type SessionSummary = {
   end_time: string;
   last_screen?: string | null;
   dropped_off: boolean;
+  platform?: string | null;
+  device_class: "phone" | "desktop";
 };
 
 export const navLinks = [
@@ -197,15 +201,19 @@ export async function getSessionScreens(): Promise<string[]> {
   }
 }
 
-export async function getHeatmap(screen: string): Promise<HeatmapResponse> {
+export async function getHeatmap(screen: string, deviceClass?: "phone" | "desktop"): Promise<HeatmapResponse> {
   try {
-    const response = await authedFetch(`/heatmap?screen=${encodeURIComponent(screen)}`);
+    const query = new URLSearchParams({ screen });
+    if (deviceClass) {
+      query.set("device_class", deviceClass);
+    }
+    const response = await authedFetch(`/heatmap?${query.toString()}`);
     if (!response.ok) {
-      return { screen, points: [] };
+      return { screen, deviceClass: deviceClass ?? "phone", availableDeviceClasses: [deviceClass ?? "phone"], points: [] };
     }
     return response.json();
   } catch {
-    return { screen, points: [] };
+    return { screen, deviceClass: deviceClass ?? "phone", availableDeviceClasses: [deviceClass ?? "phone"], points: [] };
   }
 }
 

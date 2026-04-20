@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -19,6 +19,7 @@ class EventIn(BaseModel):
     screen_height: float | None = None
     app_version: str | None = None
     screenshot_id: UUID | None = None
+    platform: str | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
 
     model_config = {"populate_by_name": True}
@@ -170,6 +171,8 @@ class HeatmapPointOut(BaseModel):
 
 class HeatmapOut(BaseModel):
     screen: str
+    deviceClass: Literal["phone", "desktop"]
+    availableDeviceClasses: list[Literal["phone", "desktop"]]
     points: list[HeatmapPointOut]
 
 

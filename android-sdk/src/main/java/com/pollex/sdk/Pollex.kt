@@ -1,4 +1,4 @@
-package com.maze.sdk
+package com.pollex.sdk
 
 import android.app.Activity
 import android.app.Application
@@ -37,7 +37,7 @@ private val recommendedBlockedCaptureScreens: Set<String> = setOf(
     "kyc_id_upload",
 )
 
-data class MazeEvent(
+data class PollexEvent(
     val event_id: String,
     val session_id: String,
     val device_id: String,
@@ -51,10 +51,11 @@ data class MazeEvent(
     val screen_height: Float?,
     val app_version: String?,
     val screenshot_id: String?,
+    val platform: String,
     val metadata: Map<String, String>
 )
 
-data class MazeLiquidRequest(
+data class PollexLiquidRequest(
     val screenKey: String,
     val locale: String? = null,
     val subjectId: String? = null,
@@ -64,12 +65,12 @@ data class MazeLiquidRequest(
     val traits: Map<String, String> = emptyMap()
 )
 
-data class MazeLiquidExperimentAssignment(
+data class PollexLiquidExperimentAssignment(
     val experimentKey: String,
     val arm: String
 )
 
-data class MazeLiquidResolvedItem(
+data class PollexLiquidResolvedItem(
     val key: String,
     val text: String,
     val icon: String?,
@@ -78,25 +79,25 @@ data class MazeLiquidResolvedItem(
     val ordering: Int,
     val locale: String,
     val source: String,
-    val experiment: MazeLiquidExperimentAssignment?
+    val experiment: PollexLiquidExperimentAssignment?
 )
 
-data class MazeLiquidBundle(
+data class PollexLiquidBundle(
     val screenKey: String,
     val stage: String,
     val revision: Int,
     val etag: String,
     val ttlSeconds: Int,
     val generatedAt: String,
-    val items: List<MazeLiquidResolvedItem>
+    val items: List<PollexLiquidResolvedItem>
 )
 
 private data class CachedLiquidBundle(
-    val bundle: MazeLiquidBundle,
+    val bundle: PollexLiquidBundle,
     val expiresAtMillis: Long
 )
 
-object MazeSession {
+object PollexSession {
     private var sessionId: String = UUID.randomUUID().toString()
 
     fun currentSessionId(): String = sessionId
@@ -117,7 +118,7 @@ private class NetworkClient(
         return raw.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n")
     }
 
-    fun send(events: List<MazeEvent>) {
+    fun send(events: List<PollexEvent>) {
         val jsonEvents = events.joinToString(separator = ",") { event ->
             """
             {
@@ -134,6 +135,7 @@ private class NetworkClient(
               "screen_height":${event.screen_height?.toString() ?: "null"},
               "app_version":${event.app_version?.let { "\"${escapeJson(it)}\"" } ?: "null"},
               "screenshot_id":${event.screenshot_id?.let { "\"${escapeJson(it)}\"" } ?: "null"},
+              "platform":"${escapeJson(event.platform)}",
               "metadata":${event.metadata.entries.joinToString(prefix = "{", postfix = "}") { "\"${escapeJson(it.key)}\":\"${escapeJson(it.value)}\"" }}
             }
             """.trimIndent()
@@ -160,7 +162,7 @@ private class NetworkClient(
         width: Int,
         height: Int
     ): String {
-        val tempFile = File.createTempFile("maze_capture_", ".jpg")
+        val tempFile = File.createTempFile("pollex_capture_", ".jpg")
         tempFile.writeBytes(imageBytes)
         try {
             val body = MultipartBody.Builder()
@@ -193,7 +195,7 @@ private class NetworkClient(
         }
     }
 
-    fun resolveLiquidBundle(requestPayload: MazeLiquidRequest): MazeLiquidBundle {
+    fun resolveLiquidBundle(requestPayload: PollexLiquidRequest): PollexLiquidBundle {
         val requestJson = JSONObject().apply {
             put("screenKey", requestPayload.screenKey)
             put("locale", requestPayload.locale)
@@ -221,7 +223,7 @@ private class NetworkClient(
             }
             val payload = JSONObject(response.body?.string().orEmpty())
             val items = payload.optJSONArray("items") ?: JSONArray()
-            return MazeLiquidBundle(
+            return PollexLiquidBundle(
                 screenKey = payload.optString("screenKey"),
                 stage = payload.optString("stage"),
                 revision = payload.optInt("revision"),
@@ -231,7 +233,7 @@ private class NetworkClient(
                 items = (0 until items.length()).map { index ->
                     val item = items.getJSONObject(index)
                     val experimentPayload = item.optJSONObject("experiment")
-                    MazeLiquidResolvedItem(
+                    PollexLiquidResolvedItem(
                         key = item.optString("key"),
                         text = item.optString("text"),
                         icon = item.optString("icon").takeIf { it.isNotBlank() },
@@ -241,7 +243,7 @@ private class NetworkClient(
                         locale = item.optString("locale"),
                         source = item.optString("source"),
                         experiment = experimentPayload?.let {
-                            MazeLiquidExperimentAssignment(
+                            PollexLiquidExperimentAssignment(
                                 experimentKey = it.optString("experimentKey"),
                                 arm = it.optString("arm")
                             )
@@ -257,10 +259,10 @@ private class EventQueue(
     private val networkClient: NetworkClient,
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.IO)
 ) {
-    private val buffer = ConcurrentLinkedQueue<MazeEvent>()
+    private val buffer = ConcurrentLinkedQueue<PollexEvent>()
     private var scheduledFlush: Job? = null
 
-    fun enqueue(event: MazeEvent) {
+    fun enqueue(event: PollexEvent) {
         buffer.add(event)
         if (buffer.size >= 20) {
             flush()
@@ -275,7 +277,7 @@ private class EventQueue(
     }
 
     fun flush() {
-        val events = mutableListOf<MazeEvent>()
+        val events = mutableListOf<PollexEvent>()
         while (true) {
             val event = buffer.poll() ?: break
             events.add(event)
@@ -299,7 +301,7 @@ private class EventQueue(
     }
 }
 
-data class MazeConfig(
+data class PollexConfig(
     val apiKey: String,
     val deviceId: String,
     val endpoint: String = "http://10.0.2.2:8000/events",
@@ -343,9 +345,9 @@ object ActivityTracker : Application.ActivityLifecycleCallbacks {
     override fun onActivityDestroyed(activity: Activity) {}
 }
 
-object Maze {
+object Pollex {
     private var currentScreen: String? = null
-    private var config: MazeConfig? = null
+    private var config: PollexConfig? = null
     private var queue: EventQueue? = null
     private var networkClient: NetworkClient? = null
     private val workerScope = CoroutineScope(Dispatchers.IO)
@@ -357,7 +359,7 @@ object Maze {
     @Volatile private var captureStatusListener: ((Boolean) -> Unit)? = null
     @Volatile private var captureEvaluator: ((String?) -> Boolean)? = null
 
-    fun configure(config: MazeConfig) {
+    fun configure(config: PollexConfig) {
         validateEndpoint(config.endpoint)
         this.config = config
         sessionCaptureEnabled = config.sessionCaptureEnabled
@@ -392,7 +394,7 @@ object Maze {
 
     fun screen(name: String) {
         currentScreen = name
-        val activeConfig = requireNotNull(config) { "Call Maze.configure(MazeConfig) before tracking events." }
+        val activeConfig = requireNotNull(config) { "Call Pollex.configure(PollexConfig) before tracking events." }
         val activeQueue = requireNotNull(queue) { "Tracker queue is not initialized." }
         val client = requireNotNull(networkClient) { "Network client is not initialized." }
         workerScope.launch {
@@ -413,7 +415,7 @@ object Maze {
         x: Float? = null,
         y: Float? = null
     ) {
-        val activeConfig = requireNotNull(config) { "Call Maze.configure(MazeConfig) before tracking events." }
+        val activeConfig = requireNotNull(config) { "Call Pollex.configure(PollexConfig) before tracking events." }
         val activeQueue = requireNotNull(queue) { "Tracker queue is not initialized." }
         workerScope.launch {
             enqueueEvent(activeConfig, activeQueue, event, screen ?: currentScreen, elementId, metadata, x, y, null)
@@ -426,9 +428,9 @@ object Maze {
         subjectId: String? = null,
         country: String? = null,
         traits: Map<String, String> = emptyMap(),
-        onComplete: (Result<MazeLiquidBundle>) -> Unit
+        onComplete: (Result<PollexLiquidBundle>) -> Unit
     ) {
-        val activeConfig = requireNotNull(config) { "Call Maze.configure(MazeConfig) before resolving Liquid bundles." }
+        val activeConfig = requireNotNull(config) { "Call Pollex.configure(PollexConfig) before resolving Liquid bundles." }
         val client = requireNotNull(networkClient) { "Network client is not initialized." }
         val cacheKey = listOf(screen, locale.orEmpty(), subjectId.orEmpty(), country.orEmpty(), traits.entries.sortedBy { it.key }.joinToString("|") { "${it.key}=${it.value}" }).joinToString("::")
         val now = System.currentTimeMillis()
@@ -440,7 +442,7 @@ object Maze {
         workerScope.launch {
             val result = runCatching {
                 client.resolveLiquidBundle(
-                    MazeLiquidRequest(
+                    PollexLiquidRequest(
                         screenKey = screen,
                         locale = locale,
                         subjectId = subjectId,
@@ -476,7 +478,7 @@ object Maze {
     }
 
     private suspend fun enqueueEvent(
-        activeConfig: MazeConfig,
+        activeConfig: PollexConfig,
         activeQueue: EventQueue,
         event: String,
         screen: String?,
@@ -492,9 +494,9 @@ object Maze {
         val normalizedY = y?.let { (it / displayMetrics.heightPixels).coerceIn(0f, 1f) }
 
         activeQueue.enqueue(
-            MazeEvent(
+            PollexEvent(
                 event_id = UUID.randomUUID().toString(),
-                session_id = MazeSession.currentSessionId(),
+                session_id = PollexSession.currentSessionId(),
                 device_id = activeConfig.deviceId,
                 occurred_at = Instant.now().toString(),
                 event = event,
@@ -506,13 +508,14 @@ object Maze {
                 screen_height = displayMetrics.heightPixels.toFloat(),
                 app_version = activeConfig.appVersion,
                 screenshot_id = screenshotId,
+                platform = "android",
                 metadata = safeMetadata
             )
         )
     }
 
     private suspend fun captureAndUploadScreenshot(
-        activeConfig: MazeConfig,
+        activeConfig: PollexConfig,
         client: NetworkClient,
         screenName: String
     ): String? {
@@ -538,7 +541,7 @@ object Maze {
         val screenshotId = client.uploadScreenshot(
             imageBytes = capture.first,
             screen = screenName,
-            sessionId = MazeSession.currentSessionId(),
+            sessionId = PollexSession.currentSessionId(),
             width = capture.second,
             height = capture.third
         )
@@ -556,6 +559,6 @@ object Maze {
     private fun validateEndpoint(endpoint: String) {
         val isSecure = endpoint.startsWith("https://")
         val isLocal = endpoint.startsWith("http://127.0.0.1") || endpoint.startsWith("http://10.0.2.2") || endpoint.startsWith("http://localhost")
-        check(isSecure || isLocal) { "Maze requires HTTPS for production endpoints." }
+        check(isSecure || isLocal) { "Pollex requires HTTPS for production endpoints." }
     }
 }

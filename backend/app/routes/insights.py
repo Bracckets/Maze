@@ -1,11 +1,11 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.models.schemas import HeatmapOut, HeatmapScenarioOut, HeatmapScenarioStepOut, InsightOut
 from app.routes.dependencies import get_current_account
 from app.services.platform import (
-    build_heatmap_points,
+    build_heatmap_payload,
     build_heatmap_scenario,
     list_workspace_insight_snapshots,
     list_workspace_issue_snapshots,
@@ -52,8 +52,13 @@ def list_sessions(
 
 
 @router.get("/heatmap", response_model=HeatmapOut)
-def get_heatmap(screen: str, account: dict = Depends(get_current_account), db: Session = Depends(get_db)):
-    return HeatmapOut(screen=screen, points=build_heatmap_points(db, account["workspace_id"], screen))
+def get_heatmap(
+    screen: str,
+    device_class: str | None = Query(default=None),
+    account: dict = Depends(get_current_account),
+    db: Session = Depends(get_db),
+):
+    return HeatmapOut(**build_heatmap_payload(db, account["workspace_id"], screen, device_class))
 
 
 @router.get("/heatmap/scenario", response_model=HeatmapScenarioOut)

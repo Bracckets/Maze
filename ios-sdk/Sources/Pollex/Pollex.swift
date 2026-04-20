@@ -1,8 +1,8 @@
 import Foundation
 import UIKit
 
-public actor MazeSession {
-    public static let shared = MazeSession()
+public actor PollexSession {
+    public static let shared = PollexSession()
     private var sessionId: String = UUID().uuidString
 
     public func currentSessionId() -> String { sessionId }
@@ -12,7 +12,7 @@ public actor MazeSession {
     }
 }
 
-public struct MazeConfig: Sendable {
+public struct PollexConfig: Sendable {
     public static let recommendedBlockedScreens = [
         "login",
         "signup",
@@ -47,7 +47,7 @@ public struct MazeConfig: Sendable {
         screenshotQuality: CGFloat = 0.72,
         screenshotMaxDimension: CGFloat = 1280,
         captureAllowedScreens: [String]? = nil,
-        captureBlockedScreens: [String] = MazeConfig.recommendedBlockedScreens,
+        captureBlockedScreens: [String] = PollexConfig.recommendedBlockedScreens,
         captureStatusHandler: (@Sendable (Bool) -> Void)? = nil,
         captureEvaluator: (@Sendable (String?) -> Bool)? = nil,
         liquidCacheTTLSeconds: TimeInterval = 60
@@ -69,7 +69,7 @@ public struct MazeConfig: Sendable {
     }
 }
 
-public struct MazeEvent: Codable {
+public struct PollexEvent: Codable {
     let eventId: String
     let sessionId: String
     let deviceId: String
@@ -83,6 +83,7 @@ public struct MazeEvent: Codable {
     let screenHeight: Double?
     let appVersion: String?
     let screenshotId: String?
+    let platform: String
     let metadata: [String: String]
 
     enum CodingKeys: String, CodingKey {
@@ -99,11 +100,12 @@ public struct MazeEvent: Codable {
         case screenHeight = "screen_height"
         case appVersion = "app_version"
         case screenshotId = "screenshot_id"
+        case platform
         case metadata
     }
 }
 
-public struct MazeLiquidRequest: Encodable, Sendable {
+public struct PollexLiquidRequest: Encodable, Sendable {
     public let screenKey: String
     public let locale: String?
     public let subjectId: String?
@@ -131,12 +133,12 @@ public struct MazeLiquidRequest: Encodable, Sendable {
     }
 }
 
-public struct MazeLiquidExperimentAssignment: Codable, Sendable {
+public struct PollexLiquidExperimentAssignment: Codable, Sendable {
     public let experimentKey: String
     public let arm: String
 }
 
-public struct MazeLiquidResolvedItem: Codable, Sendable {
+public struct PollexLiquidResolvedItem: Codable, Sendable {
     public let key: String
     public let text: String
     public let icon: String?
@@ -145,29 +147,29 @@ public struct MazeLiquidResolvedItem: Codable, Sendable {
     public let ordering: Int
     public let locale: String
     public let source: String
-    public let experiment: MazeLiquidExperimentAssignment?
+    public let experiment: PollexLiquidExperimentAssignment?
 }
 
-public struct MazeLiquidBundle: Codable, Sendable {
+public struct PollexLiquidBundle: Codable, Sendable {
     public let screenKey: String
     public let stage: String
     public let revision: Int
     public let etag: String
     public let ttlSeconds: Int
     public let generatedAt: String
-    public let items: [MazeLiquidResolvedItem]
+    public let items: [PollexLiquidResolvedItem]
 }
 
 actor NetworkClient {
-    private let config: MazeConfig
+    private let config: PollexConfig
     private let session: URLSession
 
-    init(config: MazeConfig, session: URLSession = .shared) {
+    init(config: PollexConfig, session: URLSession = .shared) {
         self.config = config
         self.session = session
     }
 
-    func send(events: [MazeEvent]) async throws {
+    func send(events: [PollexEvent]) async throws {
         var request = URLRequest(url: config.endpoint)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -214,17 +216,17 @@ actor NetworkClient {
         if let screenshotId = decoded["screenshot_id"] {
             return screenshotId
         }
-        throw NSError(domain: "Maze", code: 1, userInfo: [NSLocalizedDescriptionKey: "screenshot_id missing in response"])
+        throw NSError(domain: "Pollex", code: 1, userInfo: [NSLocalizedDescriptionKey: "screenshot_id missing in response"])
     }
 
-    func resolveLiquidBundle(requestPayload: MazeLiquidRequest) async throws -> MazeLiquidBundle {
+    func resolveLiquidBundle(requestPayload: PollexLiquidRequest) async throws -> PollexLiquidBundle {
         var request = URLRequest(url: config.liquidEndpoint)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue(config.apiKey, forHTTPHeaderField: "X-API-Key")
         request.httpBody = try JSONEncoder().encode(requestPayload)
         let (data, _) = try await session.data(for: request)
-        return try JSONDecoder().decode(MazeLiquidBundle.self, from: data)
+        return try JSONDecoder().decode(PollexLiquidBundle.self, from: data)
     }
 }
 
@@ -232,14 +234,14 @@ actor EventQueue {
     private let flushIntervalNanoseconds: UInt64 = 5_000_000_000
     private let maxBatchSize = 20
     private let client: NetworkClient
-    private var buffer: [MazeEvent] = []
+    private var buffer: [PollexEvent] = []
     private var flushTask: Task<Void, Never>?
 
     init(client: NetworkClient) {
         self.client = client
     }
 
-    func enqueue(_ event: MazeEvent) {
+    func enqueue(_ event: PollexEvent) {
         buffer.append(event)
         scheduleFlushIfNeeded()
         if buffer.count >= maxBatchSize {
@@ -293,24 +295,24 @@ actor EventQueue {
     }
 }
 
-private final class MazeClient: @unchecked Sendable {
-    static let shared = MazeClient()
+private final class PollexClient: @unchecked Sendable {
+    static let shared = PollexClient()
 
     private let isoFormatter = ISO8601DateFormatter()
     private let lock = NSLock()
     private var currentScreen: String?
-    private var config: MazeConfig?
+    private var config: PollexConfig?
     private var queue: EventQueue?
     private var sessionCaptureEnabled = false
     private var captureAllowedScreens: Set<String>?
     private var captureBlockedScreens = Set<String>()
     private var captureEvaluator: (@Sendable (String?) -> Bool)?
     private var captureStatusHandler: (@Sendable (Bool) -> Void)?
-    private var liquidCache: [String: (expiresAt: Date, bundle: MazeLiquidBundle)] = [:]
+    private var liquidCache: [String: (expiresAt: Date, bundle: PollexLiquidBundle)] = [:]
 
     private init() {}
 
-    func configure(_ config: MazeConfig) {
+    func configure(_ config: PollexConfig) {
         validateEndpoint(config.endpoint)
         lock.lock()
         self.config = config
@@ -372,12 +374,12 @@ private final class MazeClient: @unchecked Sendable {
         y: CGFloat? = nil
     ) {
         guard let snapshot = snapshot(screenOverride: screen) else {
-            assertionFailure("Call Maze.configure(MazeConfig) before tracking events.")
+            assertionFailure("Call Pollex.configure(PollexConfig) before tracking events.")
             return
         }
 
         Task {
-            let sessionId = await MazeSession.shared.currentSessionId()
+            let sessionId = await PollexSession.shared.currentSessionId()
             let sanitizedMetadata = metadata.mapValues { $0.count > 24 ? "***" : $0 }
             let bounds = UIScreen.main.bounds
             let normalizedX = x.map { Double(min(max($0 / bounds.width, 0), 1)) }
@@ -392,7 +394,7 @@ private final class MazeClient: @unchecked Sendable {
                 )
             }
 
-            let payload = MazeEvent(
+            let payload = PollexEvent(
                 eventId: UUID().uuidString,
                 sessionId: sessionId,
                 deviceId: snapshot.config.deviceId,
@@ -406,6 +408,7 @@ private final class MazeClient: @unchecked Sendable {
                 screenHeight: Double(bounds.height),
                 appVersion: snapshot.config.appVersion,
                 screenshotId: screenshotId,
+                platform: "ios",
                 metadata: sanitizedMetadata
             )
             await snapshot.queue.enqueue(payload)
@@ -418,10 +421,10 @@ private final class MazeClient: @unchecked Sendable {
         subjectId: String? = nil,
         country: String? = nil,
         traits: [String: String] = [:],
-        completion: @escaping @Sendable (Result<MazeLiquidBundle, Error>) -> Void
+        completion: @escaping @Sendable (Result<PollexLiquidBundle, Error>) -> Void
     ) {
         guard let snapshot = liquidSnapshot() else {
-            assertionFailure("Call Maze.configure(MazeConfig) before resolving Liquid bundles.")
+            assertionFailure("Call Pollex.configure(PollexConfig) before resolving Liquid bundles.")
             return
         }
         let cacheKey = [
@@ -443,7 +446,7 @@ private final class MazeClient: @unchecked Sendable {
         Task {
             do {
                 let bundle = try await snapshot.client.resolveLiquidBundle(
-                    requestPayload: MazeLiquidRequest(
+                    requestPayload: PollexLiquidRequest(
                         screenKey: screen,
                         locale: locale,
                         subjectId: subjectId,
@@ -470,7 +473,7 @@ private final class MazeClient: @unchecked Sendable {
         lock.unlock()
     }
 
-    private func snapshot(screenOverride: String?) -> (config: MazeConfig, queue: EventQueue, screen: String?, captureEnabled: Bool)? {
+    private func snapshot(screenOverride: String?) -> (config: PollexConfig, queue: EventQueue, screen: String?, captureEnabled: Bool)? {
         lock.lock()
         defer { lock.unlock() }
         guard let config, let queue else { return nil }
@@ -478,7 +481,7 @@ private final class MazeClient: @unchecked Sendable {
         return (config, queue, activeScreen, shouldCapture(screen: activeScreen))
     }
 
-    private func liquidSnapshot() -> (config: MazeConfig, client: NetworkClient)? {
+    private func liquidSnapshot() -> (config: PollexConfig, client: NetworkClient)? {
         lock.lock()
         defer { lock.unlock() }
         guard let config else { return nil }
@@ -496,7 +499,7 @@ private final class MazeClient: @unchecked Sendable {
     }
 
     private func captureAndUploadScreenshot(
-        config: MazeConfig,
+        config: PollexConfig,
         queue: EventQueue,
         sessionId: String,
         screen: String?
@@ -514,7 +517,7 @@ private final class MazeClient: @unchecked Sendable {
             let image = renderer.image { context in
                 window.layer.render(in: context.cgContext)
             }
-            guard let resized = MazeClient.resize(image: image, maxDimension: config.screenshotMaxDimension),
+            guard let resized = PollexClient.resize(image: image, maxDimension: config.screenshotMaxDimension),
                   let jpeg = resized.jpegData(compressionQuality: config.screenshotQuality) else {
                 return nil
             }
@@ -552,18 +555,18 @@ private final class MazeClient: @unchecked Sendable {
         let host = endpoint.host?.lowercased()
         let isLocalhost = host == "127.0.0.1" || host == "localhost"
         if endpoint.scheme?.lowercased() != "https", !isLocalhost {
-            assertionFailure("Maze recommends HTTPS endpoints for production SDK traffic.")
+            assertionFailure("Pollex recommends HTTPS endpoints for production SDK traffic.")
         }
     }
 }
 
-public enum Maze {
-    public static func configure(_ config: MazeConfig) {
-        MazeClient.shared.configure(config)
+public enum Pollex {
+    public static func configure(_ config: PollexConfig) {
+        PollexClient.shared.configure(config)
     }
 
     public static func screen(_ name: String) {
-        MazeClient.shared.screen(name)
+        PollexClient.shared.screen(name)
     }
 
     public static func track(
@@ -574,7 +577,7 @@ public enum Maze {
         x: CGFloat? = nil,
         y: CGFloat? = nil
     ) {
-        MazeClient.shared.track(
+        PollexClient.shared.track(
             event: event,
             screen: screen,
             elementId: elementId,
@@ -585,19 +588,19 @@ public enum Maze {
     }
 
     public static func setSessionCaptureEnabled(_ enabled: Bool) {
-        MazeClient.shared.setSessionCaptureEnabled(enabled)
+        PollexClient.shared.setSessionCaptureEnabled(enabled)
     }
 
     public static func setCaptureAllowedScreens(_ screens: [String]?) {
-        MazeClient.shared.setCaptureAllowedScreens(screens)
+        PollexClient.shared.setCaptureAllowedScreens(screens)
     }
 
     public static func setCaptureBlockedScreens(_ screens: [String]) {
-        MazeClient.shared.setCaptureBlockedScreens(screens)
+        PollexClient.shared.setCaptureBlockedScreens(screens)
     }
 
     public static func setScreenCaptureEnabled(_ enabled: Bool, for screen: String) {
-        MazeClient.shared.setScreenCaptureEnabled(enabled, for: screen)
+        PollexClient.shared.setScreenCaptureEnabled(enabled, for: screen)
     }
 
     public static func resolveLiquidBundle(
@@ -606,9 +609,9 @@ public enum Maze {
         subjectId: String? = nil,
         country: String? = nil,
         traits: [String: String] = [:],
-        completion: @escaping @Sendable (Result<MazeLiquidBundle, Error>) -> Void
+        completion: @escaping @Sendable (Result<PollexLiquidBundle, Error>) -> Void
     ) {
-        MazeClient.shared.resolveLiquidBundle(
+        PollexClient.shared.resolveLiquidBundle(
             screen: screen,
             locale: locale,
             subjectId: subjectId,
@@ -619,6 +622,6 @@ public enum Maze {
     }
 
     public static func clearLiquidCache() {
-        MazeClient.shared.clearLiquidCache()
+        PollexClient.shared.clearLiquidCache()
     }
 }
