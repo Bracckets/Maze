@@ -43,8 +43,17 @@ def classify_device_class(platform: str | None, screen_width: float | None) -> s
     return DEVICE_CLASS_PHONE
 
 
+def normalize_heatmap_device_class(requested: str | None) -> str | None:
+    if requested is None:
+        return None
+    normalized = requested.strip().lower()
+    if normalized in {DEVICE_CLASS_PHONE, DEVICE_CLASS_DESKTOP}:
+        return normalized
+    return None
+
+
 def select_heatmap_device_class(requested: str | None, available: list[str]) -> str:
-    normalized_requested = requested.strip().lower() if requested else None
+    normalized_requested = normalize_heatmap_device_class(requested)
     if normalized_requested in available:
         return normalized_requested
     if DEVICE_CLASS_PHONE in available:
@@ -1081,15 +1090,18 @@ def list_available_heatmap_device_classes(db: Session, workspace_id: str, screen
     rows = db.execute(
         text(
             """
-            SELECT DISTINCT COALESCE(s.device_class, 'phone') AS device_class
-            FROM events e
-            JOIN sessions s ON s.id = e.session_id
-            WHERE e.workspace_id = CAST(:workspace_id AS uuid)
-              AND e.screen = :screen
-              AND e.event_type = 'tap'
-              AND e.x IS NOT NULL
-              AND e.y IS NOT NULL
-            ORDER BY CASE COALESCE(s.device_class, 'phone') WHEN 'phone' THEN 0 ELSE 1 END
+            SELECT device_class
+            FROM (
+                SELECT DISTINCT COALESCE(s.device_class, 'phone') AS device_class
+                FROM events e
+                JOIN sessions s ON s.id = e.session_id
+                WHERE e.workspace_id = CAST(:workspace_id AS uuid)
+                  AND e.screen = :screen
+                  AND e.event_type = 'tap'
+                  AND e.x IS NOT NULL
+                  AND e.y IS NOT NULL
+            ) available_device_classes
+            ORDER BY CASE device_class WHEN 'phone' THEN 0 ELSE 1 END
             """
         ),
         {"workspace_id": workspace_id, "screen": screen},
@@ -1103,12 +1115,29 @@ def build_heatmap_points(
     screen: str,
     device_class: str | None = None,
 ) -> list[dict[str, float | int]]:
-    rows = db.execute(
-        text(
-            """
+    normalized_device_class = normalize_heatmap_device_class(device_class)
+    query = """
             SELECT
-                ROUND(x::numeric, 2)::float8 AS x,
-                ROUND(y::numeric, 2)::float8 AS y,
+                ROUND(
+                    COALESCE(
+                        CASE
+                            WHEN e.metadata ? '__pollex_page_x' THEN NULLIF(e.metadata->>'__pollex_page_x', '')::float8
+                            ELSE NULL
+                        END,
+                        e.x
+                    )::numeric,
+                    2
+                )::float8 AS x,
+                ROUND(
+                    COALESCE(
+                        CASE
+                            WHEN e.metadata ? '__pollex_page_y' THEN NULLIF(e.metadata->>'__pollex_page_y', '')::float8
+                            ELSE NULL
+                        END,
+                        e.y
+                    )::numeric,
+                    2
+                )::float8 AS y,
                 COUNT(*)::int AS count
             FROM events e
             JOIN sessions s ON s.id = e.session_id
@@ -1117,12 +1146,18 @@ def build_heatmap_points(
               AND e.event_type = 'tap'
               AND e.x IS NOT NULL
               AND e.y IS NOT NULL
-              AND (:device_class IS NULL OR COALESCE(s.device_class, 'phone') = :device_class)
+    """
+    params: dict[str, str] = {"workspace_id": workspace_id, "screen": screen}
+    if normalized_device_class is not None:
+        query += "\n              AND COALESCE(s.device_class, 'phone') = :device_class"
+        params["device_class"] = normalized_device_class
+    query += """
             GROUP BY 1, 2
             ORDER BY count DESC, x ASC, y ASC
-            """
-        ),
-        {"workspace_id": workspace_id, "screen": screen, "device_class": device_class},
+    """
+    rows = db.execute(
+        text(query),
+        params,
     ).mappings().all()
     return [dict(row) for row in rows]
 

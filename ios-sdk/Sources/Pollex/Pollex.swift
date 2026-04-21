@@ -380,7 +380,10 @@ private final class PollexClient: @unchecked Sendable {
 
         Task {
             let sessionId = await PollexSession.shared.currentSessionId()
-            let sanitizedMetadata = metadata.mapValues { $0.count > 24 ? "***" : $0 }
+            let heatmapMetadata = await MainActor.run {
+                Self.enrichHeatmapMetadata(metadata: metadata, x: x, y: y)
+            }
+            let sanitizedMetadata = heatmapMetadata.mapValues { $0.count > 24 ? "***" : $0 }
             let bounds = UIScreen.main.bounds
             let normalizedX = x.map { Double(min(max($0 / bounds.width, 0), 1)) }
             let normalizedY = y.map { Double(min(max($0 / bounds.height, 0), 1)) }
@@ -413,6 +416,64 @@ private final class PollexClient: @unchecked Sendable {
             )
             await snapshot.queue.enqueue(payload)
         }
+    }
+
+    @MainActor
+    private static func enrichHeatmapMetadata(
+        metadata: [String: String],
+        x: CGFloat?,
+        y: CGFloat?
+    ) -> [String: String] {
+        guard
+            let x,
+            let y,
+            let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+            let window = windowScene.windows.first(where: { $0.isKeyWindow })
+        else {
+            return metadata
+        }
+
+        let pointInWindow = CGPoint(x: x, y: y)
+        guard let scrollView = scrollContainer(for: pointInWindow, in: window) else {
+            return metadata
+        }
+
+        let pointInScrollView = scrollView.convert(pointInWindow, from: window)
+        let contentWidth = max(scrollView.contentSize.width, scrollView.bounds.width)
+        let contentHeight = max(scrollView.contentSize.height, scrollView.bounds.height)
+        guard contentWidth > 0, contentHeight > 0 else {
+            return metadata
+        }
+
+        var enriched = metadata
+        enriched["__pollex_page_x"] = formatNormalizedCoordinate(
+            (scrollView.contentOffset.x + pointInScrollView.x) / contentWidth
+        )
+        enriched["__pollex_page_y"] = formatNormalizedCoordinate(
+            (scrollView.contentOffset.y + pointInScrollView.y) / contentHeight
+        )
+        return enriched
+    }
+
+    @MainActor
+    private static func scrollContainer(for pointInWindow: CGPoint, in window: UIWindow) -> UIScrollView? {
+        var candidate = window.hitTest(pointInWindow, with: nil)
+        while let view = candidate {
+            if let scrollView = view as? UIScrollView {
+                let contentWidth = max(scrollView.contentSize.width, scrollView.bounds.width)
+                let contentHeight = max(scrollView.contentSize.height, scrollView.bounds.height)
+                if contentWidth > scrollView.bounds.width || contentHeight > scrollView.bounds.height {
+                    return scrollView
+                }
+            }
+            candidate = view.superview
+        }
+        return nil
+    }
+
+    private static func formatNormalizedCoordinate(_ value: CGFloat) -> String {
+        let clamped = min(max(value, 0), 1)
+        return String(format: "%.6f", clamped)
     }
 
     func resolveLiquidBundle(

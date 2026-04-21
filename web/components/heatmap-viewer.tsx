@@ -115,6 +115,7 @@ export function HeatmapViewer({ initialScreen, screens }: Props) {
   const [availableDeviceClasses, setAvailableDeviceClasses] = useState<DeviceClass[]>(["phone"]);
   const [points, setPoints] = useState<HeatmapPoint[]>([]);
   const [screenshotUrl, setScreenshotUrl] = useState<string | null>(null);
+  const [screenshotSize, setScreenshotSize] = useState<{ width: number; height: number } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [frameSize, setFrameSize] = useState({ width: 375, height: 812 });
   const [selectedPointIndex, setSelectedPointIndex] = useState(0);
@@ -129,7 +130,10 @@ export function HeatmapViewer({ initialScreen, screens }: Props) {
     const updateSize = () => {
       setFrameSize({
         width: element.clientWidth || 375,
-        height: element.clientHeight || (selectedDeviceClass === "desktop" ? 760 : Math.round((element.clientWidth || 375) * (812 / 375))),
+        height:
+          screenshotSize && screenshotSize.width > 0 && screenshotSize.height > 0
+            ? Math.round((element.clientWidth || 375) * (screenshotSize.height / screenshotSize.width))
+            : element.clientHeight || (selectedDeviceClass === "desktop" ? 760 : Math.round((element.clientWidth || 375) * (812 / 375))),
       });
     };
 
@@ -137,7 +141,7 @@ export function HeatmapViewer({ initialScreen, screens }: Props) {
     const observer = new ResizeObserver(updateSize);
     observer.observe(element);
     return () => observer.disconnect();
-  }, [selectedDeviceClass]);
+  }, [screenshotSize, selectedDeviceClass]);
 
   useEffect(() => {
     const mountHeatmap = async () => {
@@ -238,9 +242,20 @@ export function HeatmapViewer({ initialScreen, screens }: Props) {
       const data = await readJsonSafely(response);
       if (!response.ok || !Array.isArray(data) || data.length === 0) {
         setScreenshotUrl(null);
+        setScreenshotSize(null);
         return;
       }
-      setScreenshotUrl(typeof data[0].signed_url === "string" ? data[0].signed_url : null);
+      const latest = data[0] as { signed_url?: unknown; width?: unknown; height?: unknown };
+      const nextScreenshotUrl = typeof latest.signed_url === "string" ? latest.signed_url : null;
+      const nextScreenshotWidth = typeof latest.width === "number" && latest.width > 0 ? latest.width : null;
+      const nextScreenshotHeight = typeof latest.height === "number" && latest.height > 0 ? latest.height : null;
+
+      setScreenshotUrl(nextScreenshotUrl);
+      setScreenshotSize(
+        nextScreenshotUrl && nextScreenshotWidth && nextScreenshotHeight
+          ? { width: nextScreenshotWidth, height: nextScreenshotHeight }
+          : null,
+      );
     };
 
     void loadScreenshot();
@@ -269,6 +284,7 @@ export function HeatmapViewer({ initialScreen, screens }: Props) {
   const csv = useMemo(() => toCsv(sortedPoints), [sortedPoints]);
   const showDeviceTabs = availableDeviceClasses.length > 1;
   const activeDeviceLabel = selectedDeviceClass === "desktop" ? "desktop" : "phone";
+  const viewportStyle = screenshotSize ? { aspectRatio: `${screenshotSize.width} / ${screenshotSize.height}` } : undefined;
 
   return (
     <div className="pollex-heatmap">
@@ -364,7 +380,7 @@ export function HeatmapViewer({ initialScreen, screens }: Props) {
             {selectedDeviceClass === "phone" ? (
               <div className="pollex-phone-shell">
                 <div className="pollex-phone-notch" />
-                <div ref={viewportRef} className="pollex-device-viewport pollex-device-viewport-phone">
+                <div ref={viewportRef} className="pollex-device-viewport pollex-device-viewport-phone" style={viewportStyle}>
                   {!screenshotUrl
                     ? activePhoneLayout.map((shape, index) => (
                         <div
@@ -414,7 +430,7 @@ export function HeatmapViewer({ initialScreen, screens }: Props) {
                   <span />
                   <span />
                 </div>
-                <div ref={viewportRef} className="pollex-device-viewport pollex-device-viewport-desktop">
+                <div ref={viewportRef} className="pollex-device-viewport pollex-device-viewport-desktop" style={viewportStyle}>
                   {!screenshotUrl
                     ? activeDesktopLayout.map((shape, index) => (
                         <div
@@ -463,7 +479,9 @@ export function HeatmapViewer({ initialScreen, screens }: Props) {
           <p className="pollex-heatmap-status">
             {isLoading
               ? "Loading heatmap..."
-              : `Normalized tap coordinates are rendered on the active ${activeDeviceLabel} viewport.`}
+              : screenshotSize
+                ? `Tap coordinates are rendered against the captured ${activeDeviceLabel} content surface.`
+                : `Normalized tap coordinates are rendered on the active ${activeDeviceLabel} viewport.`}
           </p>
         </div>
 

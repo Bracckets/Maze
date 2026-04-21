@@ -7,7 +7,7 @@ import type {
   PollexTrackOptions,
 } from "./types";
 
-const DEFAULT_ENDPOINT = "http://127.0.0.1:8000/events";
+const DEFAULT_ENDPOINT = "https://yourapi.com/events";
 const DEFAULT_BATCH_SIZE = 20;
 const DEFAULT_FLUSH_INTERVAL_MS = 5_000;
 const DEFAULT_LIQUID_CACHE_TTL_SECONDS = 60;
@@ -230,6 +230,7 @@ export class PollexClient {
     const config = this.ensureConfigured();
     const viewport = getViewport();
     const screen = options.screen ?? this.currentScreen;
+    const heatmapMetadata = buildHeatmapMetadata(options, viewport);
     const payload: PollexEventPayload = {
       event_id: createId(),
       session_id: this.ensureSessionId(config.storagePrefix),
@@ -245,7 +246,10 @@ export class PollexClient {
       app_version: config.appVersion,
       screenshot_id: screenshotId,
       platform: "web",
-      metadata: sanitizeMetadata(options.metadata),
+      metadata: sanitizeMetadata({
+        ...(options.metadata ?? {}),
+        ...heatmapMetadata,
+      }),
     };
 
     this.queue.push(payload);
@@ -426,20 +430,29 @@ export class PollexClient {
       return null;
     }
 
-    const captureScale = Math.min(Math.max(window.devicePixelRatio || 1, 1), 2);
+    const surface = getDocumentSurface(viewport);
+    if (!surface) {
+      return null;
+    }
+
+    const baseScale = Math.min(Math.max(window.devicePixelRatio || 1, 1), 2);
+    const captureScale = Math.max(
+      Math.min(baseScale, config.screenshotMaxDimension / Math.max(surface.contentWidth, surface.contentHeight)),
+      0.1,
+    );
     const canvas = await html2canvas(root, {
       backgroundColor: "#111111",
       logging: false,
       useCORS: true,
       scale: captureScale,
-      width: viewport.width,
-      height: viewport.height,
-      windowWidth: viewport.width,
-      windowHeight: viewport.height,
-      x: window.scrollX,
-      y: window.scrollY,
-      scrollX: window.scrollX,
-      scrollY: window.scrollY,
+      width: surface.contentWidth,
+      height: surface.contentHeight,
+      windowWidth: surface.contentWidth,
+      windowHeight: surface.contentHeight,
+      x: 0,
+      y: 0,
+      scrollX: 0,
+      scrollY: 0,
       ignoreElements: (element: Element) => element instanceof HTMLElement && element.dataset.pollexIgnore === "true",
     }).catch(() => null);
 
@@ -569,6 +582,31 @@ function sanitizeMetadata(metadata: Record<string, string> | undefined): Record<
   );
 }
 
+function buildHeatmapMetadata(
+  options: PollexTrackOptions,
+  viewport: { width: number | null; height: number | null },
+): Record<string, string> {
+  const surface = getDocumentSurface(viewport);
+  if (!surface) {
+    return {};
+  }
+
+  const metadata: Record<string, string> = {};
+  if (options.x !== undefined && options.x !== null) {
+    const normalizedPageX = normalizeCoordinate(options.x + surface.scrollX, surface.contentWidth);
+    if (normalizedPageX !== null) {
+      metadata.__pollex_page_x = normalizedPageX.toFixed(6);
+    }
+  }
+  if (options.y !== undefined && options.y !== null) {
+    const normalizedPageY = normalizeCoordinate(options.y + surface.scrollY, surface.contentHeight);
+    if (normalizedPageY !== null) {
+      metadata.__pollex_page_y = normalizedPageY.toFixed(6);
+    }
+  }
+  return metadata;
+}
+
 function normalizeCoordinate(value: number | undefined, max: number | null): number | null {
   if (value === undefined || value === null || max === null || max <= 0) {
     return null;
@@ -576,6 +614,47 @@ function normalizeCoordinate(value: number | undefined, max: number | null): num
 
   const normalized = value / max;
   return Math.min(Math.max(normalized, 0), 1);
+}
+
+function getDocumentSurface(
+  viewport: { width: number | null; height: number | null },
+): {
+  contentWidth: number;
+  contentHeight: number;
+  scrollX: number;
+  scrollY: number;
+} | null {
+  if (typeof window === "undefined" || typeof document === "undefined" || viewport.width === null || viewport.height === null) {
+    return null;
+  }
+
+  const root = document.documentElement;
+  const body = document.body;
+  const contentWidth = Math.max(
+    Math.ceil(root?.scrollWidth ?? 0),
+    Math.ceil(root?.clientWidth ?? 0),
+    Math.ceil(body?.scrollWidth ?? 0),
+    Math.ceil(body?.clientWidth ?? 0),
+    viewport.width,
+  );
+  const contentHeight = Math.max(
+    Math.ceil(root?.scrollHeight ?? 0),
+    Math.ceil(root?.clientHeight ?? 0),
+    Math.ceil(body?.scrollHeight ?? 0),
+    Math.ceil(body?.clientHeight ?? 0),
+    viewport.height,
+  );
+
+  if (contentWidth <= 0 || contentHeight <= 0) {
+    return null;
+  }
+
+  return {
+    contentWidth,
+    contentHeight,
+    scrollX: Math.max(window.scrollX || 0, 0),
+    scrollY: Math.max(window.scrollY || 0, 0),
+  };
 }
 
 function getViewport(): { width: number | null; height: number | null } {

@@ -62,6 +62,14 @@ describe("Pollex web SDK", () => {
     Object.defineProperty(window, "devicePixelRatio", { value: 1, configurable: true, writable: true });
     Object.defineProperty(window, "scrollX", { value: 0, configurable: true, writable: true });
     Object.defineProperty(window, "scrollY", { value: 0, configurable: true, writable: true });
+    Object.defineProperty(document.documentElement, "scrollWidth", { value: 100, configurable: true });
+    Object.defineProperty(document.documentElement, "scrollHeight", { value: 50, configurable: true });
+    Object.defineProperty(document.documentElement, "clientWidth", { value: 100, configurable: true });
+    Object.defineProperty(document.documentElement, "clientHeight", { value: 50, configurable: true });
+    Object.defineProperty(document.body, "scrollWidth", { value: 100, configurable: true });
+    Object.defineProperty(document.body, "scrollHeight", { value: 50, configurable: true });
+    Object.defineProperty(document.body, "clientWidth", { value: 100, configurable: true });
+    Object.defineProperty(document.body, "clientHeight", { value: 50, configurable: true });
     html2CanvasMock.mockClear();
   });
 
@@ -250,9 +258,15 @@ describe("Pollex web SDK", () => {
     }
   });
 
-  it("masks long metadata values and normalizes viewport coordinates", async () => {
+  it("masks long metadata values and records page-relative coordinates", async () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ accepted: 1 }));
     const client = new PollexClient();
+    Object.defineProperty(window, "scrollX", { value: 20, configurable: true, writable: true });
+    Object.defineProperty(window, "scrollY", { value: 400, configurable: true, writable: true });
+    Object.defineProperty(document.documentElement, "scrollWidth", { value: 300, configurable: true });
+    Object.defineProperty(document.documentElement, "scrollHeight", { value: 1000, configurable: true });
+    Object.defineProperty(document.body, "scrollWidth", { value: 300, configurable: true });
+    Object.defineProperty(document.body, "scrollHeight", { value: 1000, configurable: true });
     client.configure({
       apiKey: "mz_live_test",
       fetchImpl: fetchMock,
@@ -275,7 +289,12 @@ describe("Pollex web SDK", () => {
 
     const [, request] = fetchMock.mock.calls[0] as [string, RequestInit];
     const event = JSON.parse(String(request.body)).events[0];
-    expect(event.metadata).toEqual({ short: "ok", long: "***" });
+    expect(event.metadata).toEqual({
+      short: "ok",
+      long: "***",
+      __pollex_page_x: "0.233333",
+      __pollex_page_y: "0.425000",
+    });
     expect(event.x).toBe(0.5);
     expect(event.y).toBe(0.5);
     expect(event.screen_width).toBe(100);
@@ -309,9 +328,14 @@ describe("Pollex web SDK", () => {
       .mockResolvedValueOnce(jsonResponse({ screenshot_id: "shot-123" }))
       .mockResolvedValueOnce(jsonResponse({ accepted: 1 }));
     const client = new PollexClient();
+    Object.defineProperty(document.documentElement, "scrollWidth", { value: 375, configurable: true });
+    Object.defineProperty(document.documentElement, "scrollHeight", { value: 1200, configurable: true });
+    Object.defineProperty(document.body, "scrollWidth", { value: 375, configurable: true });
+    Object.defineProperty(document.body, "scrollHeight", { value: 1200, configurable: true });
 
     client.configure({
       apiKey: "mz_live_test",
+      endpoint: "http://127.0.0.1:8000/events",
       fetchImpl: fetchMock,
       batchSize: 1,
       storagePrefix: "capture-test",
@@ -324,6 +348,17 @@ describe("Pollex web SDK", () => {
 
     expect(html2CanvasMock).toHaveBeenCalledTimes(1);
     expect(fetchMock).toHaveBeenCalledTimes(2);
+    const [, html2CanvasOptions] = html2CanvasMock.mock.calls[0] as unknown as [Element, Record<string, unknown>];
+    expect(html2CanvasOptions).toMatchObject({
+      width: 375,
+      height: 1200,
+      windowWidth: 375,
+      windowHeight: 1200,
+      x: 0,
+      y: 0,
+      scrollX: 0,
+      scrollY: 0,
+    });
 
     const [screenshotUrl, screenshotRequest] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(screenshotUrl).toBe("http://127.0.0.1:8000/screenshots");

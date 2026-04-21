@@ -6,6 +6,8 @@ import android.content.res.Resources
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Matrix
+import android.view.View
+import android.view.ViewGroup
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -488,7 +490,8 @@ object Pollex {
         y: Float?,
         screenshotId: String?
     ) {
-        val safeMetadata = metadata.mapValues { (_, value) -> if (value.length > 24) "***" else value }
+        val heatmapMetadata = enrichHeatmapMetadata(metadata, x, y)
+        val safeMetadata = heatmapMetadata.mapValues { (_, value) -> if (value.length > 24) "***" else value }
         val displayMetrics = Resources.getSystem().displayMetrics
         val normalizedX = x?.let { (it / displayMetrics.widthPixels).coerceIn(0f, 1f) }
         val normalizedY = y?.let { (it / displayMetrics.heightPixels).coerceIn(0f, 1f) }
@@ -512,6 +515,94 @@ object Pollex {
                 metadata = safeMetadata
             )
         )
+    }
+
+    private suspend fun enrichHeatmapMetadata(
+        metadata: Map<String, String>,
+        x: Float?,
+        y: Float?
+    ): Map<String, String> = withContext(Dispatchers.Main) {
+        if (x == null || y == null) {
+            return@withContext metadata
+        }
+
+        val activity = ActivityTracker.current() ?: return@withContext metadata
+        val root = activity.window?.decorView ?: return@withContext metadata
+        val target = findViewAt(root, x, y) ?: return@withContext metadata
+
+        var candidate: View? = target
+        while (candidate != null) {
+            val contentWidth = scrollableContentWidth(candidate)
+            val contentHeight = scrollableContentHeight(candidate)
+            val isScrollable =
+                candidate.canScrollHorizontally(1) ||
+                candidate.canScrollHorizontally(-1) ||
+                candidate.canScrollVertically(1) ||
+                candidate.canScrollVertically(-1)
+
+            if (isScrollable && contentWidth > 0 && contentHeight > 0 &&
+                (contentWidth > candidate.width || contentHeight > candidate.height)
+            ) {
+                val location = IntArray(2)
+                candidate.getLocationInWindow(location)
+                val pointInViewX = candidate.scrollX + (x - location[0].toFloat())
+                val pointInViewY = candidate.scrollY + (y - location[1].toFloat())
+
+                return@withContext metadata + mapOf(
+                    "__pollex_page_x" to formatNormalizedCoordinate(pointInViewX / contentWidth.toFloat()),
+                    "__pollex_page_y" to formatNormalizedCoordinate(pointInViewY / contentHeight.toFloat()),
+                )
+            }
+            candidate = candidate.parent as? View
+        }
+
+        metadata
+    }
+
+    private fun findViewAt(root: View, x: Float, y: Float): View? {
+        if (!root.isShown) {
+            return null
+        }
+
+        val location = IntArray(2)
+        root.getLocationInWindow(location)
+        val left = location[0].toFloat()
+        val top = location[1].toFloat()
+        val right = left + root.width
+        val bottom = top + root.height
+        if (x < left || x > right || y < top || y > bottom) {
+            return null
+        }
+
+        if (root is ViewGroup) {
+            for (index in root.childCount - 1 downTo 0) {
+                val child = root.getChildAt(index)
+                val match = findViewAt(child, x, y)
+                if (match != null) {
+                    return match
+                }
+            }
+        }
+
+        return root
+    }
+
+    private fun scrollableContentWidth(view: View): Int {
+        if (view is ViewGroup && view.childCount > 0) {
+            return maxOf(view.getChildAt(0).width, view.width)
+        }
+        return view.width
+    }
+
+    private fun scrollableContentHeight(view: View): Int {
+        if (view is ViewGroup && view.childCount > 0) {
+            return maxOf(view.getChildAt(0).height, view.height)
+        }
+        return view.height
+    }
+
+    private fun formatNormalizedCoordinate(value: Float): String {
+        return "%.6f".format(java.util.Locale.US, value.coerceIn(0f, 1f))
     }
 
     private suspend fun captureAndUploadScreenshot(
