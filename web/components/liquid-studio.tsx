@@ -134,7 +134,7 @@ const TAB_DESCRIPTIONS: Record<LiquidTab, string> = {
   analytics: "Watch coverage, fallback share, and modeled lift across every Liquid key.",
 };
 
-const PROFILE_COLORS = ["#7fb6ff", "#6ef2c0", "#f9c56d", "#c6a8ff", "#ff8ba7"];
+const PROFILE_COLORS = ["#57ff2c", "#459dff", "#f4d06f", "#bf9bff", "#ff9f8e"];
 const TRAIT_VALUE_TYPES: Array<{ value: TraitValueType; label: string }> = [
   { value: "text", label: "Text" },
   { value: "int", label: "Integer" },
@@ -532,6 +532,15 @@ function profileAccent(profileId: string) {
     hash = (hash * 31 + character.charCodeAt(0)) >>> 0;
   }
   return PROFILE_COLORS[hash % PROFILE_COLORS.length];
+}
+
+function profileMonogram(name: string, profileKey = "") {
+  const source = (name.trim() || profileKey.trim() || "Profile")
+    .split(/[\s_-]+/)
+    .filter(Boolean)
+    .slice(0, 2);
+  const letters = source.map((part) => part[0]?.toUpperCase() ?? "").join("");
+  return letters || "PR";
 }
 
 function PieChart({ shares }: { shares: ProfileShare[] }) {
@@ -2643,17 +2652,19 @@ export function LiquidStudio({
 
   function renderPollexTraitBuilder() {
     return (
-      <div className="liquid-pollex-trait-builder">
+      <div className="liquid-pollex-profile-editor-trait-list">
         {profileDraft.traits.map((row, index) => {
           const trait = traitDefinitionByKey.get(row.traitKey) ?? null;
           return (
-            <div key={`pollex-profile-${index}`} className="liquid-pollex-trait-builder-row">
-              <div className="liquid-pollex-trait-chip">
+            <div key={`pollex-profile-${index}`} className="liquid-pollex-profile-editor-trait-row">
+              <div className="liquid-pollex-profile-editor-trait-pill">
                 <strong>{trait?.label ?? row.traitKey}</strong>
                 <span>{TRAIT_VALUE_TYPES.find((item) => item.value === (trait?.valueType ?? row.valueType))?.label ?? row.valueType}</span>
               </div>
-              <ProfileTraitValueInput row={row} trait={trait} onChange={(patch) => updateProfileTrait(index, patch)} />
-              <button className="btn btn-ghost btn-sm" type="button" onClick={() => removeProfileTraitRow(index)}>Remove</button>
+              <div className="liquid-pollex-profile-editor-trait-control">
+                <ProfileTraitValueInput row={row} trait={trait} onChange={(patch) => updateProfileTrait(index, patch)} />
+              </div>
+              <PollexIconButton icon="delete" label={`Remove ${trait?.label || row.traitKey || "trait"}`} tone="danger" onClick={() => removeProfileTraitRow(index)} />
             </div>
           );
         })}
@@ -2695,15 +2706,17 @@ export function LiquidStudio({
         onClose,
         children,
         danger = false,
+        className,
       }: {
         title: string;
         icon: "key" | "profile" | "variant" | "trait" | "staging";
         onClose: () => void;
         children: ReactNode;
         danger?: boolean;
+        className?: string;
       }) {
         return (
-          <aside className={`liquid-pollex-sheet ${danger ? "is-danger" : ""}`.trim()}>
+          <aside className={`liquid-pollex-sheet ${danger ? "is-danger" : ""} ${className ?? ""}`.trim()}>
             <div className="liquid-pollex-sheet-head">
               <div className="liquid-pollex-sheet-title">
                 <span className="liquid-pollex-sheet-icon"><PollexIcon icon={icon} /></span>
@@ -3136,6 +3149,252 @@ export function LiquidStudio({
     });
   }
 
+  function renderPollexProfileTraitRowsV2() {
+    return (
+      <div className="liquid-pollex-profile-editor-trait-list">
+        {profileDraft.traits.map((row, index) => {
+          const trait = traitDefinitionByKey.get(row.traitKey) ?? null;
+          const valueType = trait?.valueType ?? row.valueType;
+          return (
+            <div key={`pollex-profile-v2-${index}`} className="liquid-pollex-profile-editor-trait-row">
+              <div className="liquid-pollex-profile-editor-trait-pill">
+                <strong>{trait?.label ?? row.traitKey}</strong>
+                <span>{TRAIT_VALUE_TYPES.find((item) => item.value === valueType)?.label ?? valueType}</span>
+              </div>
+              <div className="liquid-pollex-profile-editor-trait-control">
+                {valueType === "range" ? (
+                  <div className="liquid-pollex-profile-editor-range">
+                    <input
+                      className="liquid-ops-input liquid-ops-table-input"
+                      inputMode="decimal"
+                      value={row.minValue}
+                      onChange={(event) => updateProfileTrait(index, { minValue: event.target.value })}
+                      placeholder="7"
+                    />
+                    <span>to</span>
+                    <input
+                      className="liquid-ops-input liquid-ops-table-input"
+                      inputMode="decimal"
+                      value={row.maxValue}
+                      onChange={(event) => updateProfileTrait(index, { maxValue: event.target.value })}
+                      placeholder="18"
+                    />
+                  </div>
+                ) : (
+                  <ProfileTraitValueInput row={row} trait={trait} onChange={(patch) => updateProfileTrait(index, patch)} />
+                )}
+              </div>
+              <button
+                type="button"
+                className="liquid-pollex-profile-editor-trait-remove"
+                aria-label={`Remove ${trait?.label || row.traitKey || "trait"}`}
+                title={`Remove ${trait?.label || row.traitKey || "trait"}`}
+                onClick={() => removeProfileTraitRow(index)}
+              >
+                <PollexIcon icon="close" />
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+
+  function renderPollexProfileSheetV2() {
+    if (profilePanelMode === "closed") return null;
+    if (profilePanelMode === "delete") {
+      return (
+        <div className="liquid-pollex-sheet-rail liquid-pollex-profile-sheet-rail">
+          <RenderPollexSheet title="Delete Profile" icon="profile" onClose={() => void requestCloseProfilePanel()} danger>
+            <div className="liquid-pollex-delete-copy">
+              <p>Delete "{profileDraft.name || "this profile"}"? Any profile-specific variants that depend on it will lose their audience anchor.</p>
+            </div>
+            <div className="liquid-pollex-sheet-actions">
+              <button className="btn btn-ghost btn-sm" type="button" onClick={() => setProfilePanelMode("edit")}>Back</button>
+              <button className="btn btn-primary btn-sm liquid-pollex-danger-button" type="button" onClick={() => void deleteProfile()} disabled={busy === "profile-delete"}>Delete</button>
+            </div>
+          </RenderPollexSheet>
+        </div>
+      );
+    }
+
+    const previewAccent = profileAccent(profileDraft.id || profileDraft.profileKey || profileDraft.name || "draft-profile");
+    const attachedTraitKeys = new Set(profileDraft.traits.map((trait) => trait.traitKey));
+    const availableTraitOptions = traits
+      .filter((trait) => !attachedTraitKeys.has(trait.traitKey))
+      .map((trait) => ({ value: trait.traitKey, label: trait.label }));
+    return (
+      <div className="liquid-pollex-sheet-rail liquid-pollex-profile-sheet-rail">
+        <RenderPollexSheet
+          title={profilePanelMode === "create" ? "Create Profile" : "Edit Profile"}
+          icon="profile"
+          onClose={() => void requestCloseProfilePanel()}
+          className="liquid-pollex-sheet-profile"
+        >
+          <div className="liquid-pollex-profile-editor">
+            <div className="liquid-pollex-profile-editor-columns">
+              <section className="liquid-pollex-profile-editor-panel liquid-pollex-profile-editor-panel-info">
+                <div className="liquid-pollex-profile-editor-hero" style={{ "--liquid-profile-accent": previewAccent } as CSSProperties}>
+                  <div className="liquid-pollex-profile-editor-avatar">
+                    <span>{profileMonogram(profileDraft.name, profileDraft.profileKey)}</span>
+                  </div>
+                  <div className="liquid-pollex-profile-editor-hero-copy">
+                    <strong>{profileDraft.name.trim() || "New profile"}</strong>
+                    <span>{profileDraft.profileKey.trim() || "profile_key"}</span>
+                    <small>{previewAccent}</small>
+                  </div>
+                </div>
+                {renderPollexField({ label: "Profile Name", children: <input className="liquid-ops-input" value={profileDraft.name} onChange={(event) => setProfileDraft((current) => ({ ...current, name: event.target.value }))} placeholder="Young Users" /> })}
+                {renderPollexField({ label: "Profile key", children: <input className="liquid-ops-input" value={profileDraft.profileKey} onChange={(event) => setProfileDraft((current) => ({ ...current, profileKey: event.target.value }))} placeholder="young_users" /> })}
+                {renderPollexField({ label: "Description", children: <textarea className="liquid-ops-input liquid-ops-textarea" value={profileDraft.description} onChange={(event) => setProfileDraft((current) => ({ ...current, description: event.target.value }))} placeholder="Users in the range of 7 to 18 who should see age-aware copy." /> })}
+                {renderPollexField({ label: "Status", children: renderPollexToggle(profileDraft.enabled, () => setProfileDraft((current) => ({ ...current, enabled: !current.enabled })), "Active", "Paused") })}
+              </section>
+
+              <section className="liquid-pollex-profile-editor-panel liquid-pollex-profile-editor-panel-traits">
+                <div className="liquid-pollex-profile-editor-section-head">
+                  <strong>Traits</strong>
+                </div>
+                {renderPollexProfileTraitRowsV2()}
+                <div className="liquid-pollex-profile-editor-trait-row liquid-pollex-profile-editor-trait-row-add">
+                  <div className="liquid-pollex-profile-editor-trait-pill">
+                    <strong>Add a trait</strong>
+                  </div>
+                  <div className="liquid-pollex-profile-editor-trait-control">
+                    <LiquidSelect
+                      value=""
+                      options={availableTraitOptions}
+                      placeholder={availableTraitOptions.length ? "something" : "No more traits"}
+                      disabled={availableTraitOptions.length === 0}
+                      onChange={(nextValue) => {
+                        const definition = traitDefinitionByKey.get(nextValue);
+                        if (!definition) return;
+                        setProfileDraft((current) => ({
+                          ...current,
+                          traits: [...current.traits, buildProfileTraitRowForTrait(definition)],
+                        }));
+                        clearMessages();
+                      }}
+                    />
+                  </div>
+                  <span className="liquid-pollex-profile-editor-trait-spacer" aria-hidden="true" />
+                </div>
+              </section>
+            </div>
+          </div>
+          <div className="liquid-pollex-sheet-actions">
+            {profilePanelMode === "edit" ? <button className="btn btn-ghost btn-sm" type="button" onClick={() => setProfilePanelMode("delete")}>Delete</button> : null}
+            <button className="btn btn-ghost btn-sm" type="button" onClick={() => void requestCloseProfilePanel()}>Close</button>
+            <button className="btn btn-primary btn-sm" type="button" onClick={() => void saveProfile()} disabled={busy === "profile"}>{profilePanelMode === "create" ? "Create profile" : "Save profile"}</button>
+          </div>
+        </RenderPollexSheet>
+      </div>
+    );
+  }
+
+  function renderPollexProfilesTabV2() {
+    return renderPollexFrame({
+      title: "Profiles",
+      action: (
+        <div className="liquid-pollex-profile-toolbar">
+          <button className="liquid-pollex-profile-toolbar-icon" type="button" onClick={() => void requestActiveTabChange("traits")} aria-label="Open traits" title="Open traits">
+            <PollexIcon icon="trait" />
+          </button>
+          <PollexCommand icon="add" label="Create Profile" onClick={() => void requestOpenProfilePanel("create")} />
+        </div>
+      ),
+      sheet: renderPollexProfileSheetV2(),
+      children: profiles.length === 0 ? (
+        renderPollexEmpty("Add records to start", "Create a reusable audience so Liquid can branch copy with clearer intent.")
+      ) : (
+        <div className="liquid-pollex-profile-board">
+          {profiles.map((profile) => {
+            const accent = profileAccent(profile.id);
+            const visibleTraits = profile.traits.slice(0, 4);
+            const extraTraits = profile.traits.length - visibleTraits.length;
+            return (
+              <article
+                key={profile.id}
+                className={`liquid-pollex-profile-card liquid-pollex-profile-card-v2 ${selectedProfileId === profile.id && profilePanelMode !== "closed" ? "is-selected" : ""}`.trim()}
+                style={{ "--liquid-profile-accent": accent } as CSSProperties}
+                role="button"
+                tabIndex={0}
+                onClick={() => void requestOpenProfilePanel("edit", profile.id)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    void requestOpenProfilePanel("edit", profile.id);
+                  }
+                }}
+              >
+                <div className="liquid-pollex-profile-card-glow" aria-hidden="true" />
+                <div className="liquid-pollex-profile-card-avatar">
+                  <span>{profileMonogram(profile.name, profile.profileKey)}</span>
+                </div>
+                <div className="liquid-pollex-profile-card-copy">
+                  <strong>{profile.name}</strong>
+                  <span>{profile.profileKey}</span>
+                </div>
+                <div className="liquid-pollex-profile-card-rules">
+                  {visibleTraits.length === 0 ? (
+                    <div className="liquid-pollex-profile-rule is-empty">
+                      <span>Add traits</span>
+                      <strong>Open editor</strong>
+                    </div>
+                  ) : (
+                    visibleTraits.map((trait) => (
+                      <div key={`${profile.id}-${trait.traitKey}`} className="liquid-pollex-profile-rule">
+                        <span>{trait.label}</span>
+                        <strong>{formatProfileTraitDisplayValue(trait)}</strong>
+                      </div>
+                    ))
+                  )}
+                  {extraTraits > 0 ? (
+                    <div className="liquid-pollex-profile-rule is-more">
+                      <span>More traits</span>
+                      <strong>+{extraTraits}</strong>
+                    </div>
+                  ) : null}
+                </div>
+                <div className="liquid-pollex-profile-card-footer">
+                  <div className="liquid-pollex-profile-card-meta">
+                    <small>{readinessLabel(profile.readiness?.state)}</small>
+                    <span>{profileVariantCount(profile.id)} variants</span>
+                  </div>
+                  <div className="liquid-pollex-row-actions">
+                    <button
+                      type="button"
+                      className="liquid-pollex-icon-button"
+                      aria-label="Edit profile"
+                      title="Edit profile"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        void requestOpenProfilePanel("edit", profile.id);
+                      }}
+                    >
+                      <PollexIcon icon="edit" />
+                    </button>
+                    <button
+                      type="button"
+                      className="liquid-pollex-icon-button is-danger"
+                      aria-label="Delete profile"
+                      title="Delete profile"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        void requestOpenProfilePanel("delete", profile.id);
+                      }}
+                    >
+                      <PollexIcon icon="delete" />
+                    </button>
+                  </div>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      ),
+    });
+  }
+
   function renderPollexTraitsTab() {
     const traitUsageCount = (traitKey: string) => profiles.reduce((count, profile) => count + profile.traits.filter((trait) => trait.traitKey === traitKey).length, 0);
     return renderPollexFrame({
@@ -3357,7 +3616,7 @@ export function LiquidStudio({
       {notice ? <div className="liquid-pollex-banner success">{notice}</div> : null}
       {error ? <div className="liquid-pollex-banner error">{error}</div> : null}
       {activeTab === "keys" ? renderPollexKeysTab() : null}
-      {activeTab === "profiles" ? renderPollexProfilesTab() : null}
+      {activeTab === "profiles" ? renderPollexProfilesTabV2() : null}
       {activeTab === "variants" ? renderPollexVariantsTab() : null}
       {activeTab === "traits" ? renderPollexTraitsTab() : null}
       {activeTab === "staging" ? renderPollexStagingTab() : null}

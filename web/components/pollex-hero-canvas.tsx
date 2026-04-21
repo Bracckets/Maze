@@ -2,6 +2,8 @@
 
 import { useEffect, useRef } from "react";
 
+import { useTheme } from "@/components/theme-provider";
+
 type HeroShape = {
   baseRotation: number;
   depth: number;
@@ -43,6 +45,7 @@ const mobileHeroShapes: HeroShape[] = [
 ];
 
 export function PollexHeroCanvas() {
+  const { resolvedTheme } = useTheme();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const pointerRef = useRef({ targetX: 0, targetY: 0, x: 0, y: 0, active: false });
@@ -130,13 +133,22 @@ export function PollexHeroCanvas() {
         height * 0.45,
         Math.max(width, height) * 0.42,
       );
-      halo.addColorStop(0, "rgba(255,255,255,0.12)");
-      halo.addColorStop(0.4, "rgba(255,255,255,0.045)");
-      halo.addColorStop(1, "rgba(255,255,255,0)");
+      if (resolvedTheme === "light") {
+        halo.addColorStop(0, "rgba(95,115,145,0.14)");
+        halo.addColorStop(0.4, "rgba(95,115,145,0.05)");
+        halo.addColorStop(1, "rgba(95,115,145,0)");
+      } else {
+        halo.addColorStop(0, "rgba(255,255,255,0.12)");
+        halo.addColorStop(0.4, "rgba(255,255,255,0.045)");
+        halo.addColorStop(1, "rgba(255,255,255,0)");
+      }
       context.fillStyle = halo;
       context.fillRect(0, 0, width, height);
 
-      context.strokeStyle = "rgba(255,255,255,0.045)";
+      context.strokeStyle =
+        resolvedTheme === "light"
+          ? "rgba(95,115,145,0.12)"
+          : "rgba(255,255,255,0.045)";
       context.lineWidth = 1;
       context.beginPath();
       context.moveTo(width * 0.5 - 160, height * 0.27);
@@ -235,7 +247,7 @@ export function PollexHeroCanvas() {
       wrapper.removeEventListener("pointermove", handlePointerMove);
       wrapper.removeEventListener("pointerleave", handlePointerLeave);
     };
-  }, []);
+  }, [resolvedTheme]);
 
   return (
     <div className="pollex-hero-canvas-layer" ref={wrapperRef} aria-hidden="true">

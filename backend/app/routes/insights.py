@@ -2,8 +2,16 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.db import get_db
-from app.models.schemas import HeatmapOut, HeatmapScenarioOut, HeatmapScenarioStepOut, InsightOut
+from app.models.schemas import (
+    HeatmapOut,
+    HeatmapScenarioOut,
+    HeatmapScenarioStepOut,
+    InsightChatRequestIn,
+    InsightChatResponseOut,
+    InsightOut,
+)
 from app.routes.dependencies import get_current_account
+from app.services.insight_chat import build_insight_chat_reply
 from app.services.platform import (
     build_heatmap_payload,
     build_heatmap_scenario,
@@ -32,6 +40,15 @@ def list_insights(account: dict = Depends(get_current_account), db: Session = De
             )
         )
     return insights
+
+
+@router.post("/insights/chat", response_model=InsightChatResponseOut)
+def chat_about_insights(
+    payload: InsightChatRequestIn,
+    account: dict = Depends(get_current_account),
+    db: Session = Depends(get_db),
+):
+    return InsightChatResponseOut(**build_insight_chat_reply(db, account["workspace_id"], payload.question, payload.focus))
 
 
 @router.get("/issues")

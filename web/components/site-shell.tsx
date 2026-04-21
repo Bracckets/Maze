@@ -197,10 +197,10 @@ export async function DashboardShell({
           <div className="dashboard-page-copy">
             <h1 className="page-title">{title}</h1>
           </div>
-          <div className="dashboard-page-tools">
-            {headerAction}
-            <LocaleSwitcher />
-          </div>
+        <div className="dashboard-page-tools">
+          {headerAction}
+          <LocaleSwitcher />
+        </div>
         </div>
 
         <div className="dashboard-page-body">{children}</div>

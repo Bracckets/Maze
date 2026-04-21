@@ -1,13 +1,29 @@
 # POLLEX_INTEGRATION
 
-Follow this document when integrating Pollex into a mobile app.
+Follow this document when integrating Pollex into a host app.
+This file is an agent runbook, not just a product note.
+It should give enough detail for an agent to install, configure, run, verify, and troubleshoot Pollex in iOS, Android, or web clients without inventing missing steps.
 
-Pollex now covers two connected responsibilities:
+Pollex covers two connected responsibilities:
 
 1. Behavior telemetry and optional session capture
 2. Liquid runtime bundle resolution for app content
 
-The goal is one coherent Pollex setup, not two separate SDK stories.
+The goal is one coherent Pollex setup, not separate telemetry and Liquid integrations.
+
+## Agent run checklist
+
+When using this file, the agent should:
+
+1. confirm which host platform is being integrated: iOS, Android, web, or more than one
+2. confirm the backend `/events` endpoint the client can actually reach
+3. confirm a valid workspace API key exists for ingestion and Liquid runtime requests
+4. configure Pollex once in app bootstrap code
+5. add explicit `screen` and `track` calls for the target flow
+6. wire one `resolveLiquidBundle` call for a real screen
+7. verify traffic reaches `/events`, `/screenshots` when enabled, and `/liquid/runtime/bundles/resolve`
+8. fall back to app-local content if runtime resolve fails
+9. keep session capture off unless the host app satisfies disclosure and consent requirements
 
 ## Core integration contract
 
@@ -79,6 +95,20 @@ import com.pollex.sdk.Pollex
 import com.pollex.sdk.PollexConfig
 ```
 
+### Web
+
+Install the browser SDK:
+
+```bash
+npm install pollex-web-sdk
+```
+
+Import:
+
+```ts
+import { Pollex } from "pollex-web-sdk";
+```
+
 ## 2. Configure Pollex once
 
 Pollex uses the same workspace API key for telemetry and Liquid bundle resolution.
@@ -91,6 +121,7 @@ Pollex.configure(
         apiKey: "YOUR_API_KEY",
         deviceId: "app-scoped-device-id",
         endpoint: URL(string: "https://api.yourdomain.com/events")!,
+        appVersion: "1.0.0",
         sessionCaptureEnabled: false
     )
 )
@@ -104,17 +135,60 @@ Pollex.configure(
         apiKey = "YOUR_API_KEY",
         deviceId = "app-scoped-device-id",
         endpoint = "https://api.yourdomain.com/events",
+        appVersion = "1.0.0",
         application = this,
         sessionCaptureEnabled = false
     )
 )
 ```
 
+### Web
+
+Configure Pollex in client-side bootstrap code only:
+
+```ts
+import { Pollex } from "pollex-web-sdk";
+
+Pollex.configure({
+  apiKey: "YOUR_API_KEY",
+  endpoint: "https://api.yourdomain.com/events",
+  appVersion: "1.0.0",
+  sessionCaptureEnabled: false,
+});
+```
+
+### Next.js
+
+Use a client component and run configuration once:
+
+```tsx
+"use client";
+
+import { useEffect } from "react";
+import { Pollex } from "pollex-web-sdk";
+
+export function PollexBootstrap() {
+  useEffect(() => {
+    Pollex.configure({
+      apiKey: process.env.NEXT_PUBLIC_POLLEX_API_KEY ?? "",
+      endpoint: process.env.NEXT_PUBLIC_POLLEX_EVENTS_URL ?? "http://127.0.0.1:8000/events",
+      appVersion: "1.0.0",
+      sessionCaptureEnabled: false,
+    });
+  }, []);
+
+  return null;
+}
+```
+
 Notes:
 
 - configure Pollex exactly once
 - use HTTPS in production
-- the SDK derives the Liquid runtime endpoint from the Pollex backend host unless explicitly overridden
+- the SDK derives both the screenshot upload endpoint and the Liquid runtime endpoint from the Pollex backend host unless explicitly overridden
+- browser integrations must run Pollex in client-side code, not in server-only code
+- browser API keys are exposed by design, so treat them as publishable ingestion and runtime credentials rather than secrets
+- for web local development, the backend must allow the web origin through `CORS_ALLOW_ORIGINS`
 
 ## 3. Define stable screen keys and content keys
 
@@ -152,6 +226,8 @@ Recommended placement:
 - SwiftUI: `.onAppear`
 - Android Activity or Fragment: `onResume()`
 - Jetpack Compose: `LaunchedEffect(Unit)`
+- Web SPA route or screen entry: after route change or page mount
+- Next.js client component: inside `useEffect` for the rendered screen
 
 ### Interaction tracking
 
@@ -171,7 +247,18 @@ Pollex.track(
 )
 ```
 
+```ts
+Pollex.track("tap", {
+  screen: "checkout_paywall",
+  elementId: "primary_cta",
+  metadata: {
+    variant: "hero_a",
+  },
+});
+```
+
 Track form events only when the app already knows submission or validation state.
+Pollex web v1 is explicit-only and does not auto-capture pageviews, clicks, or replay events for you.
 
 ## 5. Resolve a Liquid bundle at runtime
 
@@ -194,7 +281,7 @@ Pollex.resolveLiquidBundle(
     case .success(let bundle):
         render(bundle)
     case .failure:
-        renderLastKnownBundleOrLocalDefaults()
+        renderAppFallbackContent()
     }
 }
 ```
@@ -215,9 +302,26 @@ Pollex.resolveLiquidBundle(
     result.onSuccess { bundle ->
         render(bundle)
     }.onFailure {
-        renderLastKnownBundleOrLocalDefaults()
+        renderAppFallbackContent()
     }
 }
+```
+
+### Web
+
+```ts
+const bundle = await Pollex.resolveLiquidBundle({
+  screen: "checkout_paywall",
+  locale: "en-US",
+  subjectId: userId,
+  country: "US",
+  traits: {
+    "user.plan": "growth",
+    "user.region": "na",
+  },
+});
+
+render(bundle);
 ```
 
 Send these fields when available:
@@ -284,9 +388,21 @@ Runtime behavior should be:
 
 1. request one published Liquid bundle for the current screen
 2. cache the result using the SDK helper
-3. render the bundle immediately when present
-4. on failure, use the last known cached bundle
-5. if no cached bundle exists, use app-local defaults
+3. render a fresh cached bundle immediately when present
+4. if the runtime fetch fails and there is no fresh cached bundle, handle the SDK error and fall back in app code
+5. use app-local defaults when no usable runtime bundle is available
+
+Current SDK behavior:
+
+- iOS, Android, and web cache fresh bundles using the bundle TTL when provided, otherwise the SDK cache TTL setting
+- the SDKs do not currently return an expired cached bundle after a failed fetch
+- if you want stale-cache fallback behavior, implement that policy in app code instead of assuming the SDK does it for you
+
+Web runtime notes:
+
+- the browser SDK stores device identity in local storage and session identity in session storage using the configured `storagePrefix`
+- the browser SDK flushes queued events on `pagehide` and when the document becomes hidden
+- `Pollex.flush()` is useful in tests when you want to force event delivery before asserting backend state
 
 Expected server behavior:
 
@@ -318,8 +434,8 @@ Only published keys and published bundles are served to production runtime.
 
 The Liquid dashboard now reports:
 
-- whether observed screens exist
-- whether runtime bundle resolves are happening
+- observed screen count
+- runtime resolve count and whether runtime traffic is active
 - app trait coverage
 - Pollex-computed trait coverage
 - fallback-only live keys
@@ -342,13 +458,29 @@ Examples:
 
 ```swift
 Pollex.setSessionCaptureEnabled(true)
-Pollex.setCaptureBlockedScreens(["login", "signup", "otp_verification", "payment"])
+Pollex.setCaptureBlockedScreens([
+    "login",
+    "signup",
+    "otp_verification",
+    "password_reset",
+    "payment",
+    "kyc_id_upload"
+])
 ```
 
 ```kotlin
 Pollex.setSessionCaptureEnabled(true)
-Pollex.setCaptureBlockedScreens(setOf("login", "signup", "otp_verification", "payment"))
+Pollex.setCaptureBlockedScreens(
+    setOf("login", "signup", "otp_verification", "password_reset", "payment", "kyc_id_upload")
+)
 ```
+
+Additional SDK helpers:
+
+- `Pollex.setCaptureAllowedScreens(...)` narrows capture to a safe allowlist
+- `Pollex.setScreenCaptureEnabled(_:for:)` on iOS and `Pollex.setScreenCaptureEnabled(enabled, screen)` on Android can override one screen at a time
+- on web, `captureAllowedScreens`, `captureBlockedScreens`, and `captureEvaluator` are configuration-time controls
+- on web, mark elements with `data-pollex-ignore="true"` if they must be excluded from optional screenshot capture
 
 ## 12. Data safety rules
 
@@ -368,14 +500,37 @@ Rules:
 - `deviceId` must come from an app-controlled identifier
 - sensitive screens must remain blocked from capture
 
-## 13. Backend endpoints used by the integration
+## 13. Web runtime requirements
+
+Before expecting web telemetry or Liquid runtime to work:
+
+1. the backend must be reachable from the browser origin
+2. the browser origin must be included in backend `CORS_ALLOW_ORIGINS`
+3. the app must initialize Pollex in client code
+4. the app must call `Pollex.screen(...)` explicitly on route entry
+5. the app must call `Pollex.track(...)` explicitly for important interactions
+6. the app must handle `resolveLiquidBundle(...)` failures with app-local fallback content
+
+Recommended web verification steps:
+
+1. load the target page with browser devtools open
+2. confirm `POST /events` appears after `Pollex.screen(...)`
+3. confirm `POST /liquid/runtime/bundles/resolve` appears when the app requests content
+4. if session capture is enabled, confirm `POST /screenshots` appears only for allowed screens
+5. confirm the request sends `X-API-Key`
+6. confirm the returned bundle contains the expected `screenKey`, `items`, and `diagnostics`
+7. if no events arrive, check CORS, API key, origin, and endpoint reachability first
+
+## 14. Backend endpoints used by the integration
 
 Telemetry:
 
 - `POST /events`
+- `POST /screenshots`
 
 Liquid:
 
+- `GET /liquid/overview`
 - `POST /liquid/runtime/bundles/resolve`
 - `POST /liquid/preview/bundles/resolve`
 - `GET /liquid/integration-status`
@@ -383,10 +538,28 @@ Liquid:
 Admin:
 
 - `GET /liquid/keys`
+- `POST /liquid/keys`
+- `GET /liquid/keys/{key_id}`
+- `PUT /liquid/keys/{key_id}/draft`
+- `POST /liquid/keys/{key_id}/publish`
+- `POST /liquid/keys/{key_id}/demote`
+- `POST /liquid/keys/{key_id}/variants`
+- `PUT /liquid/variants/{variant_id}`
+- `DELETE /liquid/variants/{variant_id}`
+- `GET /liquid/segments`
 - `GET /liquid/traits`
+- `POST /liquid/traits`
 - `GET /liquid/profiles`
-- `GET /liquid/variants`
+- `POST /liquid/profiles`
+- `GET /liquid/rules`
+- `POST /liquid/rules`
+- `GET /liquid/experiments`
+- `POST /liquid/experiments`
 - `GET /liquid/bundles`
+- `POST /liquid/bundles`
+- `GET /liquid/bundles/{bundle_id}`
+- `PUT /liquid/bundles/{bundle_id}`
+- `POST /liquid/bundles/{bundle_id}/publish`
 
 Health:
 

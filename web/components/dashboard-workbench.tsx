@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Area,
   AreaChart,
@@ -50,6 +50,23 @@ type ChartTooltipProps = {
   }>;
 };
 
+type InsightDiscussionOption = {
+  key: string;
+  insight: Insight;
+};
+
+type InsightChatEvidence = {
+  label: string;
+  detail: string;
+};
+
+type InsightChatMessage = {
+  id: string;
+  role: "assistant" | "user";
+  content: string;
+  evidence: InsightChatEvidence[];
+};
+
 const tabLabels: Record<DashboardTab, string> = {
   charts: "Charts",
   data: "Data",
@@ -89,16 +106,24 @@ const integrationTagToneMap: Record<string, "green" | "amber" | "red" | "default
 };
 
 const chartPalette = {
-  line: "#dfeafc",
-  area: "rgba(186, 208, 239, 0.48)",
-  areaSecondary: "rgba(226, 192, 123, 0.44)",
-  bar: "#efe8d8",
-  barSoft: "#b0c6eb",
-  amber: "#e2c07b",
-  red: "#e59080",
-  green: "#99d7b2",
-  grid: "rgba(255,255,255,0.08)",
-  axis: "rgba(187,184,178,0.72)",
+  line: "var(--chart-line)",
+  area: "var(--chart-area)",
+  areaSecondary: "var(--chart-area-secondary)",
+  bar: "var(--chart-bar)",
+  barSoft: "var(--chart-bar-soft)",
+  amber: "var(--chart-amber)",
+  red: "var(--chart-red)",
+  green: "var(--chart-green)",
+  grid: "var(--chart-grid)",
+  axis: "var(--chart-axis)",
+};
+
+const issueLabelMap: Record<string, string> = {
+  rage_tap: "Rage taps",
+  drop_off: "Drop-offs",
+  slow_response: "Slow response",
+  dead_tap: "Dead taps",
+  form_friction: "Form friction",
 };
 
 function toCsv(headers: string[], rows: string[][]) {
@@ -170,6 +195,49 @@ function getInsightKey(insight: Insight, index: number) {
   ].join("-");
 }
 
+function createMessageId() {
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function formatScreenLabel(screen: string | null | undefined) {
+  if (!screen) {
+    return "Unknown screen";
+  }
+  return screen.replace(/[_-]+/g, " ");
+}
+
+function getIssueLabel(issueType: string) {
+  return issueLabelMap[issueType] ?? issueType.replace(/[_-]+/g, " ");
+}
+
+function getPrimarySuggestion(insight: Insight) {
+  return insight.suggestions[0] ?? "Review the session evidence and tighten the target flow.";
+}
+
+function createInsightChatIntro(insight: Insight): InsightChatMessage {
+  return {
+    id: createMessageId(),
+    role: "assistant",
+    content: `I'm focused on ${getIssueLabel(insight.issue_type)} on ${formatScreenLabel(insight.screen)}. Ask why it is happening, what evidence supports it, or what to test first.`,
+    evidence: [
+      {
+        label: "Focus issue",
+        detail: `${insight.title} across ${insight.affected_users_count} affected users.`,
+      },
+    ],
+  };
+}
+
+function buildInsightChatPrompts(insight: Insight) {
+  const issueLabel = getIssueLabel(insight.issue_type);
+  const screenLabel = formatScreenLabel(insight.screen);
+  return [
+    `Why is ${issueLabel} happening on ${screenLabel}?`,
+    "What evidence supports this explanation?",
+    "What should we test first to reduce this issue?",
+  ];
+}
+
 export function DashboardWorkbench({
   insights,
   issues,
@@ -178,12 +246,63 @@ export function DashboardWorkbench({
 }: Props) {
   const [activeTab, setActiveTab] = useState<DashboardTab>("charts");
   const [activeDataTab, setActiveDataTab] = useState<DataTab>("sessions");
+  const chatThreadRef = useRef<HTMLDivElement | null>(null);
 
   const totalSessions = sessions.length;
   const dropOffs = sessions.filter((session) => session.dropped_off).length;
   const completionRate = totalSessions > 0 ? Math.round(((totalSessions - dropOffs) / totalSessions) * 100) : 0;
   const activeScreens = new Set(sessions.map((session) => session.last_screen).filter(Boolean)).size;
   const topIssue = issues[0];
+  const insightDiscussionOptions = useMemo<InsightDiscussionOption[]>(
+    () => insights.slice(0, 5).map((insight, index) => ({ key: getInsightKey(insight, index), insight })),
+    [insights],
+  );
+  const [selectedInsightKey, setSelectedInsightKey] = useState<string | null>(insightDiscussionOptions[0]?.key ?? null);
+  const [chatDraft, setChatDraft] = useState("");
+  const [chatMessages, setChatMessages] = useState<InsightChatMessage[]>(
+    insightDiscussionOptions[0] ? [createInsightChatIntro(insightDiscussionOptions[0].insight)] : [],
+  );
+  const [chatError, setChatError] = useState<string | null>(null);
+  const [isChatLoading, setIsChatLoading] = useState(false);
+  const activeInsightOption = insightDiscussionOptions.find((option) => option.key === selectedInsightKey) ?? insightDiscussionOptions[0] ?? null;
+  const activeChatPrompts = activeInsightOption ? buildInsightChatPrompts(activeInsightOption.insight) : [];
+
+  useEffect(() => {
+    if (insightDiscussionOptions.length === 0) {
+      if (selectedInsightKey !== null) {
+        setSelectedInsightKey(null);
+      }
+      if (chatMessages.length > 0) {
+        setChatMessages([]);
+      }
+      return;
+    }
+
+    const hasSelection = selectedInsightKey
+      ? insightDiscussionOptions.some((option) => option.key === selectedInsightKey)
+      : false;
+    if (hasSelection) {
+      return;
+    }
+
+    const fallbackOption = insightDiscussionOptions[0];
+    setSelectedInsightKey(fallbackOption.key);
+    setChatMessages([createInsightChatIntro(fallbackOption.insight)]);
+    setChatDraft("");
+    setChatError(null);
+  }, [insightDiscussionOptions, selectedInsightKey, chatMessages.length]);
+
+  useEffect(() => {
+    const thread = chatThreadRef.current;
+    if (!thread) {
+      return;
+    }
+
+    thread.scrollTo({
+      top: thread.scrollHeight,
+      behavior: chatMessages.length > 1 ? "smooth" : "auto",
+    });
+  }, [chatMessages, isChatLoading, selectedInsightKey]);
 
   const sessionBuckets = useMemo(() => {
     const buckets = new Map<string, { sessions: number; dropOffs: number }>();
@@ -299,22 +418,6 @@ export function DashboardWorkbench({
     [issues],
   );
 
-  const insightCsv = useMemo(
-    () =>
-      toCsv(
-        ["title", "screen", "issue_type", "frequency", "affected_users", "impact"],
-        insights.map((insight) => [
-          insight.title,
-          insight.screen,
-          insight.issue_type,
-          String(insight.frequency),
-          String(insight.affected_users_count),
-          insight.impact,
-        ]),
-      ),
-    [insights],
-  );
-
   const integrationCsv = useMemo(
     () =>
       toCsv(
@@ -323,6 +426,80 @@ export function DashboardWorkbench({
       ),
     [integrations],
   );
+
+  async function submitInsightChatQuestion(question: string) {
+    const trimmedQuestion = question.trim();
+    if (!trimmedQuestion || !activeInsightOption || isChatLoading) {
+      return;
+    }
+
+    const history = chatMessages.map((message) => ({
+      role: message.role,
+      content: message.content,
+    }));
+    const userMessage: InsightChatMessage = {
+      id: createMessageId(),
+      role: "user",
+      content: trimmedQuestion,
+      evidence: [],
+    };
+    const nextMessages = [...chatMessages, userMessage];
+
+    setChatMessages(nextMessages);
+    setChatDraft("");
+    setChatError(null);
+    setIsChatLoading(true);
+
+    try {
+      const response = await fetch("/api/insights/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          question: trimmedQuestion,
+          focus: {
+            title: activeInsightOption.insight.title,
+            screen: activeInsightOption.insight.screen,
+            issue_type: activeInsightOption.insight.issue_type,
+          },
+          history,
+        }),
+      });
+
+      const payload = (await response.json()) as {
+        answer?: string;
+        evidence?: InsightChatEvidence[];
+        error?: string;
+      };
+
+      if (!response.ok || !payload.answer) {
+        throw new Error(payload.error ?? "Unable to discuss this issue right now.");
+      }
+
+      setChatMessages([
+        ...nextMessages,
+        {
+          id: createMessageId(),
+          role: "assistant",
+          content: payload.answer,
+          evidence: payload.evidence ?? [],
+        },
+      ]);
+    } catch (error) {
+      setChatError(error instanceof Error ? error.message : "Unable to discuss this issue right now.");
+      setChatMessages(nextMessages);
+    } finally {
+      setIsChatLoading(false);
+    }
+  }
+
+  function handleInsightFocusSelect(option: InsightDiscussionOption) {
+    setSelectedInsightKey(option.key);
+    setChatMessages([createInsightChatIntro(option.insight)]);
+    setChatDraft("");
+    setChatError(null);
+  }
 
   return (
     <section className="pollex-dashboard">
@@ -391,7 +568,7 @@ export function DashboardWorkbench({
                   <CartesianGrid stroke={chartPalette.grid} strokeDasharray="3 6" vertical={false} />
                   <XAxis axisLine={false} dataKey="label" tick={{ fill: chartPalette.axis, fontSize: 12 }} tickLine={false} />
                   <YAxis axisLine={false} tick={{ fill: chartPalette.axis, fontSize: 12 }} tickLine={false} width={34} />
-                  <Tooltip content={<ChartTooltip />} cursor={{ stroke: "rgba(255,255,255,0.12)" }} />
+                  <Tooltip content={<ChartTooltip />} cursor={{ stroke: "var(--chart-cursor-stroke)" }} />
                   <Area
                     type="monotone"
                     dataKey="sessions"
@@ -436,7 +613,7 @@ export function DashboardWorkbench({
                     type="category"
                     width={110}
                   />
-                  <Tooltip content={<ChartTooltip />} cursor={{ fill: "rgba(255,255,255,0.04)" }} />
+                  <Tooltip content={<ChartTooltip />} cursor={{ fill: "var(--chart-cursor-fill)" }} />
                   <Bar dataKey="value" name="Events" radius={[0, 12, 12, 0]} fill={chartPalette.barSoft} />
                 </BarChart>
               </ResponsiveContainer>
@@ -454,7 +631,7 @@ export function DashboardWorkbench({
                   <CartesianGrid stroke={chartPalette.grid} strokeDasharray="3 6" vertical={false} />
                   <XAxis axisLine={false} dataKey="screen" tick={{ fill: chartPalette.axis, fontSize: 12 }} tickLine={false} />
                   <YAxis axisLine={false} tick={{ fill: chartPalette.axis, fontSize: 12 }} tickLine={false} width={34} />
-                  <Tooltip content={<ChartTooltip />} cursor={{ fill: "rgba(255,255,255,0.04)" }} />
+                  <Tooltip content={<ChartTooltip />} cursor={{ fill: "var(--chart-cursor-fill)" }} />
                   <Bar dataKey="value" name="Sessions" radius={[10, 10, 0, 0]} fill={chartPalette.bar} />
                 </BarChart>
               </ResponsiveContainer>
@@ -476,7 +653,7 @@ export function DashboardWorkbench({
                       innerRadius={34}
                       outerRadius={52}
                       paddingAngle={4}
-                      stroke="rgba(24,24,24,0.5)"
+                      stroke="var(--chart-separator)"
                       strokeWidth={2}
                     >
                       {completionSplit.map((entry) => (
@@ -647,63 +824,186 @@ export function DashboardWorkbench({
         ) : null}
 
         {activeTab === "insights" ? (
-          <div className="pollex-dashboard-grid">
-          <Card className="pollex-surface pollex-surface-large">
-            <div className="pollex-surface-head">
-              <div>
-                <h2 className="heading">Priority insights</h2>
-                <p className="panel-copy">The most actionable explanations currently surfaced from behavioral signals.</p>
-              </div>
-              <button className="btn btn-ghost btn-sm" onClick={() => downloadCsv("pollex-insights.csv", insightCsv)}>
-                Export CSV
-              </button>
-            </div>
-            <div className="pollex-insight-grid">
-              {insights.length > 0 ? (
-                insights.slice(0, 6).map((insight, index) => (
-                  <article className="pollex-insight-card" key={getInsightKey(insight, index)}>
-                    <div className="pollex-insight-topline">
-                      <Tag tone="accent">{insight.screen}</Tag>
-                      <Tag>{insight.frequency} events</Tag>
+          <section className="pollex-insights-workspace">
+            <div className="pollex-insights-chat-stage">
+              {activeInsightOption ? (
+                <div className="pollex-insight-chat">
+                  <div className="pollex-insight-chat-hero">
+                    <div className="pollex-insight-chat-copy">
+                      <span className="eyebrow">Model context protocol</span>
+                      <h2 className="heading">Issue discussion</h2>
+                      <p className="panel-copy">Ask about likely causes, supporting evidence, and what to test next. Replies stay grounded in the selected insight, related issue severity, and recent workspace sessions.</p>
                     </div>
-                    <h3>{insight.title}</h3>
-                    <p>{insight.impact}</p>
-                  </article>
-                ))
+                    <div className="pollex-insight-chat-hero-tags">
+                      <Tag tone={issueToneMap[activeInsightOption.insight.issue_type] ?? "default"}>
+                        {getIssueLabel(activeInsightOption.insight.issue_type)}
+                      </Tag>
+                      <Tag>{formatScreenLabel(activeInsightOption.insight.screen)}</Tag>
+                    </div>
+                  </div>
+
+                  <div className="pollex-insight-chat-meta">
+                    <span>MCP context packet is attached</span>
+                    <span>{chatMessages.length} messages in this thread</span>
+                    <span>{activeInsightOption.insight.affected_users_count} impacted users</span>
+                  </div>
+
+                  <div className="pollex-chat-thread" ref={chatThreadRef}>
+                    <div className="pollex-chat-thread-break">Today</div>
+                    {chatMessages.map((message) => (
+                      <article className={`pollex-chat-message pollex-chat-message-${message.role}`.trim()} key={message.id}>
+                        <div className={`pollex-chat-avatar pollex-chat-avatar-${message.role}`.trim()}>
+                          {message.role === "assistant" ? "AI" : "You"}
+                        </div>
+                        <div className="pollex-chat-message-body">
+                          <div className="pollex-chat-bubble-top">
+                            <strong>{message.role === "assistant" ? "Context analyst" : "You"}</strong>
+                            <span>{message.role === "assistant" ? "Grounded answer" : "Question"}</span>
+                          </div>
+                          <div className={`pollex-chat-bubble pollex-chat-bubble-${message.role}`.trim()}>
+                            <p>{message.content}</p>
+                            {message.evidence.length > 0 ? (
+                              <div className="pollex-chat-evidence">
+                                {message.evidence.map((item) => (
+                                  <div className="pollex-chat-evidence-item" key={`${message.id}-${item.label}`}>
+                                    <strong>{item.label}</strong>
+                                    <span>{item.detail}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : null}
+                          </div>
+                        </div>
+                      </article>
+                    ))}
+                    {isChatLoading ? (
+                      <article className="pollex-chat-message pollex-chat-message-assistant pollex-chat-bubble-loading">
+                        <div className="pollex-chat-avatar pollex-chat-avatar-assistant">AI</div>
+                        <div className="pollex-chat-message-body">
+                          <div className="pollex-chat-bubble-top">
+                            <strong>Context analyst</strong>
+                            <span>Thinking</span>
+                          </div>
+                          <div className="pollex-chat-bubble pollex-chat-bubble-assistant">
+                            <p>Reviewing the current issue snapshot, related sessions, and workspace evidence.</p>
+                          </div>
+                        </div>
+                      </article>
+                    ) : null}
+                  </div>
+
+                  <div className="pollex-chat-prompt-row">
+                    {activeChatPrompts.map((prompt) => (
+                      <button
+                        key={prompt}
+                        type="button"
+                        className="pollex-chat-prompt"
+                        onClick={() => void submitInsightChatQuestion(prompt)}
+                        disabled={isChatLoading}
+                      >
+                        {prompt}
+                      </button>
+                    ))}
+                  </div>
+
+                  <form
+                    className="pollex-chat-compose"
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      void submitInsightChatQuestion(chatDraft);
+                    }}
+                  >
+                    <div className="pollex-chat-compose-shell">
+                      <textarea
+                        className="pollex-chat-input"
+                        rows={3}
+                        value={chatDraft}
+                        onChange={(event) => setChatDraft(event.target.value)}
+                        placeholder={`Ask about ${activeInsightOption.insight.title.toLowerCase()}...`}
+                      />
+                      <div className="pollex-chat-compose-actions">
+                        <span className={`pollex-chat-status ${chatError ? "pollex-chat-status-error" : ""}`.trim()}>
+                          {chatError ?? "Ask about causes, confidence, or what to test next."}
+                        </span>
+                        <button
+                          className="pollex-chat-send"
+                          type="submit"
+                          aria-label={isChatLoading ? "Thinking" : "Send message"}
+                          disabled={isChatLoading || !chatDraft.trim()}
+                        >
+                          <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M4 12 20 4l-4.5 16-3.2-5.3L4 12Z" />
+                            <path d="M11.8 14.7 20 4" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  </form>
+                </div>
               ) : (
-                <p className="empty-copy">Pollex will surface product insights here once the workspace has enough signal.</p>
+                <div className="pollex-insight-chat pollex-insight-chat-empty">
+                  <p className="empty-copy">Issue discussion will become available once Pollex has insights to analyze.</p>
+                </div>
               )}
             </div>
-          </Card>
 
-          <Card className="pollex-surface">
-            <div className="pollex-surface-head">
-              <h2 className="heading">Suggested next moves</h2>
-            </div>
-            <div className="pollex-note-stack">
-              {insights.slice(0, 4).map((insight, index) => (
-                <div key={`${getInsightKey(insight, index)}-notes`}>
-                  <strong>{insight.title}</strong>
-                  <p>{insight.suggestions[0] ?? "Review the session evidence and tighten the target flow."}</p>
-                </div>
-              ))}
-            </div>
-          </Card>
+            <aside className="pollex-insights-rail">
+              <div className="pollex-insights-rail-head">
+                <span className="eyebrow">Investigation workspace</span>
+                <h2 className="heading">Keep the active issue in view while you chat</h2>
+                <p className="panel-copy">Use the right rail to switch friction threads and inspect the evidence behind the current conversation.</p>
+              </div>
 
-          <Card className="pollex-surface">
-            <div className="pollex-surface-head">
-              <h2 className="heading">Latest sessions</h2>
-            </div>
-            <div className="pollex-note-stack">
-              {sessions.slice(0, 4).map((session) => (
-                <div key={`${session.session_id}-summary`}>
-                  <strong>{session.last_screen ?? "unknown"}</strong>
-                  <p>{formatShortTime(session.start_time)} from device {session.device_id}</p>
-                </div>
-              ))}
-            </div>
-          </Card>
-          </div>
+              {activeInsightOption ? (
+                <>
+                  <div className="pollex-insight-focus-list" role="tablist" aria-label="Issues to discuss">
+                    {insightDiscussionOptions.map((option, index) => (
+                      <button
+                        key={option.key}
+                        type="button"
+                        role="tab"
+                        aria-selected={activeInsightOption.key === option.key}
+                        className={`pollex-chat-focus-chip ${activeInsightOption.key === option.key ? "active" : ""}`.trim()}
+                        onClick={() => handleInsightFocusSelect(option)}
+                      >
+                        <div className="pollex-chat-focus-chip-topline">
+                          <span className="pollex-chat-focus-rank">{String(index + 1).padStart(2, "0")}</span>
+                          <Tag tone={issueToneMap[option.insight.issue_type] ?? "default"}>{getIssueLabel(option.insight.issue_type)}</Tag>
+                        </div>
+                        <strong>{option.insight.title}</strong>
+                        <span>{formatScreenLabel(option.insight.screen)}</span>
+                      </button>
+                    ))}
+                  </div>
+
+                  <section className="pollex-insight-context-panel">
+                    <div className="pollex-insight-context-head">
+                      <div>
+                        <span className="eyebrow">Selected issue</span>
+                        <h3>{activeInsightOption.insight.title}</h3>
+                      </div>
+                      <Tag tone={issueToneMap[activeInsightOption.insight.issue_type] ?? "default"}>
+                        {formatScreenLabel(activeInsightOption.insight.screen)}
+                      </Tag>
+                    </div>
+                    <p>{activeInsightOption.insight.impact}</p>
+                    <div className="pollex-insight-context-metrics">
+                      <div>
+                        <span>Signal volume</span>
+                        <strong>{activeInsightOption.insight.frequency}</strong>
+                      </div>
+                      <div>
+                        <span>Affected users</span>
+                        <strong>{activeInsightOption.insight.affected_users_count}</strong>
+                      </div>
+                    </div>
+                  </section>
+                </>
+              ) : (
+                <p className="empty-copy">Issue discussion will become available once Pollex has insights to analyze.</p>
+              )}
+            </aside>
+          </section>
         ) : null}
 
         {activeTab === "integrations" ? (

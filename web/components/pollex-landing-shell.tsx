@@ -26,7 +26,7 @@ export async function PollexLandingShell({
   ];
 
   return (
-    <div className="pollex-home-shell">
+    <div className="pollex-home-shell pollex-home-shell-dark">
       <PollexLandingCursor />
 
       <header className="site-shell-header pollex-home-header-shell">

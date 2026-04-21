@@ -159,6 +159,34 @@ class InsightOut(BaseModel):
     affected_users_count: int
 
 
+class InsightChatFocusIn(BaseModel):
+    title: str = Field(..., min_length=1)
+    screen: str = Field(..., min_length=1)
+    issue_type: str = Field(..., min_length=1)
+
+
+class InsightChatMessageIn(BaseModel):
+    role: Literal["user", "assistant"]
+    content: str = Field(..., min_length=1, max_length=4000)
+
+
+class InsightChatRequestIn(BaseModel):
+    question: str = Field(..., min_length=2, max_length=2000)
+    focus: InsightChatFocusIn | None = None
+    history: list[InsightChatMessageIn] = Field(default_factory=list)
+
+
+class InsightChatEvidenceOut(BaseModel):
+    label: str
+    detail: str
+
+
+class InsightChatResponseOut(BaseModel):
+    answer: str
+    evidence: list[InsightChatEvidenceOut]
+    focus_title: str | None = None
+
+
 class HealthOut(BaseModel):
     status: str
 

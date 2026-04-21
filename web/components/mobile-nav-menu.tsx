@@ -102,7 +102,9 @@ export function MobileNavMenu({
             ) : null}
           </div>
 
-          <LocaleSwitcher compact />
+          <div className="mobile-drawer-control-stack">
+            <LocaleSwitcher compact />
+          </div>
 
           <nav className="mobile-drawer-sections">
             {sections.map((section) => (

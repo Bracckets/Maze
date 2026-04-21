@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { useTheme } from "@/components/theme-provider";
 import { Tag } from "@/components/ui";
 
 type HeatmapPoint = {
@@ -104,6 +105,7 @@ async function readJsonSafely(response: Response) {
 }
 
 export function HeatmapViewer({ initialScreen, screens }: Props) {
+  const { resolvedTheme } = useTheme();
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const heatmapLayerRef = useRef<HTMLDivElement | null>(null);
   const heatmapInstanceRef = useRef<any>(null);
@@ -143,25 +145,31 @@ export function HeatmapViewer({ initialScreen, screens }: Props) {
         return;
       }
 
+      const rootStyles = getComputedStyle(document.documentElement);
+      const container = heatmapLayerRef.current;
+      while (container.firstChild) {
+        container.removeChild(container.firstChild);
+      }
+
       const heatmapModule: any = await import("heatmap.js");
       const h337 = heatmapModule.default ?? heatmapModule;
 
       heatmapInstanceRef.current = h337.create({
-        container: heatmapLayerRef.current,
+        container,
         radius: 42,
         maxOpacity: 0.72,
         minOpacity: 0.08,
         blur: 0.9,
         gradient: {
-          0.2: "#7db0ff",
-          0.55: "#ffd572",
-          1.0: "#ff7d67",
+          0.2: rootStyles.getPropertyValue("--heatmap-gradient-low").trim() || "#7db0ff",
+          0.55: rootStyles.getPropertyValue("--heatmap-gradient-mid").trim() || "#ffd572",
+          1.0: rootStyles.getPropertyValue("--heatmap-gradient-high").trim() || "#ff7d67",
         },
       });
     };
 
     void mountHeatmap();
-  }, [selectedDeviceClass]);
+  }, [resolvedTheme, selectedDeviceClass]);
 
   useEffect(() => {
     const loadHeatmap = async () => {
@@ -368,8 +376,11 @@ export function HeatmapViewer({ initialScreen, screens }: Props) {
                             width: shape.width,
                             height: shape.height,
                             borderRadius: shape.radius ?? 12,
-                            background: index === activePhoneLayout.length - 1 ? "rgba(132, 171, 255, 0.16)" : "rgba(255, 255, 255, 0.045)",
-                            border: "1px solid rgba(255, 255, 255, 0.06)",
+                            background:
+                              index === activePhoneLayout.length - 1
+                                ? "var(--heatmap-placeholder-accent)"
+                                : "var(--heatmap-placeholder)",
+                            border: "1px solid var(--heatmap-placeholder-border)",
                           }}
                         />
                       ))
@@ -415,8 +426,11 @@ export function HeatmapViewer({ initialScreen, screens }: Props) {
                             width: shape.width,
                             height: shape.height,
                             borderRadius: shape.radius ?? 18,
-                            background: shape.tone === "accent" ? "rgba(132, 171, 255, 0.16)" : "rgba(255, 255, 255, 0.05)",
-                            border: "1px solid rgba(255, 255, 255, 0.07)",
+                            background:
+                              shape.tone === "accent"
+                                ? "var(--heatmap-placeholder-accent)"
+                                : "var(--heatmap-placeholder)",
+                            border: "1px solid var(--heatmap-placeholder-border)",
                           }}
                         />
                       ))
