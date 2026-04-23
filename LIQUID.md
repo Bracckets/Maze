@@ -18,8 +18,8 @@ Trait sources are explicit:
 
 - `app_profile`
   The app or backend provides the value at runtime, for example `user.plan` or `user.region`.
-- `maze_computed`
-  Maze derives the value from behavior, for example `maze.intent_level`.
+- `pollex_computed`
+  Pollex derives the value from behavior, for example `pollex.intent_level`.
 - `manual_test`
   Preview-only input for draft testing. This is never live-eligible.
 
@@ -125,7 +125,7 @@ Runtime resolution is bundle-first:
 4. Liquid merges runtime context in this order:
    - app-provided request traits
    - stored subject traits already seen by Maze
-   - Maze-computed behavior traits
+   - Pollex-computed behavior traits
    - preview-only overrides in draft preview
 5. The resolver applies:
    - locale matching and locale fallback
@@ -232,13 +232,13 @@ Preview reads draft state and returns the same shape with `stage: "draft"`, plus
 
 ## Computed traits
 
-Maze currently derives only non-sensitive behavioral traits:
+Pollex currently derives only non-sensitive behavioral traits:
 
-- `maze.intent_level`
-- `maze.usage_depth`
-- `maze.recent_activity`
-- `maze.paywall_fatigue`
-- `maze.onboarding_stage`
+- `pollex.intent_level`
+- `pollex.usage_depth`
+- `pollex.recent_activity`
+- `pollex.paywall_fatigue`
+- `pollex.onboarding_stage`
 
 These are operational signals, not identity inference.
 

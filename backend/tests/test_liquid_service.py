@@ -53,8 +53,12 @@ def make_row():
     }
 
 
-def test_list_liquid_keys_without_query_omits_search_filter():
+def test_list_liquid_keys_without_query_omits_search_filter(monkeypatch):
     db = FakeSession([make_row()])
+    monkeypatch.setattr(
+        "app.liquid.service._key_readiness",
+        lambda db, workspace_id, key_id: {"dependentTraits": []},
+    )
 
     result = list_liquid_keys(db, "workspace-id")
 
@@ -64,8 +68,12 @@ def test_list_liquid_keys_without_query_omits_search_filter():
     assert result[0]["key"] == "checkout.primary.cta"
 
 
-def test_list_liquid_keys_with_query_includes_search_filter():
+def test_list_liquid_keys_with_query_includes_search_filter(monkeypatch):
     db = FakeSession([make_row()])
+    monkeypatch.setattr(
+        "app.liquid.service._key_readiness",
+        lambda db, workspace_id, key_id: {"dependentTraits": []},
+    )
 
     list_liquid_keys(db, "workspace-id", "checkout")
 
@@ -138,6 +146,10 @@ def test_profile_out_groups_typed_trait_conditions():
             "traitKey": "age",
             "label": "Age",
             "valueType": "range",
+            "sourceType": "app_profile",
+            "sourceKey": None,
+            "liveEligible": True,
+            "coveragePercent": 0.0,
             "value": None,
             "intValue": None,
             "minValue": 18.0,
@@ -150,6 +162,10 @@ def test_profile_out_groups_typed_trait_conditions():
             "traitKey": "subscriber",
             "label": "Subscriber",
             "valueType": "boolean",
+            "sourceType": "app_profile",
+            "sourceKey": None,
+            "liveEligible": True,
+            "coveragePercent": 0.0,
             "value": None,
             "intValue": None,
             "minValue": None,
@@ -162,6 +178,10 @@ def test_profile_out_groups_typed_trait_conditions():
             "traitKey": "sessions",
             "label": "Sessions",
             "valueType": "int",
+            "sourceType": "app_profile",
+            "sourceKey": None,
+            "liveEligible": True,
+            "coveragePercent": 0.0,
             "value": None,
             "intValue": 5,
             "minValue": None,
@@ -217,7 +237,7 @@ def test_merged_resolution_traits_prefers_preview_then_request_then_stored(monke
         "app.liquid.service._trait_definition_map",
         lambda db, workspace_id: {
             "plan": {"sourceType": "app_profile", "sourceKey": "user.plan", "liveEligible": True},
-            "maze.intent_level": {"sourceType": "maze_computed", "sourceKey": "maze.intent_level", "liveEligible": True},
+            "pollex.intent_level": {"sourceType": "pollex_computed", "sourceKey": "pollex.intent_level", "liveEligible": True},
             "preview_only": {"sourceType": "manual_test", "sourceKey": "preview_only", "liveEligible": False},
         },
     )
@@ -237,7 +257,8 @@ def test_merged_resolution_traits_prefers_preview_then_request_then_stored(monke
     )
 
     assert merged["plan"] == "growth"
-    assert merged["maze.intent_level"] == "high"
+    assert merged["pollex.intent_level"] == "high"
+    assert "maze.intent_level" not in merged
     assert merged["preview_only"] == "on"
     assert diagnostics["missingTraits"] == []
     assert diagnostics["traitSources"]["preview_only"] == "manual_test"
@@ -258,32 +279,40 @@ def test_compute_behavior_traits_derives_safe_operational_fields():
 
     traits = _compute_behavior_traits(db, "workspace-id", "subject-1")
 
-    assert traits["maze.intent_level"] in {"medium", "high"}
-    assert traits["maze.usage_depth"] in {"active", "power"}
-    assert traits["maze.recent_activity"] == "active_24h"
-    assert traits["maze.paywall_fatigue"] is False
-    assert traits["maze.onboarding_stage"] in {"completed", "stalled", "in_progress"}
+    assert traits["pollex.intent_level"] in {"medium", "high"}
+    assert traits["pollex.usage_depth"] in {"active", "power"}
+    assert traits["pollex.recent_activity"] == "active_24h"
+    assert traits["pollex.paywall_fatigue"] is False
+    assert traits["pollex.onboarding_stage"] in {"completed", "stalled", "in_progress"}
 
 
-def test_builtin_maze_trait_is_registered():
+def test_builtin_pollex_trait_is_registered():
+    trait = _builtin_trait_by_key("pollex.intent_level")
+
+    assert trait is not None
+    assert trait["sourceType"] == "pollex_computed"
+    assert trait["traitKey"] == "pollex.intent_level"
+
+
+def test_builtin_trait_lookup_accepts_legacy_maze_key():
     trait = _builtin_trait_by_key("maze.intent_level")
 
     assert trait is not None
-    assert trait["sourceType"] == "maze_computed"
+    assert trait["traitKey"] == "pollex.intent_level"
 
 
-def test_custom_traits_cannot_claim_maze_computed_source():
+def test_custom_traits_cannot_claim_pollex_computed_source():
     try:
         _assert_custom_trait_allowed(
             {
                 "traitKey": "custom.intent",
-                "sourceType": "maze_computed",
+                "sourceType": "pollex_computed",
             }
         )
     except ValueError as exc:
         assert "built in" in str(exc)
     else:
-        raise AssertionError("Expected Maze-computed trait creation to be rejected.")
+        raise AssertionError("Expected Pollex-computed trait creation to be rejected.")
 
 
 def test_builtin_trait_out_is_live_eligible():
@@ -293,13 +322,13 @@ def test_builtin_trait_out_is_live_eligible():
         db,
         "workspace-id",
         {
-            "id": "builtin:maze.intent_level",
-            "traitKey": "maze.intent_level",
+            "id": "builtin:pollex.intent_level",
+            "traitKey": "pollex.intent_level",
             "label": "Intent level",
             "description": "Behavior-derived intent",
             "valueType": "select",
-            "sourceType": "maze_computed",
-            "sourceKey": "maze.intent_level",
+            "sourceType": "pollex_computed",
+            "sourceKey": "pollex.intent_level",
             "exampleValues": ["low", "medium", "high"],
             "enabled": True,
         },

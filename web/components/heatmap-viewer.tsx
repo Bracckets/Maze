@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { PollexAppIcon } from "@/components/pollex-app-icon";
 import { useTheme } from "@/components/theme-provider";
 import { Tag } from "@/components/ui";
 
@@ -75,10 +76,46 @@ type HeatmapPayload = {
   deviceClass?: DeviceClass;
   availableDeviceClasses?: string[];
 };
+type ResolvedHeatmapPayload = {
+  points: HeatmapPoint[];
+  deviceClass: DeviceClass;
+  availableDeviceClasses: DeviceClass[];
+};
+
+function isDeviceClass(value: string | undefined | null): value is DeviceClass {
+  return value === "phone" || value === "desktop";
+}
+
+function isHeatmapPayload(value: unknown): value is ResolvedHeatmapPayload {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const payload = value as HeatmapPayload;
+  return (
+    Array.isArray(payload.points) &&
+    payload.points.every(
+      (point) =>
+        !!point &&
+        typeof point === "object" &&
+        typeof point.x === "number" &&
+        typeof point.y === "number" &&
+        typeof point.count === "number",
+    ) &&
+    isDeviceClass(payload.deviceClass) &&
+    Array.isArray(payload.availableDeviceClasses) &&
+    payload.availableDeviceClasses.every((deviceClass) => isDeviceClass(deviceClass))
+  );
+}
 
 function toCsv(points: HeatmapPoint[]) {
   const lines = [["x", "y", "count"], ...points.map((point) => [point.x, point.y, point.count])];
   return lines.map((line) => line.join(",")).join("\n");
+}
+
+function toCanvasCoordinate(value: number, size: number) {
+  const max = Math.max(size - 1, 0);
+  return Math.min(Math.max(Math.round(value * size), 0), max);
 }
 
 function downloadCsv(filename: string, csv: string) {
@@ -110,6 +147,8 @@ export function HeatmapViewer({ initialScreen, screens }: Props) {
   const heatmapLayerRef = useRef<HTMLDivElement | null>(null);
   const heatmapInstanceRef = useRef<any>(null);
   const screenMenuRef = useRef<HTMLDivElement | null>(null);
+  const resolvedHeatmapKeyRef = useRef<string | null>(null);
+  const lastScreenRef = useRef<string | null>(null);
   const [selectedScreen, setSelectedScreen] = useState(initialScreen);
   const [selectedDeviceClass, setSelectedDeviceClass] = useState<DeviceClass>("phone");
   const [availableDeviceClasses, setAvailableDeviceClasses] = useState<DeviceClass[]>(["phone"]);
@@ -118,6 +157,8 @@ export function HeatmapViewer({ initialScreen, screens }: Props) {
   const [screenshotSize, setScreenshotSize] = useState<{ width: number; height: number } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [frameSize, setFrameSize] = useState({ width: 375, height: 812 });
+  const [heatmapLayerSize, setHeatmapLayerSize] = useState({ width: 0, height: 0 });
+  const [heatmapRenderKey, setHeatmapRenderKey] = useState(0);
   const [selectedPointIndex, setSelectedPointIndex] = useState(0);
   const [isScreenMenuOpen, setIsScreenMenuOpen] = useState(false);
 
@@ -144,18 +185,45 @@ export function HeatmapViewer({ initialScreen, screens }: Props) {
   }, [screenshotSize, selectedDeviceClass]);
 
   useEffect(() => {
-    const mountHeatmap = async () => {
-      if (!heatmapLayerRef.current) {
-        return;
-      }
+    const element = heatmapLayerRef.current;
+    if (!element) {
+      return;
+    }
 
+    const updateLayerSize = () => {
+      const { width, height } = element.getBoundingClientRect();
+      setHeatmapLayerSize({
+        width: Math.round(width),
+        height: Math.round(height),
+      });
+    };
+
+    updateLayerSize();
+    const observer = new ResizeObserver(updateLayerSize);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [selectedDeviceClass]);
+
+  useEffect(() => {
+    const container = heatmapLayerRef.current;
+    if (!container || heatmapLayerSize.width <= 0 || heatmapLayerSize.height <= 0) {
+      heatmapInstanceRef.current = null;
+      return;
+    }
+
+    let isCancelled = false;
+
+    const mountHeatmap = async () => {
       const rootStyles = getComputedStyle(document.documentElement);
-      const container = heatmapLayerRef.current;
       while (container.firstChild) {
         container.removeChild(container.firstChild);
       }
 
       const heatmapModule: any = await import("heatmap.js");
+      if (isCancelled) {
+        return;
+      }
+
       const h337 = heatmapModule.default ?? heatmapModule;
 
       heatmapInstanceRef.current = h337.create({
@@ -170,34 +238,111 @@ export function HeatmapViewer({ initialScreen, screens }: Props) {
           1.0: rootStyles.getPropertyValue("--heatmap-gradient-high").trim() || "#ff7d67",
         },
       });
+      setHeatmapRenderKey((key) => key + 1);
     };
 
+    heatmapInstanceRef.current = null;
     void mountHeatmap();
-  }, [resolvedTheme, selectedDeviceClass]);
+
+    return () => {
+      isCancelled = true;
+      heatmapInstanceRef.current = null;
+    };
+  }, [heatmapLayerSize.height, heatmapLayerSize.width, resolvedTheme, selectedDeviceClass]);
 
   useEffect(() => {
     const loadHeatmap = async () => {
+      const requestKey = `${selectedScreen}:${selectedDeviceClass}`;
+      if (resolvedHeatmapKeyRef.current === requestKey) {
+        return;
+      }
+
       setIsLoading(true);
-      const query = new URLSearchParams({ screen: selectedScreen });
-      if (selectedDeviceClass) {
-        query.set("device_class", selectedDeviceClass);
+      const screenChanged = lastScreenRef.current !== selectedScreen;
+      lastScreenRef.current = selectedScreen;
+
+      const fetchHeatmap = async (deviceClass?: DeviceClass) => {
+        const query = new URLSearchParams({ screen: selectedScreen });
+        if (deviceClass) {
+          query.set("device_class", deviceClass);
+        }
+
+        const response = await fetch(`/api/heatmap?${query.toString()}`, { cache: "no-store" });
+        const data = await readJsonSafely(response);
+        if (!response.ok || !isHeatmapPayload(data)) {
+          return null;
+        }
+        return data;
+      };
+
+      if (screenChanged) {
+        const baseHeatmap = await fetchHeatmap();
+        if (!baseHeatmap) {
+          resolvedHeatmapKeyRef.current = null;
+          setPoints([]);
+          setAvailableDeviceClasses([selectedDeviceClass]);
+          setIsLoading(false);
+          return;
+        }
+
+        const nextAvailableDeviceClasses = baseHeatmap.availableDeviceClasses.filter((deviceClass) => isDeviceClass(deviceClass));
+        const resolvedDeviceClass =
+          nextAvailableDeviceClasses.includes(selectedDeviceClass) ? selectedDeviceClass : baseHeatmap.deviceClass;
+        if (resolvedDeviceClass !== baseHeatmap.deviceClass) {
+          const explicitHeatmap = await fetchHeatmap(resolvedDeviceClass);
+          if (!explicitHeatmap) {
+            resolvedHeatmapKeyRef.current = null;
+            setPoints([]);
+            setSelectedPointIndex(0);
+            setAvailableDeviceClasses(
+              nextAvailableDeviceClasses.length > 0 ? nextAvailableDeviceClasses : [resolvedDeviceClass],
+            );
+            setIsLoading(false);
+            return;
+          }
+
+          resolvedHeatmapKeyRef.current = `${selectedScreen}:${explicitHeatmap.deviceClass}`;
+          setPoints(explicitHeatmap.points);
+          setSelectedPointIndex(0);
+          setAvailableDeviceClasses(
+            nextAvailableDeviceClasses.length > 0 ? nextAvailableDeviceClasses : [explicitHeatmap.deviceClass],
+          );
+          if (explicitHeatmap.deviceClass !== selectedDeviceClass) {
+            setSelectedDeviceClass(explicitHeatmap.deviceClass);
+          }
+          setIsLoading(false);
+          return;
+        }
+
+        const finalDeviceClass = baseHeatmap.deviceClass;
+        resolvedHeatmapKeyRef.current = `${selectedScreen}:${finalDeviceClass}`;
+        setPoints(baseHeatmap.points);
+        setSelectedPointIndex(0);
+        setAvailableDeviceClasses(
+          nextAvailableDeviceClasses.length > 0 ? nextAvailableDeviceClasses : [finalDeviceClass],
+        );
+        if (finalDeviceClass !== selectedDeviceClass) {
+          setSelectedDeviceClass(finalDeviceClass);
+        }
+        setIsLoading(false);
+        return;
       }
 
-      const response = await fetch(`/api/heatmap?${query.toString()}`, { cache: "no-store" });
-      const data = (await readJsonSafely(response)) as HeatmapPayload | null;
-      const nextPoints = response.ok && Array.isArray(data?.points) ? data.points : [];
-      const nextDeviceClass = response.ok && (data?.deviceClass === "desktop" || data?.deviceClass === "phone") ? data.deviceClass : "phone";
-      const nextAvailableDeviceClasses =
-        response.ok && Array.isArray(data?.availableDeviceClasses)
-          ? data.availableDeviceClasses.filter((deviceClass: string): deviceClass is DeviceClass => deviceClass === "phone" || deviceClass === "desktop")
-          : [nextDeviceClass];
+      const heatmap = await fetchHeatmap(selectedDeviceClass);
+      if (!heatmap) {
+        resolvedHeatmapKeyRef.current = null;
+        setPoints([]);
+        setAvailableDeviceClasses([selectedDeviceClass]);
+        setIsLoading(false);
+        return;
+      }
 
-      setPoints(nextPoints);
+      resolvedHeatmapKeyRef.current = requestKey;
+      setPoints(heatmap.points);
       setSelectedPointIndex(0);
-      setAvailableDeviceClasses(nextAvailableDeviceClasses.length > 0 ? nextAvailableDeviceClasses : [nextDeviceClass]);
-      if (nextDeviceClass !== selectedDeviceClass) {
-        setSelectedDeviceClass(nextDeviceClass);
-      }
+      setAvailableDeviceClasses(
+        heatmap.availableDeviceClasses.length > 0 ? heatmap.availableDeviceClasses : [heatmap.deviceClass],
+      );
       setIsLoading(false);
     };
 
@@ -262,19 +407,25 @@ export function HeatmapViewer({ initialScreen, screens }: Props) {
   }, [selectedDeviceClass, selectedScreen]);
 
   useEffect(() => {
-    if (!heatmapInstanceRef.current) {
+    if (
+      !heatmapInstanceRef.current ||
+      frameSize.width <= 0 ||
+      frameSize.height <= 0 ||
+      heatmapLayerSize.width <= 0 ||
+      heatmapLayerSize.height <= 0
+    ) {
       return;
     }
 
     heatmapInstanceRef.current.setData({
       max: Math.max(...points.map((point) => point.count), 1),
       data: points.map((point) => ({
-        x: Math.round(point.x * frameSize.width),
-        y: Math.round(point.y * frameSize.height),
+        x: toCanvasCoordinate(point.x, frameSize.width),
+        y: toCanvasCoordinate(point.y, frameSize.height),
         value: point.count,
       })),
     });
-  }, [frameSize, points]);
+  }, [frameSize, heatmapLayerSize, heatmapRenderKey, points]);
 
   const activePhoneLayout = phoneLayouts[selectedScreen] ?? phoneLayouts.kyc_form;
   const activeDesktopLayout = desktopLayouts[selectedScreen] ?? desktopLayouts.kyc_form;
@@ -290,7 +441,12 @@ export function HeatmapViewer({ initialScreen, screens }: Props) {
     <div className="pollex-heatmap">
       <div className="pollex-heatmap-topbar">
         <div>
-          <h2 className="heading">Interaction surface</h2>
+          <div className="pollex-section-heading">
+            <span className="pollex-section-heading-icon" aria-hidden="true">
+              <PollexAppIcon icon="heatmap" />
+            </span>
+            <h2 className="heading">Interaction surface</h2>
+          </div>
           <p className="panel-copy">Hotspots, screenshot context, and tap density in one focused frame.</p>
         </div>
 
@@ -357,7 +513,10 @@ export function HeatmapViewer({ initialScreen, screens }: Props) {
       <div className="pollex-heatmap-frame">
         <aside className="pollex-heatmap-column">
           <div className="pollex-heatmap-column-head">
-            <span>Data</span>
+            <span className="pollex-section-label-with-icon">
+              <PollexAppIcon icon="chart" />
+              <span>Data</span>
+            </span>
           </div>
           <div className="pollex-heatmap-metric-list">
             <div className="pollex-heatmap-metric-card">
@@ -487,7 +646,10 @@ export function HeatmapViewer({ initialScreen, screens }: Props) {
 
         <aside className="pollex-heatmap-column pollex-heatmap-column-scroll">
           <div className="pollex-heatmap-column-head">
-            <span>Hotspots</span>
+            <span className="pollex-section-label-with-icon">
+              <PollexAppIcon icon="insight" />
+              <span>Hotspots</span>
+            </span>
             <Tag tone="accent">{sortedPoints.length}</Tag>
           </div>
           <div className="pollex-hotspot-list">

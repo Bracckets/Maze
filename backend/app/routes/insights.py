@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.db import get_db
@@ -18,6 +18,7 @@ from app.services.platform import (
     list_workspace_insight_snapshots,
     list_workspace_issue_snapshots,
     list_workspace_sessions,
+    normalize_heatmap_device_class,
     serialize_session,
 )
 
@@ -75,7 +76,15 @@ def get_heatmap(
     account: dict = Depends(get_current_account),
     db: Session = Depends(get_db),
 ):
-    return HeatmapOut(**build_heatmap_payload(db, account["workspace_id"], screen, device_class))
+    normalized_device_class = normalize_heatmap_device_class(device_class)
+    if device_class is not None and normalized_device_class is None:
+        raise HTTPException(status_code=422, detail="device_class must be 'phone' or 'desktop'.")
+
+    try:
+        payload = build_heatmap_payload(db, account["workspace_id"], screen, normalized_device_class)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return HeatmapOut(**payload)
 
 
 @router.get("/heatmap/scenario", response_model=HeatmapScenarioOut)

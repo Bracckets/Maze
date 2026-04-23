@@ -21,6 +21,7 @@ import {
 
 import type { Insight, Issue, SessionSummary } from "@/lib/site-data";
 
+import { PollexAppIcon } from "@/components/pollex-app-icon";
 import { Card, StatusDot, Tag } from "@/components/ui";
 
 type IntegrationService = {
@@ -72,6 +73,13 @@ const tabLabels: Record<DashboardTab, string> = {
   data: "Data",
   insights: "Insights",
   integrations: "Integrations",
+};
+
+const tabIcons: Record<DashboardTab, Parameters<typeof PollexAppIcon>[0]["icon"]> = {
+  charts: "chart",
+  data: "table",
+  insights: "insight",
+  integrations: "connection",
 };
 
 const dataTabLabels: Record<DataTab, string> = {
@@ -513,7 +521,10 @@ export function DashboardWorkbench({
             className={`pollex-tab ${activeTab === tab ? "active" : ""}`.trim()}
             onClick={() => setActiveTab(tab)}
           >
-            {tabLabels[tab]}
+            <span className="pollex-tab-content">
+              <PollexAppIcon icon={tabIcons[tab]} />
+              <span>{tabLabels[tab]}</span>
+            </span>
           </button>
         ))}
       </div>

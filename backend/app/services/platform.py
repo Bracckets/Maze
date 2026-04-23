@@ -54,8 +54,13 @@ def normalize_heatmap_device_class(requested: str | None) -> str | None:
 
 def select_heatmap_device_class(requested: str | None, available: list[str]) -> str:
     normalized_requested = normalize_heatmap_device_class(requested)
-    if normalized_requested in available:
-        return normalized_requested
+    if normalized_requested is not None:
+        if normalized_requested in available:
+            return normalized_requested
+        available_label = ", ".join(available) if available else "none"
+        raise ValueError(f"Requested device_class '{normalized_requested}' is unavailable. Available device classes: {available_label}.")
+    if requested is not None:
+        raise ValueError("device_class must be 'phone' or 'desktop'.")
     if DEVICE_CLASS_PHONE in available:
         return DEVICE_CLASS_PHONE
     if available:

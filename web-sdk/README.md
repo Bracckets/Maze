@@ -5,13 +5,13 @@ Browser SDK for Pollex telemetry batching and Liquid runtime resolution.
 ## Install
 
 ```bash
-npm install pollex-web-sdk
+npm install @pollex/sdk
 ```
 
 ## Quick Start
 
 ```ts
-import { Pollex } from "pollex-web-sdk";
+import { Pollex } from "@pollex/sdk";
 
 Pollex.configure({
   apiKey: "mz_live_...",
@@ -35,7 +35,7 @@ Pollex.track("tap", {
 ## Liquid Runtime
 
 ```ts
-import { Pollex } from "pollex-web-sdk";
+import { Pollex } from "@pollex/sdk";
 
 const bundle = await Pollex.resolveLiquidBundle({
   screen: "checkout_paywall",
@@ -55,7 +55,7 @@ const bundle = await Pollex.resolveLiquidBundle({
 "use client";
 
 import { useEffect } from "react";
-import { Pollex } from "pollex-web-sdk";
+import { Pollex } from "@pollex/sdk";
 
 export function PollexBootstrap() {
   useEffect(() => {

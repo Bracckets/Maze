@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, startTransition, useDeferredValue, useMemo, useState, type CSSProperties, type ReactNode } from "react";
+import { Fragment, startTransition, useDeferredValue, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 
 import { Tag } from "@/components/ui";
 import type {
@@ -22,6 +22,7 @@ type Props = {
 };
 
 type LiquidTab = "keys" | "profiles" | "variants" | "traits" | "staging" | "insights" | "rules" | "analytics";
+type RulesTab = "profiles" | "traits" | "variants";
 type EntityPanelMode = "closed" | "create" | "edit" | "delete";
 
 type KeyDraft = {
@@ -39,7 +40,7 @@ type TraitDraft = {
   label: string;
   description: string;
   valueType: "text" | "int" | "range" | "boolean" | "select";
-  sourceType: "app_profile" | "maze_computed" | "manual_test";
+  sourceType: "app_profile" | "pollex_computed" | "manual_test";
   sourceKey: string;
   exampleValues: string;
   enabled: boolean;
@@ -262,13 +263,13 @@ function readinessLabel(state?: string | null) {
 }
 
 function traitSourceLabel(sourceType: LiquidTraitDefinition["sourceType"]) {
-  if (sourceType === "maze_computed") return "Pollex computed";
+  if (sourceType === "pollex_computed") return "Pollex computed";
   if (sourceType === "manual_test") return "Manual test";
   return "App profile";
 }
 
 function isSystemTrait(trait: LiquidTraitDefinition | null | undefined) {
-  return trait?.sourceType === "maze_computed";
+  return trait?.sourceType === "pollex_computed";
 }
 
 function titleFromKey(key: string) {
@@ -700,7 +701,7 @@ function ProfileTraitValueInput({
         compact
         value={row.value}
         options={selectOptions}
-        placeholder={trait?.sourceType === "maze_computed" ? "Choose computed value" : "Choose option"}
+        placeholder={trait?.sourceType === "pollex_computed" ? "Choose computed value" : "Choose option"}
         onChange={(nextValue) => onChange({ value: nextValue })}
         disabled={selectOptions.length === 0}
       />
@@ -711,8 +712,8 @@ function ProfileTraitValueInput({
       className="liquid-ops-input liquid-ops-table-input"
       value={row.value}
       onChange={(event) => onChange({ value: event.target.value })}
-      placeholder={trait?.sourceType === "maze_computed" ? "Computed value is fixed by Pollex" : "Value"}
-      disabled={trait?.sourceType === "maze_computed"}
+      placeholder={trait?.sourceType === "pollex_computed" ? "Computed value is fixed by Pollex" : "Value"}
+      disabled={trait?.sourceType === "pollex_computed"}
     />
   );
 }
@@ -778,6 +779,7 @@ export function LiquidStudio({
   const selectedKeyDetail = activeKeyId ? detailsById[activeKeyId] ?? null : null;
   const selectedProfile = activeProfileId ? profiles.find((profile) => profile.id === activeProfileId) ?? null : null;
   const selectedTrait = activeTraitId ? traits.find((trait) => trait.id === activeTraitId) ?? null : null;
+  const selectedTabLabel = TABS.find((tab) => tab.id === activeTab)?.label ?? "Liquid";
 
   const filteredKeys = keys.filter((key) => {
     const detail = detailsById[key.id] ?? null;
@@ -1157,7 +1159,7 @@ export function LiquidStudio({
       setError("Add both a trait key and label.");
       return false;
     }
-    if (traitDraft.sourceType === "maze_computed") {
+    if (traitDraft.sourceType === "pollex_computed") {
       setError("Pollex-computed traits are built in. Create an app or manual test trait instead.");
       return false;
     }
@@ -1197,7 +1199,7 @@ export function LiquidStudio({
 
   async function deleteTrait() {
     if (!traitDraft.id) return;
-    if (traitDraft.sourceType === "maze_computed") {
+    if (traitDraft.sourceType === "pollex_computed") {
       setError("Pollex-computed traits are built in and cannot be deleted.");
       return;
     }
@@ -2636,16 +2638,76 @@ export function LiquidStudio({
     label,
     onClick,
     disabled = false,
+    expanded = false,
   }: {
     icon: "add" | "preview";
     label: string;
     onClick: () => void;
     disabled?: boolean;
+    expanded?: boolean;
   }) {
+    const [isExpanded, setIsExpanded] = useState(false);
+    const collapseTimerRef = useRef<number | null>(null);
+    const isCommandExpanded = expanded || isExpanded;
+
+    useEffect(() => {
+      return () => {
+        if (collapseTimerRef.current !== null) {
+          window.clearTimeout(collapseTimerRef.current);
+        }
+      };
+    }, []);
+
+    useEffect(() => {
+      clearCollapseTimer();
+      if (!expanded) {
+        setIsExpanded(false);
+      }
+    }, [expanded]);
+
+    function clearCollapseTimer() {
+      if (collapseTimerRef.current !== null) {
+        window.clearTimeout(collapseTimerRef.current);
+        collapseTimerRef.current = null;
+      }
+    }
+
+    function expandCommand() {
+      clearCollapseTimer();
+      setIsExpanded(true);
+    }
+
+    function collapseCommand(delay = 160) {
+      if (expanded) {
+        return;
+      }
+      clearCollapseTimer();
+      collapseTimerRef.current = window.setTimeout(() => {
+        setIsExpanded(false);
+      }, delay);
+    }
+
     return (
-      <button type="button" className="liquid-pollex-command" onClick={onClick} disabled={disabled}>
+      <button
+        type="button"
+        className={`liquid-pollex-command ${isCommandExpanded ? "is-expanded" : ""}`.trim()}
+        onClick={() => {
+          expandCommand();
+          onClick();
+          if (!expanded) {
+            collapseCommand(900);
+          }
+        }}
+        onMouseEnter={expandCommand}
+        onMouseLeave={() => collapseCommand(120)}
+        onFocus={expandCommand}
+        onBlur={() => collapseCommand(120)}
+        aria-label={label}
+        title={label}
+        disabled={disabled}
+      >
         <span className="liquid-pollex-command-glyph"><PollexIcon icon={icon} /></span>
-        <span>{label}</span>
+        <span className="liquid-pollex-command-label">{label}</span>
       </button>
     );
   }
@@ -2871,7 +2933,7 @@ export function LiquidStudio({
             {renderPollexField({ label: "Example Values", wide: true, children: <input className="liquid-ops-input" value={traitDraft.exampleValues} onChange={(event) => setTraitDraft((current) => ({ ...current, exampleValues: event.target.value }))} placeholder="free, pro, enterprise" /> })}
           </div>
           <div className="liquid-pollex-sheet-actions">
-            {traitPanelMode === "edit" && traitDraft.sourceType !== "maze_computed" ? <button className="btn btn-ghost btn-sm" type="button" onClick={() => setTraitPanelMode("delete")}>Delete</button> : null}
+            {traitPanelMode === "edit" && traitDraft.sourceType !== "pollex_computed" ? <button className="btn btn-ghost btn-sm" type="button" onClick={() => setTraitPanelMode("delete")}>Delete</button> : null}
             <button className="btn btn-ghost btn-sm" type="button" onClick={() => void requestCloseTraitPanel()}>Close</button>
             <button className="btn btn-primary btn-sm" type="button" onClick={() => void saveTrait()} disabled={busy === "trait"}>{traitPanelMode === "create" ? "Create trait" : "Save trait"}</button>
           </div>
@@ -3012,7 +3074,7 @@ export function LiquidStudio({
     return renderPollexFrame({
       title: "Key Table",
       subtitle: "Every user-facing copy surface starts here.",
-      action: <PollexCommand icon="add" label="Create Key" onClick={() => void requestOpenKeyPanel("create")} disabled={!hasObservedScreens} />,
+        action: <PollexCommand icon="add" label="Create Key" onClick={() => void requestOpenKeyPanel("create")} disabled={!hasObservedScreens} expanded={keyPanelMode !== "closed"} />,
       sheet: renderPollexKeySheet(),
       children: !hasObservedScreens ? (
         renderPollexEmpty("Add records to start", "Liquid keys need at least one observed screen before they can be created.")
@@ -3066,7 +3128,7 @@ export function LiquidStudio({
     return renderPollexFrame({
       title: "Profiles",
       subtitle: "Saved audiences should feel like browsing a cast, not parsing a spreadsheet.",
-      action: <PollexCommand icon="add" label="Create Profile" onClick={() => void requestOpenProfilePanel("create")} />,
+        action: <PollexCommand icon="add" label="Create Profile" onClick={() => void requestOpenProfilePanel("create")} expanded={profilePanelMode !== "closed"} />,
       sheet: renderPollexProfileSheet(),
       children: (
         <div className="liquid-pollex-stack">
@@ -3296,10 +3358,7 @@ export function LiquidStudio({
       title: "Profiles",
       action: (
         <div className="liquid-pollex-profile-toolbar">
-          <button className="liquid-pollex-profile-toolbar-icon" type="button" onClick={() => void requestActiveTabChange("traits")} aria-label="Open traits" title="Open traits">
-            <PollexIcon icon="trait" />
-          </button>
-          <PollexCommand icon="add" label="Create Profile" onClick={() => void requestOpenProfilePanel("create")} />
+          <PollexCommand icon="add" label="Create Profile" onClick={() => void requestOpenProfilePanel("create")} expanded={profilePanelMode !== "closed"} />
         </div>
       ),
       sheet: renderPollexProfileSheetV2(),
@@ -3400,12 +3459,15 @@ export function LiquidStudio({
     return renderPollexFrame({
       title: "Traits",
       subtitle: "Traits keep their pill language in use, but are defined here as cards with source and coverage context.",
-      action: <PollexCommand icon="add" label="Create Trait" onClick={() => void requestOpenTraitPanel("create")} />,
+        action: <PollexCommand icon="add" label="Create Trait" onClick={() => void requestOpenTraitPanel("create")} expanded={traitPanelMode !== "closed"} />,
       sheet: renderPollexTraitSheet(),
       children: (
         <div className="liquid-pollex-trait-grid">
           {traits.map((trait) => (
-            <article key={trait.id} className={`liquid-pollex-trait-card ${selectedTraitId === trait.id && traitPanelMode !== "closed" ? "is-selected" : ""}`.trim()}>
+            <article
+              key={trait.id}
+              className={`liquid-pollex-trait-card ${!isSystemTrait(trait) ? "is-custom" : ""} ${selectedTraitId === trait.id && traitPanelMode !== "closed" ? "is-selected" : ""}`.trim()}
+            >
               <div className="liquid-pollex-trait-card-head">
                 <div className="liquid-pollex-cell"><strong>{trait.label}</strong><span>{trait.traitKey}</span></div>
                 {isSystemTrait(trait) ? <Tag tone="accent">System</Tag> : <Tag tone={trait.enabled ? "green" : "amber"}>{trait.enabled ? "Active" : "Paused"}</Tag>}
@@ -3437,7 +3499,7 @@ export function LiquidStudio({
     return renderPollexFrame({
       title: "Variants",
       subtitle: "Fallback remains the root. Profile-specific branches should show their hierarchy at a glance.",
-      action: <PollexCommand icon="add" label="Create Variant" onClick={() => void requestOpenVariantPanel("create")} disabled={keys.length === 0 || profiles.length === 0} />,
+        action: <PollexCommand icon="add" label="Create Variant" onClick={() => void requestOpenVariantPanel("create")} disabled={keys.length === 0 || profiles.length === 0} expanded={variantPanelMode !== "closed"} />,
       sheet: renderPollexVariantSheet(),
       children: (
         <div className="liquid-pollex-variant-groups">
@@ -3488,7 +3550,7 @@ export function LiquidStudio({
     return renderPollexFrame({
       title: "Staging Table",
       subtitle: "One operational table for draft, live, readiness, and launch decisions.",
-      action: <PollexCommand icon="preview" label="Preview Selection" onClick={() => selectedKeyDetail ? void runPreview(selectedKeyDetail, selectedKeyDetail.variants.find((variant) => variant.stage === "draft" && variant.segmentId)?.segmentId ?? null) : undefined} disabled={!selectedKeyDetail} />,
+        action: <PollexCommand icon="preview" label="Preview Selection" onClick={() => selectedKeyDetail ? void runPreview(selectedKeyDetail, selectedKeyDetail.variants.find((variant) => variant.stage === "draft" && variant.segmentId)?.segmentId ?? null) : undefined} disabled={!selectedKeyDetail} expanded={Boolean(selectedKeyDetail)} />,
       sheet: renderPollexStagingSheet(),
       children: (
         <div className="liquid-pollex-table-wrap">

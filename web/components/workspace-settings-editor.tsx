@@ -32,33 +32,33 @@ export function WorkspaceSettingsEditor({ initialSettings }: Props) {
     });
     const data = await response.json();
     setSaving(false);
-    setStatus(response.ok ? (locale === "ar" ? "تم حفظ الإعدادات." : "Settings saved.") : data.error ?? (locale === "ar" ? "تعذر حفظ الإعدادات." : "Unable to save settings."));
+    setStatus(response.ok ? (locale === "ar" ? "طھظ… ط­ظپط¸ ط§ظ„ط¥ط¹ط¯ط§ط¯ط§طھ." : "Settings saved.") : data.error ?? (locale === "ar" ? "طھط¹ط°ط± ط­ظپط¸ ط§ظ„ط¥ط¹ط¯ط§ط¯ط§طھ." : "Unable to save settings."));
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+    <div className="pollex-form-stack">
       <div className="field">
-        <label>{locale === "ar" ? "نقطة إدخال البيانات" : "Ingestion endpoint"}</label>
+        <label>{locale === "ar" ? "ظ†ظ‚ط·ط© ط¥ط¯ط®ط§ظ„ ط§ظ„ط¨ظٹط§ظ†ط§طھ" : "Ingestion endpoint"}</label>
         <input value={apiBaseUrl} onChange={(event) => setApiBaseUrl(event.target.value)} />
       </div>
       <div className="field">
-        <label>{locale === "ar" ? "موفر المصادقة" : "Auth provider"}</label>
+        <label>{locale === "ar" ? "ظ…ظˆظپط± ط§ظ„ظ…طµط§ط¯ظ‚ط©" : "Auth provider"}</label>
         <input value={authProvider} onChange={(event) => setAuthProvider(event.target.value)} />
       </div>
       <div className="field">
-        <label>{locale === "ar" ? "وضع الإدخال" : "Ingestion mode"}</label>
+        <label>{locale === "ar" ? "ظˆط¶ط¹ ط§ظ„ط¥ط¯ط®ط§ظ„" : "Ingestion mode"}</label>
         <input value={ingestionMode} onChange={(event) => setIngestionMode(event.target.value)} />
       </div>
       <div className="field">
-        <label>{locale === "ar" ? "قواعد إخفاء البيانات" : "Data masking rules"}</label>
+        <label>{locale === "ar" ? "ظ‚ظˆط§ط¹ط¯ ط¥ط®ظپط§ط، ط§ظ„ط¨ظٹط§ظ†ط§طھ" : "Data masking rules"}</label>
         <textarea value={masking} onChange={(event) => setMasking(event.target.value)} rows={3} />
       </div>
-      <button className="btn btn-primary" type="button" onClick={saveSettings} disabled={saving} style={{ alignSelf: "flex-start" }}>
-        {saving ? (locale === "ar" ? "جارٍ الحفظ..." : "Saving...") : (locale === "ar" ? "حفظ الإعدادات" : "Save settings")}
-      </button>
-      {status ? (
-        <p style={{ fontSize: "0.82rem", color: "var(--text-2)" }}>{status}</p>
-      ) : null}
+      <div className="pollex-form-actions">
+        <button className="btn btn-primary" type="button" onClick={saveSettings} disabled={saving}>
+          {saving ? (locale === "ar" ? "ط¬ط§ط±ظچ ط§ظ„ط­ظپط¸..." : "Saving...") : (locale === "ar" ? "ط­ظپط¸ ط§ظ„ط¥ط¹ط¯ط§ط¯ط§طھ" : "Save settings")}
+        </button>
+        {status ? <p className="pollex-inline-status">{status}</p> : null}
+      </div>
     </div>
   );
 }

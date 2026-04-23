@@ -8,7 +8,7 @@ EmphasisValue = Literal["low", "medium", "high"]
 ExperimentStatus = Literal["draft", "active", "paused", "completed"]
 ConditionOperator = Literal["eq", "neq", "in", "not_in", "gte", "lte", "contains", "exists", "prefix"]
 TraitValueType = Literal["text", "int", "range", "boolean", "select"]
-TraitSourceType = Literal["app_profile", "maze_computed", "manual_test"]
+TraitSourceType = Literal["app_profile", "pollex_computed", "manual_test"]
 LiquidReadinessState = Literal["ready", "missing_source", "test_only", "low_coverage", "fallback_only"]
 
 

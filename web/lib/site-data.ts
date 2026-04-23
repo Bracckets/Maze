@@ -19,13 +19,6 @@ export type HeatmapPoint = {
   count: number;
 };
 
-export type HeatmapResponse = {
-  screen: string;
-  deviceClass: "phone" | "desktop";
-  availableDeviceClasses: Array<"phone" | "desktop">;
-  points: HeatmapPoint[];
-};
-
 export type HeatmapScenarioStep = {
   screen: string;
   title: string;
@@ -103,7 +96,7 @@ export const featureRows = [
 
 export const stepsEasy = [
   "Sign in to Pollex",
-  "Give your coding agent the MAZE_INTEGRATION.md file",
+  "Give your coding agent the POLLEX_INTEGRATION.md file",
   "Watch Pollex unfold"
 ];
 
@@ -198,22 +191,6 @@ export async function getSessionScreens(): Promise<string[]> {
     return Array.from(screens);
   } catch {
     return [];
-  }
-}
-
-export async function getHeatmap(screen: string, deviceClass?: "phone" | "desktop"): Promise<HeatmapResponse> {
-  try {
-    const query = new URLSearchParams({ screen });
-    if (deviceClass) {
-      query.set("device_class", deviceClass);
-    }
-    const response = await authedFetch(`/heatmap?${query.toString()}`);
-    if (!response.ok) {
-      return { screen, deviceClass: deviceClass ?? "phone", availableDeviceClasses: [deviceClass ?? "phone"], points: [] };
-    }
-    return response.json();
-  } catch {
-    return { screen, deviceClass: deviceClass ?? "phone", availableDeviceClasses: [deviceClass ?? "phone"], points: [] };
   }
 }
 

@@ -9,7 +9,7 @@ const defaultHighlights = [
   { label: "Setup time", value: "10 min" },
   { label: "SDKs included", value: "iOS + Android" },
   { label: "Billing model", value: "Workspace" },
-];
+] as const;
 
 export default async function SignUpPage() {
   const locale = await getRequestLocale();
@@ -20,18 +20,17 @@ export default async function SignUpPage() {
       <div className="auth-locale-bar">
         <LocaleSwitcher />
       </div>
+
       <div className="apple-auth-card">
         <aside className="apple-auth-aside">
           <Brand />
-          <div className="space-y-4">
-            <p className="eyebrow">{isArabic ? "إطلاق سريع" : "Fast launch"}</p>
-            <h1 className="text-4xl font-semibold tracking-[-0.05em] text-foreground md:text-5xl">
-              {isArabic ? "أنشئ مساحة Pollex وابدأ جمع الإشارة." : "Create a Pollex workspace and start collecting signal."}
-            </h1>
-            <p className="subtext text-base leading-8">
+          <div className="pollex-auth-copy">
+            <p className="eyebrow">{isArabic ? "ط¥ط·ظ„ط§ظ‚ ط³ط±ظٹط¹" : "Fast launch"}</p>
+            <h1 className="display-sm">{isArabic ? "ط£ظ†ط´ط¦ ظ…ط³ط§ط­ط© Pollex ظˆط§ط¨ط¯ط£ ط¬ظ…ط¹ ط§ظ„ط¥ط´ط§ط±ط©." : "Create a Pollex workspace and start collecting signal."}</h1>
+            <p className="subtext">
               {isArabic
-                ? "المسار الجديد يختصر التهيئة ويجعل الخطوة الأولى أوضح. أقل ضجيج بصري، أكثر تركيزًا على الوصول الفعلي إلى البيانات."
-                : "The redesigned flow trims setup noise and makes the first step clearer. Less visual clutter, more focus on getting real signal live."}
+                ? "ط§ظ„طھط¯ظپظ‚ ط§ظ„ط¬ط¯ظٹط¯ ظٹظ‚ظ„ظ„ ط§ظ„ط¶ط¬ظٹط¬ ظˆظٹط¬ط¹ظ„ ط§ظ„ط®ط·ظˆط© ط§ظ„ط£ظˆظ„ظ‰ ط£ظˆط¶ط­."
+                : "The onboarding flow trims setup noise and keeps the first step obvious so you can move straight into the workspace."}
             </p>
           </div>
 
@@ -46,30 +45,25 @@ export default async function SignUpPage() {
         </aside>
 
         <section className="apple-auth-main">
-          <div className="space-y-3">
-            <p className="eyebrow">{isArabic ? "إنشاء مساحة عمل" : "Create workspace"}</p>
-            <h2 className="text-3xl font-semibold tracking-[-0.05em] text-foreground">
-              {isArabic ? "ابدأ مساحة Pollex الجديدة" : "Start your Pollex workspace"}
+          <div className="pollex-auth-copy">
+            <p className="eyebrow">{isArabic ? "ط¥ظ†ط´ط§ط، ظ…ط³ط§ط­ط© ط¹ظ…ظ„" : "Create workspace"}</p>
+            <h2 className="display-sm" style={{ fontSize: "2.1rem" }}>
+              {isArabic ? "ط§ط¨ط¯ط£ ظ…ط³ط§ط­ط© Pollex ط§ظ„ط¬ط¯ظٹط¯ط©" : "Start your Pollex workspace"}
             </h2>
-            <p className="subtext max-w-md">
-              {isArabic ? "ننشىء الحساب ونأخذك مباشرة إلى السطح التشغيلي الجديد." : "We create the account, provision the workspace, and route you straight into the new operating surface."}
+            <p className="subtext">
+              {isArabic ? "ظ†ظ†ط´ط¦ ظ„ظƒ ط§ظ„ط­ط³ط§ط¨ ظˆظ†ط£ط®ط°ظƒ ظ…ط¨ط§ط´ط±ط© ط¥ظ„ظ‰ ط§ظ„ط³ط·ط­ ط§ظ„طھط´ط؛ظٹظ„ظٹ." : "We create the account, provision the workspace, and route you straight into the operating surface."}
             </p>
           </div>
 
-          <div className="mt-8">
+          <div style={{ marginTop: 24 }}>
             <SignUpForm />
           </div>
 
-          <p className="mt-8 text-center text-sm text-muted-foreground">
-            {isArabic ? "بإنشاء الحساب فإنك توافق على " : "By creating an account you agree to our "}
-            <Link href="/terms" style={{ color: "var(--text)" }}>
-              {isArabic ? "الشروط" : "Terms"}
-            </Link>{" "}
-            {isArabic ? "و" : "and "}
-            <Link href="/privacy" style={{ color: "var(--text)" }}>
-              {isArabic ? "سياسة الخصوصية" : "Privacy Policy"}
-            </Link>
-            .
+          <p className="pollex-auth-legal" style={{ marginTop: 24 }}>
+            {isArabic ? "ط¨ط¥ظ†ط´ط§ط، ط§ظ„ط­ط³ط§ط¨ ظپط¥ظ†ظƒ طھظˆط§ظپظ‚ ط¹ظ„ظ‰ " : "By creating an account you agree to our "}
+            <Link href="/terms">{isArabic ? "ط§ظ„ط´ط±ظˆط·" : "Terms"}</Link>{" "}
+            {isArabic ? "ظˆ" : "and "}
+            <Link href="/privacy">{isArabic ? "ط³ظٹط§ط³ط© ط§ظ„ط®طµظˆطµظٹط©" : "Privacy Policy"}</Link>.
           </p>
         </section>
       </div>

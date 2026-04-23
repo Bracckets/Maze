@@ -1,4 +1,5 @@
 import { DashboardShell } from "@/components/site-shell";
+import { PollexAppIcon } from "@/components/pollex-app-icon";
 import { ProfileEditor } from "@/components/profile-editor";
 import { SignOutButton } from "@/components/signout-button";
 import { Card, Tag } from "@/components/ui";
@@ -10,91 +11,97 @@ export default async function ProfilePage() {
   const me = await getCurrentUser();
   const user = "user" in me.data ? me.data.user : null;
   const initials = user?.email.slice(0, 2).toUpperCase() ?? "PL";
-  const planName = user?.plan_name ?? (locale === "ar" ? "لا توجد باقة" : "No plan");
+  const planName = user?.plan_name ?? (locale === "ar" ? "ط¸â€‍ط·آ§ ط·ع¾ط¸ث†ط·آ¬ط·آ¯ ط·آ¨ط·آ§ط¸â€ڑط·آ©" : "No plan");
 
   return (
     <DashboardShell
       activePath="/profile"
-      title={locale === "ar" ? "الملف الشخصي" : "Profile"}
-      subtitle={locale === "ar" ? "أدر تفاصيل الحساب وتفضيلات مساحة العمل." : "Manage your account details and workspace preferences."}
+      title={locale === "ar" ? "ط·آ§ط¸â€‍ط¸â€¦ط¸â€‍ط¸ظ¾ ط·آ§ط¸â€‍ط·آ´ط·آ®ط·آµط¸ظ¹" : "Profile"}
+      subtitle={locale === "ar" ? "ط·آ£ط·آ¯ط·آ± ط·ع¾ط¸ظ¾ط·آ§ط·آµط¸ظ¹ط¸â€‍ ط·آ§ط¸â€‍ط·آ­ط·آ³ط·آ§ط·آ¨ ط¸ث†ط·ع¾ط¸ظ¾ط·آ¶ط¸ظ¹ط¸â€‍ط·آ§ط·ع¾ ط¸â€¦ط·آ³ط·آ§ط·آ­ط·آ© ط·آ§ط¸â€‍ط·آ¹ط¸â€¦ط¸â€‍." : "Manage your account details and workspace preferences."}
     >
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--gap)" }}>
-        <div style={{ display: "flex", flexDirection: "column", gap: "var(--gap)" }}>
+      <div className="pollex-account-grid">
+        <div className="pollex-account-stack">
           <Card accent>
-            <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 20 }}>
-              <div className="avatar avatar-lg">{initials}</div>
-              <div>
-                <div className="heading" style={{ fontSize: "1.15rem" }}>
-                  {user?.email ?? (locale === "ar" ? "تسجيل الدخول مطلوب" : "Sign in required")}
+            <div className="pollex-profile-hero">
+              <div className="pollex-avatar pollex-avatar-lg">{initials}</div>
+              <div className="pollex-profile-hero-copy">
+                <div className="pollex-profile-hero-title">
+                  {user?.email ?? (locale === "ar" ? "ط·ع¾ط·آ³ط·آ¬ط¸ظ¹ط¸â€‍ ط·آ§ط¸â€‍ط·آ¯ط·آ®ط¸ث†ط¸â€‍ ط¸â€¦ط·آ·ط¸â€‍ط¸ث†ط·آ¨" : "Sign in required")}
                 </div>
                 <div className="subtext" style={{ fontSize: "0.85rem" }}>
-                  {user?.workspace_name ?? (locale === "ar" ? "عضو في مساحة Pollex" : "Pollex workspace member")}
+                  {user?.workspace_name ?? (locale === "ar" ? "ط·آ¹ط·آ¶ط¸ث† ط¸ظ¾ط¸ظ¹ ط¸â€¦ط·آ³ط·آ§ط·آ­ط·آ© Pollex" : "Pollex workspace member")}
                 </div>
               </div>
             </div>
 
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
-              <Tag tone="accent">{locale === "ar" ? "مالك مساحة العمل" : "Workspace owner"}</Tag>
+            <div className="pollex-inline-tags">
+              <Tag tone="accent">{locale === "ar" ? "ط¸â€¦ط·آ§ط¸â€‍ط¸ئ’ ط¸â€¦ط·آ³ط·آ§ط·آ­ط·آ© ط·آ§ط¸â€‍ط·آ¹ط¸â€¦ط¸â€‍" : "Workspace owner"}</Tag>
               <Tag tone="green">{planName}</Tag>
             </div>
 
-            <p className="subtext" style={{ fontSize: "0.88rem", marginTop: 12, marginBottom: 20 }}>
+            <p className="pollex-panel-intro">
               {user
                 ? locale === "ar"
-                  ? `هذا الحساب يملك مساحة العمل ${user.workspace_name} ويمكنه إنشاء مفاتيح الإدخال لإعداد الحزمة.`
+                  ? `ط¸â€،ط·آ°ط·آ§ ط·آ§ط¸â€‍ط·آ­ط·آ³ط·آ§ط·آ¨ ط¸ظ¹ط¸â€¦ط¸â€‍ط¸ئ’ ط¸â€¦ط·آ³ط·آ§ط·آ­ط·آ© ط·آ§ط¸â€‍ط·آ¹ط¸â€¦ط¸â€‍ ${user.workspace_name} ط¸ث†ط¸ظ¹ط¸â€¦ط¸ئ’ط¸â€ ط¸â€، ط·آ¥ط¸â€ ط·آ´ط·آ§ط·طŒ ط¸â€¦ط¸ظ¾ط·آ§ط·ع¾ط¸ظ¹ط·آ­ ط·آ§ط¸â€‍ط·آ¥ط·آ¯ط·آ®ط·آ§ط¸â€‍ ط¸â€‍ط·آ¥ط·آ¹ط·آ¯ط·آ§ط·آ¯ ط·آ§ط¸â€‍ط·آ­ط·آ²ط¸â€¦ط·آ©.`
                   : `This account owns the ${user.workspace_name} workspace and can generate ingestion keys for SDK setup.`
                 : locale === "ar"
-                  ? "سجّل الدخول عبر تدفق مساحة العمل لتحميل تفاصيل ملفك الشخصي."
+                  ? "ط·آ³ط·آ¬ط¸â€کط¸â€‍ ط·آ§ط¸â€‍ط·آ¯ط·آ®ط¸ث†ط¸â€‍ ط·آ¹ط·آ¨ط·آ± ط·ع¾ط·آ¯ط¸ظ¾ط¸â€ڑ ط¸â€¦ط·آ³ط·آ§ط·آ­ط·آ© ط·آ§ط¸â€‍ط·آ¹ط¸â€¦ط¸â€‍ ط¸â€‍ط·ع¾ط·آ­ط¸â€¦ط¸ظ¹ط¸â€‍ ط·ع¾ط¸ظ¾ط·آ§ط·آµط¸ظ¹ط¸â€‍ ط¸â€¦ط¸â€‍ط¸ظ¾ط¸ئ’ ط·آ§ط¸â€‍ط·آ´ط·آ®ط·آµط¸ظ¹."
                   : "Sign in through the workspace auth flow to load your profile details."}
             </p>
           </Card>
 
           <Card>
-            <div className="heading" style={{ marginBottom: 16 }}>
-              {locale === "ar" ? "تفاصيل مساحة العمل" : "Workspace details"}
+            <div className="pollex-section-heading" style={{ marginBottom: 16 }}>
+              <span className="pollex-section-heading-icon" aria-hidden="true">
+                <PollexAppIcon icon="workspace" />
+              </span>
+              <div className="heading">
+                {locale === "ar" ? "ط·ع¾ط¸ظ¾ط·آ§ط·آµط¸ظ¹ط¸â€‍ ط¸â€¦ط·آ³ط·آ§ط·آ­ط·آ© ط·آ§ط¸â€‍ط·آ¹ط¸â€¦ط¸â€‍" : "Workspace details"}
+              </div>
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              <div style={{ background: "var(--surface-2)", borderRadius: "var(--r-md)", padding: "12px 14px", border: "1px solid var(--border)" }}>
-                <p className="metric-label">{locale === "ar" ? "مساحة العمل" : "Workspace"}</p>
-                <p style={{ fontSize: "0.9rem", fontWeight: 600, color: "var(--text)", marginTop: 2 }}>
-                  {user?.workspace_name ?? (locale === "ar" ? "غير متاح" : "Unavailable")}
-                </p>
+            <div className="pollex-detail-grid">
+              <div className="pollex-detail-card">
+                <p className="metric-label">{locale === "ar" ? "ط¸â€¦ط·آ³ط·آ§ط·آ­ط·آ© ط·آ§ط¸â€‍ط·آ¹ط¸â€¦ط¸â€‍" : "Workspace"}</p>
+                <strong>{user?.workspace_name ?? (locale === "ar" ? "ط·ط›ط¸ظ¹ط·آ± ط¸â€¦ط·ع¾ط·آ§ط·آ­" : "Unavailable")}</strong>
               </div>
-              <div style={{ background: "var(--surface-2)", borderRadius: "var(--r-md)", padding: "12px 14px", border: "1px solid var(--border)" }}>
-                <p className="metric-label">{locale === "ar" ? "معرف مساحة العمل" : "Workspace ID"}</p>
-                <p style={{ fontSize: "0.9rem", fontWeight: 600, color: "var(--text)", marginTop: 2 }}>
-                  {user?.workspace_id ?? (locale === "ar" ? "غير متاح" : "Unavailable")}
-                </p>
+              <div className="pollex-detail-card">
+                <p className="metric-label">{locale === "ar" ? "ط¸â€¦ط·آ¹ط·آ±ط¸ظ¾ ط¸â€¦ط·آ³ط·آ§ط·آ­ط·آ© ط·آ§ط¸â€‍ط·آ¹ط¸â€¦ط¸â€‍" : "Workspace ID"}</p>
+                <strong>{user?.workspace_id ?? (locale === "ar" ? "ط·ط›ط¸ظ¹ط·آ± ط¸â€¦ط·ع¾ط·آ§ط·آ­" : "Unavailable")}</strong>
               </div>
-              <div style={{ background: "var(--surface-2)", borderRadius: "var(--r-md)", padding: "12px 14px", border: "1px solid var(--border)" }}>
-                <p className="metric-label">{locale === "ar" ? "الباقة الحالية" : "Current plan"}</p>
-                <p style={{ fontSize: "0.9rem", fontWeight: 600, color: "var(--text)", marginTop: 2 }}>{planName}</p>
+              <div className="pollex-detail-card">
+                <p className="metric-label">{locale === "ar" ? "ط·آ§ط¸â€‍ط·آ¨ط·آ§ط¸â€ڑط·آ© ط·آ§ط¸â€‍ط·آ­ط·آ§ط¸â€‍ط¸ظ¹ط·آ©" : "Current plan"}</p>
+                <strong>{planName}</strong>
               </div>
             </div>
           </Card>
         </div>
 
         <Card>
-          <div className="heading" style={{ marginBottom: 4 }}>{locale === "ar" ? "تعديل الملف الشخصي" : "Edit profile"}</div>
-          <p className="subtext" style={{ fontSize: "0.85rem", marginBottom: 22 }}>
+          <div className="pollex-section-heading" style={{ marginBottom: 4 }}>
+            <span className="pollex-section-heading-icon" aria-hidden="true">
+              <PollexAppIcon icon="profile" />
+            </span>
+            <div className="heading">{locale === "ar" ? "ط·ع¾ط·آ¹ط·آ¯ط¸ظ¹ط¸â€‍ ط·آ§ط¸â€‍ط¸â€¦ط¸â€‍ط¸ظ¾ ط·آ§ط¸â€‍ط·آ´ط·آ®ط·آµط¸ظ¹" : "Edit profile"}</div>
+          </div>
+          <p className="pollex-panel-intro">
             {locale === "ar"
-              ? "حدّث البريد الإلكتروني واسم مساحة العمل المرتبطين بهذه المساحة."
+              ? "ط·آ­ط·آ¯ط¸â€کط·آ« ط·آ§ط¸â€‍ط·آ¨ط·آ±ط¸ظ¹ط·آ¯ ط·آ§ط¸â€‍ط·آ¥ط¸â€‍ط¸ئ’ط·ع¾ط·آ±ط¸ث†ط¸â€ ط¸ظ¹ ط¸ث†ط·آ§ط·آ³ط¸â€¦ ط¸â€¦ط·آ³ط·آ§ط·آ­ط·آ© ط·آ§ط¸â€‍ط·آ¹ط¸â€¦ط¸â€‍ ط·آ§ط¸â€‍ط¸â€¦ط·آ±ط·ع¾ط·آ¨ط·آ·ط¸ظ¹ط¸â€  ط·آ¨ط¸â€،ط·آ°ط¸â€، ط·آ§ط¸â€‍ط¸â€¦ط·آ³ط·آ§ط·آ­ط·آ©."
               : "Update the account email and workspace name tied to this Pollex workspace."}
           </p>
           {user ? (
             <ProfileEditor initialEmail={user.email} initialWorkspaceName={user.workspace_name} />
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <div className="pollex-form-stack">
               <div className="field">
-                <label htmlFor="email">{locale === "ar" ? "البريد الإلكتروني" : "Email address"}</label>
+                <label htmlFor="email">{locale === "ar" ? "ط·آ§ط¸â€‍ط·آ¨ط·آ±ط¸ظ¹ط·آ¯ ط·آ§ط¸â€‍ط·آ¥ط¸â€‍ط¸ئ’ط·ع¾ط·آ±ط¸ث†ط¸â€ ط¸ظ¹" : "Email address"}</label>
                 <input defaultValue="" id="email" readOnly />
               </div>
             </div>
           )}
 
-          <div style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 20 }}>
+          <div className="pollex-form-stack" style={{ marginTop: 20 }}>
             <div className="field">
-              <label htmlFor="workspace-id">{locale === "ar" ? "معرف مساحة العمل" : "Workspace ID"}</label>
+              <label htmlFor="workspace-id">{locale === "ar" ? "ط¸â€¦ط·آ¹ط·آ±ط¸ظ¾ ط¸â€¦ط·آ³ط·آ§ط·آ­ط·آ© ط·آ§ط¸â€‍ط·آ¹ط¸â€¦ط¸â€‍" : "Workspace ID"}</label>
               <input defaultValue={user?.workspace_id ?? ""} id="workspace-id" readOnly />
             </div>
             {user ? <SignOutButton /> : null}

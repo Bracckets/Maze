@@ -7,6 +7,7 @@ from app.models.schemas import ScreenshotRefOut, ScreenshotUploadOut
 from app.routes.dependencies import get_api_key_context, get_current_account
 from app.services.platform import (
     list_workspace_screenshots,
+    normalize_heatmap_device_class,
     resolve_screenshot_file,
     store_screenshot_asset,
     verify_screenshot_token,
@@ -64,12 +65,16 @@ def get_screenshots(
     account: dict = Depends(get_current_account),
     db: Session = Depends(get_db),
 ):
+    normalized_device_class = normalize_heatmap_device_class(device_class)
+    if device_class is not None and normalized_device_class is None:
+        raise HTTPException(status_code=422, detail="device_class must be 'phone' or 'desktop'.")
+
     rows = list_workspace_screenshots(
         db=db,
         workspace_id=account["workspace_id"],
         screen=screen,
         session_id=session_id,
-        device_class=device_class,
+        device_class=normalized_device_class,
         limit=1 if latest else limit,
     )
     return [ScreenshotRefOut(**row) for row in rows]

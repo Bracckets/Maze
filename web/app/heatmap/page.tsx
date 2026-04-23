@@ -1,13 +1,12 @@
 import { DashboardShell } from "@/components/site-shell";
 import { HeatmapViewer } from "@/components/heatmap-viewer";
 import { getRequestLocale } from "@/lib/i18n-server";
-import { getHeatmap, getSessionScreens } from "@/lib/site-data";
+import { getSessionScreens } from "@/lib/site-data";
 
 export default async function HeatmapPage() {
   const locale = await getRequestLocale();
   const screens = await getSessionScreens();
   const initialScreen = screens[0] ?? "welcome";
-  const initialHeatmap = await getHeatmap(initialScreen);
 
   return (
     <DashboardShell
@@ -20,8 +19,8 @@ export default async function HeatmapPage() {
       }
     >
       <HeatmapViewer
-        initialScreen={initialHeatmap.screen}
-        screens={screens.length > 0 ? screens : [initialHeatmap.screen]}
+        initialScreen={initialScreen}
+        screens={screens.length > 0 ? screens : [initialScreen]}
       />
     </DashboardShell>
   );

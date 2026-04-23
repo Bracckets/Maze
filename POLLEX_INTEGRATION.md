@@ -100,13 +100,13 @@ import com.pollex.sdk.PollexConfig
 Install the browser SDK:
 
 ```bash
-npm install pollex-web-sdk
+npm install @pollex/sdk
 ```
 
 Import:
 
 ```ts
-import { Pollex } from "pollex-web-sdk";
+import { Pollex } from "@pollex/sdk";
 ```
 
 ## 2. Configure Pollex once
@@ -147,7 +147,7 @@ Pollex.configure(
 Configure Pollex in client-side bootstrap code only:
 
 ```ts
-import { Pollex } from "pollex-web-sdk";
+import { Pollex } from "@pollex/sdk";
 
 Pollex.configure({
   apiKey: "YOUR_API_KEY",
@@ -165,7 +165,7 @@ Use a client component and run configuration once:
 "use client";
 
 import { useEffect } from "react";
-import { Pollex } from "pollex-web-sdk";
+import { Pollex } from "@pollex/sdk";
 
 export function PollexBootstrap() {
   useEffect(() => {
@@ -354,11 +354,11 @@ Examples of app-provided traits:
 
 Examples of Pollex-computed traits:
 
-- `maze.intent_level`
-- `maze.usage_depth`
-- `maze.recent_activity`
-- `maze.paywall_fatigue`
-- `maze.onboarding_stage`
+- `pollex.intent_level`
+- `pollex.usage_depth`
+- `pollex.recent_activity`
+- `pollex.paywall_fatigue`
+- `pollex.onboarding_stage`
 
 Pollex does not infer sensitive identity traits such as age or gender from behavior.
 

@@ -16,7 +16,7 @@ type ApiKey = {
 export function ApiKeyManager() {
   const { locale } = useI18n();
   const [keys, setKeys] = useState<ApiKey[]>([]);
-  const [name, setName] = useState(locale === "ar" ? "مفتاح إدخال الخلفية" : "Backend ingestion key");
+  const [name, setName] = useState(locale === "ar" ? "ظ…ظپطھط§ط­ ط¥ط¯ط®ط§ظ„ ط§ظ„ط®ظ„ظپظٹط©" : "Backend ingestion key");
   const [environment, setEnvironment] = useState<"test" | "live">("live");
   const [status, setStatus] = useState<{ text: string; ok: boolean } | null>(null);
   const [loading, setLoading] = useState(true);
@@ -61,7 +61,7 @@ export function ApiKeyManager() {
   }, [isEnvironmentOpen]);
 
   async function createKey(formData: FormData) {
-      setStatus({ text: locale === "ar" ? "جارٍ الإنشاء..." : "Generating...", ok: true });
+    setStatus({ text: locale === "ar" ? "ط¬ط§ط±ظچ ط§ظ„ط¥ظ†ط´ط§ط،..." : "Generating...", ok: true });
 
     const response = await fetch("/api/workspace/api-keys", {
       method: "POST",
@@ -75,33 +75,33 @@ export function ApiKeyManager() {
     const data = await response.json();
     if (response.ok) {
       setKeys((current) => [data.key, ...current]);
-      setStatus({ text: locale === "ar" ? `تم إنشاء المفتاح: ${data.key.token}` : `Key created: ${data.key.token}`, ok: true });
+      setStatus({ text: locale === "ar" ? `طھظ… ط¥ظ†ط´ط§ط، ط§ظ„ظ…ظپطھط§ط­: ${data.key.token}` : `Key created: ${data.key.token}`, ok: true });
     } else {
-      setStatus({ text: data.error ?? (locale === "ar" ? "تعذر إنشاء المفتاح." : "Unable to generate key."), ok: false });
+      setStatus({ text: data.error ?? (locale === "ar" ? "طھط¹ط°ط± ط¥ظ†ط´ط§ط، ط§ظ„ظ…ظپطھط§ط­." : "Unable to generate key."), ok: false });
     }
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-      <form action={createKey} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+    <div className="pollex-form-stack">
+      <form action={createKey} className="pollex-form-stack">
         <div className="api-key-form-grid">
           <div className="field">
-            <label htmlFor="key-name">{locale === "ar" ? "اسم المفتاح" : "Key name"}</label>
-            <input id="key-name" name="name" value={name} onChange={(e) => setName(e.target.value)} />
+            <label htmlFor="key-name">{locale === "ar" ? "ط§ط³ظ… ط§ظ„ظ…ظپطھط§ط­" : "Key name"}</label>
+            <input id="key-name" name="name" value={name} onChange={(event) => setName(event.target.value)} />
           </div>
           <div className="field api-key-environment-field">
-            <label htmlFor="key-env">{locale === "ar" ? "البيئة" : "Environment"}</label>
+            <label htmlFor="key-env">{locale === "ar" ? "ط§ظ„ط¨ظٹط¦ط©" : "Environment"}</label>
             <input id="key-env" name="environment" type="hidden" value={environment} />
             <div className="surface-select" ref={environmentRef}>
               <button
                 aria-expanded={isEnvironmentOpen}
                 aria-haspopup="menu"
-                className={`surface-select-trigger ${isEnvironmentOpen ? "open" : ""}`}
+                className={`surface-select-trigger ${isEnvironmentOpen ? "open" : ""}`.trim()}
                 type="button"
                 onClick={() => setIsEnvironmentOpen((open) => !open)}
               >
                 <span className="surface-select-value">
-                  {environment === "live" ? (locale === "ar" ? "حي" : "Live") : (locale === "ar" ? "اختبار" : "Test")}
+                  {environment === "live" ? (locale === "ar" ? "ط­ظٹ" : "Live") : (locale === "ar" ? "ط§ط®طھط¨ط§ط±" : "Test")}
                 </span>
                 <span className="surface-select-chevron" aria-hidden="true">
                   ▾
@@ -111,11 +111,11 @@ export function ApiKeyManager() {
               {isEnvironmentOpen ? (
                 <div className="surface-select-popover" role="menu">
                   {[
-                    { value: "live" as const, label: locale === "ar" ? "حي" : "Live" },
-                    { value: "test" as const, label: locale === "ar" ? "اختبار" : "Test" },
+                    { value: "live" as const, label: locale === "ar" ? "ط­ظٹ" : "Live" },
+                    { value: "test" as const, label: locale === "ar" ? "ط§ط®طھط¨ط§ط±" : "Test" },
                   ].map((option) => (
                     <button
-                      className={`surface-select-option ${option.value === environment ? "active" : ""}`}
+                      className={`surface-select-option ${option.value === environment ? "active" : ""}`.trim()}
                       key={option.value}
                       role="menuitemradio"
                       type="button"
@@ -125,7 +125,7 @@ export function ApiKeyManager() {
                       }}
                     >
                       <span>{option.label}</span>
-                      {option.value === environment ? <strong>{locale === "ar" ? "الحالي" : "Current"}</strong> : null}
+                      {option.value === environment ? <strong>{locale === "ar" ? "ط§ظ„ط­ط§ظ„ظٹ" : "Current"}</strong> : null}
                     </button>
                   ))}
                 </div>
@@ -134,59 +134,34 @@ export function ApiKeyManager() {
           </div>
         </div>
         <button className="btn btn-primary api-key-submit" type="submit">
-          {locale === "ar" ? "إنشاء مفتاح" : "Generate key"}
+          {locale === "ar" ? "ط¥ظ†ط´ط§ط، ظ…ظپطھط§ط­" : "Generate key"}
         </button>
       </form>
 
-      {status && (
-        <p
-          style={{
-            fontSize: "0.82rem",
-            color: status.ok ? "var(--green)" : "var(--red)",
-            fontFamily: status.ok ? "var(--font-mono)" : "inherit",
-            background: status.ok ? "var(--green-dim)" : "var(--red-dim)",
-            padding: "10px 14px",
-            borderRadius: "var(--r-md)",
-            border: `1px solid ${status.ok ? "rgba(52,211,153,0.2)" : "rgba(248,113,113,0.2)"}`,
-            wordBreak: "break-all",
-          }}
-        >
-          {status.text}
-        </p>
-      )}
+      {status ? <p className={`pollex-status-banner ${status.ok ? "ok" : "error"}`.trim()}>{status.text}</p> : null}
 
       <div>
-        <p style={{ fontSize: "0.78rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--text-3)", marginBottom: 10 }}>
-          {loading ? (locale === "ar" ? "جارٍ التحميل..." : "Loading...") : locale === "ar" ? `${keys.length} مفتاح` : `${keys.length} key${keys.length !== 1 ? "s" : ""}`}
+        <p className="pollex-key-count">
+          {loading ? (locale === "ar" ? "ط¬ط§ط±ظچ ط§ظ„طھط­ظ…ظٹظ„..." : "Loading...") : locale === "ar" ? `${keys.length} ظ…ظپطھط§ط­` : `${keys.length} key${keys.length !== 1 ? "s" : ""}`}
         </p>
-        {keys.map((key) => (
-          <div
-            key={key.id}
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              gap: 14,
-              padding: "12px 0",
-              borderBottom: "1px solid var(--border)",
-            }}
-          >
-            <div>
-              <div style={{ fontSize: "0.88rem", fontWeight: 600, color: "var(--text)", marginBottom: 3 }}>{key.name}</div>
-              <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.78rem", color: "var(--text-3)" }}>
-                {key.token ?? `${key.prefix ?? "mz_"}************`}
+        <div className="pollex-key-list">
+          {keys.map((key) => (
+            <div className="pollex-key-row" key={key.id}>
+              <div className="pollex-key-copy">
+                <div className="pollex-key-name">{key.name}</div>
+                <div className="pollex-key-token">{key.token ?? `${key.prefix ?? "mz_"}************`}</div>
+              </div>
+              <div className="pollex-key-meta">
+                {key.lastUsedAt
+                  ? locale === "ar" ? `ط§ط³طھظڈط®ط¯ظ… ${new Date(key.lastUsedAt).toLocaleDateString()}` : `Used ${new Date(key.lastUsedAt).toLocaleDateString()}`
+                  : locale === "ar" ? `ط£ظڈظ†ط´ط¦ ${new Date(key.createdAt).toLocaleDateString()}` : `Created ${new Date(key.createdAt).toLocaleDateString()}`}
               </div>
             </div>
-            <div style={{ fontSize: "0.78rem", color: "var(--text-3)", whiteSpace: "nowrap" }}>
-              {key.lastUsedAt
-                ? locale === "ar" ? `استُخدم ${new Date(key.lastUsedAt).toLocaleDateString()}` : `Used ${new Date(key.lastUsedAt).toLocaleDateString()}`
-                : locale === "ar" ? `أُنشئ ${new Date(key.createdAt).toLocaleDateString()}` : `Created ${new Date(key.createdAt).toLocaleDateString()}`}
-            </div>
-          </div>
-        ))}
-        {!loading && keys.length === 0 && (
-          <p style={{ fontSize: "0.85rem", color: "var(--text-3)" }}>{locale === "ar" ? "لا توجد مفاتيح بعد. أنشئ واحداً أعلاه." : "No keys yet. Generate one above."}</p>
-        )}
+          ))}
+        </div>
+        {!loading && keys.length === 0 ? (
+          <p className="pollex-inline-status">{locale === "ar" ? "ظ„ط§ طھظˆط¬ط¯ ظ…ظپط§طھظٹط­ ط¨ط¹ط¯. ط£ظ†ط´ط¦ ظˆط§ط­ط¯ط§ظ‹ ط£ط¹ظ„ط§ظ‡." : "No keys yet. Generate one above."}</p>
+        ) : null}
       </div>
     </div>
   );

@@ -126,25 +126,60 @@ select {
   --shadow-edge: inset 0 1px 0 rgba(255, 255, 255, 0.05);
   --liquid-blur: blur(24px);
   --page-background:
-    radial-gradient(circle at top left, rgba(255, 255, 255, 0.07), transparent 24%),
-    radial-gradient(circle at bottom right, rgba(181, 210, 255, 0.08), transparent 28%),
+    radial-gradient(
+      circle at top left,
+      rgba(255, 255, 255, 0.07),
+      transparent 24%
+    ),
+    radial-gradient(
+      circle at bottom right,
+      rgba(181, 210, 255, 0.08),
+      transparent 28%
+    ),
     linear-gradient(180deg, #20201f 0%, #171716 45%, #141413 100%);
   --page-background-ambient:
-    radial-gradient(circle at 12% 12%, rgba(255, 255, 255, 0.06), transparent 20%),
-    radial-gradient(circle at 82% 14%, rgba(170, 194, 230, 0.08), transparent 18%),
-    radial-gradient(circle at 55% 85%, rgba(255, 255, 255, 0.03), transparent 30%);
+    radial-gradient(
+      circle at 12% 12%,
+      rgba(255, 255, 255, 0.06),
+      transparent 20%
+    ),
+    radial-gradient(
+      circle at 82% 14%,
+      rgba(170, 194, 230, 0.08),
+      transparent 18%
+    ),
+    radial-gradient(
+      circle at 55% 85%,
+      rgba(255, 255, 255, 0.03),
+      transparent 30%
+    );
   --page-noise-opacity: 0.018;
   --brand-shadow: drop-shadow(0 10px 30px rgba(0, 0, 0, 0.24));
-  --surface-shell:
-    linear-gradient(180deg, rgba(70, 70, 72, 0.68), rgba(32, 32, 34, 0.72));
-  --surface-footer:
-    linear-gradient(180deg, rgba(52, 52, 54, 0.56), rgba(27, 27, 29, 0.72));
-  --surface-sidebar:
-    linear-gradient(180deg, rgba(64, 64, 66, 0.7), rgba(35, 35, 37, 0.82));
-  --surface-card:
-    linear-gradient(180deg, rgba(62, 62, 64, 0.72), rgba(39, 39, 41, 0.78));
-  --surface-chart:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.015));
+  --surface-shell: linear-gradient(
+    180deg,
+    rgba(70, 70, 72, 0.68),
+    rgba(32, 32, 34, 0.72)
+  );
+  --surface-footer: linear-gradient(
+    180deg,
+    rgba(52, 52, 54, 0.56),
+    rgba(27, 27, 29, 0.72)
+  );
+  --surface-sidebar: linear-gradient(
+    180deg,
+    rgba(64, 64, 66, 0.7),
+    rgba(35, 35, 37, 0.82)
+  );
+  --surface-card: linear-gradient(
+    180deg,
+    rgba(62, 62, 64, 0.72),
+    rgba(39, 39, 41, 0.78)
+  );
+  --surface-chart: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.03),
+    rgba(255, 255, 255, 0.015)
+  );
   --surface-tooltip: rgba(31, 31, 33, 0.92);
   --surface-popover: rgba(34, 34, 36, 0.94);
   --surface-row: rgba(255, 255, 255, 0.03);
@@ -152,20 +187,32 @@ select {
   --surface-press: rgba(255, 255, 255, 0.06);
   --surface-track: rgba(255, 255, 255, 0.05);
   --surface-backdrop: rgba(9, 9, 11, 0.58);
-  --surface-auth:
-    linear-gradient(180deg, rgba(60, 60, 62, 0.74), rgba(34, 34, 36, 0.82));
+  --surface-auth: linear-gradient(
+    180deg,
+    rgba(60, 60, 62, 0.74),
+    rgba(34, 34, 36, 0.82)
+  );
   --surface-auth-section: rgba(255, 255, 255, 0.04);
   --surface-auth-divider: rgba(255, 255, 255, 0.07);
-  --surface-marketing:
-    linear-gradient(180deg, rgba(60, 60, 62, 0.64), rgba(36, 36, 38, 0.78));
-  --surface-pricing:
-    linear-gradient(180deg, rgba(58, 58, 60, 0.7), rgba(35, 35, 37, 0.8));
+  --surface-marketing: linear-gradient(
+    180deg,
+    rgba(60, 60, 62, 0.64),
+    rgba(36, 36, 38, 0.78)
+  );
+  --surface-pricing: linear-gradient(
+    180deg,
+    rgba(58, 58, 60, 0.7),
+    rgba(35, 35, 37, 0.8)
+  );
   --surface-shadow-card: 0 16px 42px rgba(0, 0, 0, 0.28);
   --surface-shadow-overlay: 0 18px 32px rgba(0, 0, 0, 0.28);
   --control-bg: rgba(255, 255, 255, 0.04);
   --control-ghost-bg: rgba(255, 255, 255, 0.03);
-  --control-primary-bg:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(220, 216, 207, 0.1));
+  --control-primary-bg: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.18),
+    rgba(220, 216, 207, 0.1)
+  );
   --control-primary-border: rgba(255, 255, 255, 0.18);
   --control-primary-text: var(--text);
   --table-cell-bg: rgba(255, 255, 255, 0.03);
@@ -238,25 +285,60 @@ select {
   --shadow-soft: 0 22px 60px rgba(105, 84, 44, 0.12);
   --shadow-edge: inset 0 1px 0 rgba(255, 255, 255, 0.72);
   --page-background:
-    radial-gradient(circle at top left, rgba(255, 255, 255, 0.7), transparent 24%),
-    radial-gradient(circle at bottom right, rgba(141, 169, 209, 0.14), transparent 30%),
+    radial-gradient(
+      circle at top left,
+      rgba(255, 255, 255, 0.7),
+      transparent 24%
+    ),
+    radial-gradient(
+      circle at bottom right,
+      rgba(141, 169, 209, 0.14),
+      transparent 30%
+    ),
     linear-gradient(180deg, #f7f2ea 0%, #f2eadf 48%, #ece2d5 100%);
   --page-background-ambient:
-    radial-gradient(circle at 12% 12%, rgba(255, 255, 255, 0.58), transparent 20%),
-    radial-gradient(circle at 82% 14%, rgba(152, 172, 200, 0.18), transparent 18%),
-    radial-gradient(circle at 55% 85%, rgba(255, 255, 255, 0.34), transparent 30%);
+    radial-gradient(
+      circle at 12% 12%,
+      rgba(255, 255, 255, 0.58),
+      transparent 20%
+    ),
+    radial-gradient(
+      circle at 82% 14%,
+      rgba(152, 172, 200, 0.18),
+      transparent 18%
+    ),
+    radial-gradient(
+      circle at 55% 85%,
+      rgba(255, 255, 255, 0.34),
+      transparent 30%
+    );
   --page-noise-opacity: 0.01;
   --brand-shadow: drop-shadow(0 10px 22px rgba(157, 134, 96, 0.14));
-  --surface-shell:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(244, 236, 225, 0.92));
-  --surface-footer:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(240, 232, 221, 0.94));
-  --surface-sidebar:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(241, 232, 220, 0.94));
-  --surface-card:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.84), rgba(241, 232, 220, 0.94));
-  --surface-chart:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(244, 236, 227, 0.94));
+  --surface-shell: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.88),
+    rgba(244, 236, 225, 0.92)
+  );
+  --surface-footer: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.82),
+    rgba(240, 232, 221, 0.94)
+  );
+  --surface-sidebar: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.88),
+    rgba(241, 232, 220, 0.94)
+  );
+  --surface-card: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.84),
+    rgba(241, 232, 220, 0.94)
+  );
+  --surface-chart: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.82),
+    rgba(244, 236, 227, 0.94)
+  );
   --surface-tooltip: rgba(255, 250, 244, 0.96);
   --surface-popover: rgba(255, 249, 242, 0.98);
   --surface-row: rgba(255, 255, 255, 0.62);
@@ -264,20 +346,32 @@ select {
   --surface-press: rgba(95, 115, 145, 0.08);
   --surface-track: rgba(95, 115, 145, 0.12);
   --surface-backdrop: rgba(246, 239, 230, 0.58);
-  --surface-auth:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(241, 232, 220, 0.95));
+  --surface-auth: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.88),
+    rgba(241, 232, 220, 0.95)
+  );
   --surface-auth-section: rgba(255, 255, 255, 0.68);
   --surface-auth-divider: rgba(95, 115, 145, 0.12);
-  --surface-marketing:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.84), rgba(241, 232, 221, 0.94));
-  --surface-pricing:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.86), rgba(239, 230, 219, 0.94));
+  --surface-marketing: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.84),
+    rgba(241, 232, 221, 0.94)
+  );
+  --surface-pricing: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.86),
+    rgba(239, 230, 219, 0.94)
+  );
   --surface-shadow-card: 0 16px 34px rgba(124, 96, 52, 0.12);
   --surface-shadow-overlay: 0 18px 34px rgba(124, 96, 52, 0.12);
   --control-bg: rgba(255, 255, 255, 0.72);
   --control-ghost-bg: rgba(255, 255, 255, 0.58);
-  --control-primary-bg:
-    linear-gradient(180deg, rgba(95, 115, 145, 0.18), rgba(95, 115, 145, 0.08));
+  --control-primary-bg: linear-gradient(
+    180deg,
+    rgba(95, 115, 145, 0.18),
+    rgba(95, 115, 145, 0.08)
+  );
   --control-primary-border: rgba(95, 115, 145, 0.24);
   --control-primary-text: var(--text);
   --table-cell-bg: rgba(255, 255, 255, 0.76);
@@ -333,25 +427,60 @@ select {
     --shadow-soft: 0 22px 60px rgba(105, 84, 44, 0.12);
     --shadow-edge: inset 0 1px 0 rgba(255, 255, 255, 0.72);
     --page-background:
-      radial-gradient(circle at top left, rgba(255, 255, 255, 0.7), transparent 24%),
-      radial-gradient(circle at bottom right, rgba(141, 169, 209, 0.14), transparent 30%),
+      radial-gradient(
+        circle at top left,
+        rgba(255, 255, 255, 0.7),
+        transparent 24%
+      ),
+      radial-gradient(
+        circle at bottom right,
+        rgba(141, 169, 209, 0.14),
+        transparent 30%
+      ),
       linear-gradient(180deg, #f7f2ea 0%, #f2eadf 48%, #ece2d5 100%);
     --page-background-ambient:
-      radial-gradient(circle at 12% 12%, rgba(255, 255, 255, 0.58), transparent 20%),
-      radial-gradient(circle at 82% 14%, rgba(152, 172, 200, 0.18), transparent 18%),
-      radial-gradient(circle at 55% 85%, rgba(255, 255, 255, 0.34), transparent 30%);
+      radial-gradient(
+        circle at 12% 12%,
+        rgba(255, 255, 255, 0.58),
+        transparent 20%
+      ),
+      radial-gradient(
+        circle at 82% 14%,
+        rgba(152, 172, 200, 0.18),
+        transparent 18%
+      ),
+      radial-gradient(
+        circle at 55% 85%,
+        rgba(255, 255, 255, 0.34),
+        transparent 30%
+      );
     --page-noise-opacity: 0.01;
     --brand-shadow: drop-shadow(0 10px 22px rgba(157, 134, 96, 0.14));
-    --surface-shell:
-      linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(244, 236, 225, 0.92));
-    --surface-footer:
-      linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(240, 232, 221, 0.94));
-    --surface-sidebar:
-      linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(241, 232, 220, 0.94));
-    --surface-card:
-      linear-gradient(180deg, rgba(255, 255, 255, 0.84), rgba(241, 232, 220, 0.94));
-    --surface-chart:
-      linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(244, 236, 227, 0.94));
+    --surface-shell: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.88),
+      rgba(244, 236, 225, 0.92)
+    );
+    --surface-footer: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.82),
+      rgba(240, 232, 221, 0.94)
+    );
+    --surface-sidebar: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.88),
+      rgba(241, 232, 220, 0.94)
+    );
+    --surface-card: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.84),
+      rgba(241, 232, 220, 0.94)
+    );
+    --surface-chart: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.82),
+      rgba(244, 236, 227, 0.94)
+    );
     --surface-tooltip: rgba(255, 250, 244, 0.96);
     --surface-popover: rgba(255, 249, 242, 0.98);
     --surface-row: rgba(255, 255, 255, 0.62);
@@ -359,20 +488,32 @@ select {
     --surface-press: rgba(95, 115, 145, 0.08);
     --surface-track: rgba(95, 115, 145, 0.12);
     --surface-backdrop: rgba(246, 239, 230, 0.58);
-    --surface-auth:
-      linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(241, 232, 220, 0.95));
+    --surface-auth: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.88),
+      rgba(241, 232, 220, 0.95)
+    );
     --surface-auth-section: rgba(255, 255, 255, 0.68);
     --surface-auth-divider: rgba(95, 115, 145, 0.12);
-    --surface-marketing:
-      linear-gradient(180deg, rgba(255, 255, 255, 0.84), rgba(241, 232, 221, 0.94));
-    --surface-pricing:
-      linear-gradient(180deg, rgba(255, 255, 255, 0.86), rgba(239, 230, 219, 0.94));
+    --surface-marketing: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.84),
+      rgba(241, 232, 221, 0.94)
+    );
+    --surface-pricing: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.86),
+      rgba(239, 230, 219, 0.94)
+    );
     --surface-shadow-card: 0 16px 34px rgba(124, 96, 52, 0.12);
     --surface-shadow-overlay: 0 18px 34px rgba(124, 96, 52, 0.12);
     --control-bg: rgba(255, 255, 255, 0.72);
     --control-ghost-bg: rgba(255, 255, 255, 0.58);
-    --control-primary-bg:
-      linear-gradient(180deg, rgba(95, 115, 145, 0.18), rgba(95, 115, 145, 0.08));
+    --control-primary-bg: linear-gradient(
+      180deg,
+      rgba(95, 115, 145, 0.18),
+      rgba(95, 115, 145, 0.08)
+    );
     --control-primary-border: rgba(95, 115, 145, 0.24);
     --control-primary-text: var(--text);
     --table-cell-bg: rgba(255, 255, 255, 0.76);
@@ -528,10 +669,13 @@ body::after {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  min-height: 44px;
+  padding: 0 16px;
   border-radius: 999px;
   border: 1px solid var(--border);
   background: var(--control-bg);
   box-shadow: var(--shadow-edge);
+  font-size: 0.9rem;
   line-height: 1;
   text-align: center;
   white-space: nowrap;
@@ -749,9 +893,7 @@ body::after {
   background: var(--surface-card);
   border: 1px solid var(--border);
   border-radius: 28px;
-  box-shadow:
-    var(--shadow-edge),
-    var(--surface-shadow-card);
+  box-shadow: var(--shadow-edge), var(--surface-shadow-card);
 }
 
 .card {
@@ -861,11 +1003,55 @@ body::after {
   border: 1px solid transparent;
 }
 
+.dashboard-sidebar-link-icon,
+.dashboard-page-title-icon,
+.pollex-section-heading-icon,
+.pollex-list-row-icon {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  color: var(--text-2);
+}
+
+.dashboard-sidebar-link-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.dashboard-sidebar-link-copy {
+  min-width: 0;
+}
+
+.dashboard-sidebar-link-icon svg,
+.dashboard-page-title-icon svg,
+.pollex-section-heading-icon svg,
+.pollex-section-label-with-icon svg,
+.pollex-tab-content svg,
+.pollex-list-row-icon svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 .dashboard-sidebar-link:hover,
 .dashboard-sidebar-link.active {
   color: var(--text);
   background: var(--surface-chart);
   border-color: var(--border-strong);
+}
+
+.dashboard-sidebar-link:hover .dashboard-sidebar-link-icon,
+.dashboard-sidebar-link.active .dashboard-sidebar-link-icon {
+  color: var(--text);
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .dashboard-sidebar-link-indicator {
@@ -936,6 +1122,21 @@ body::after {
   gap: 10px;
 }
 
+.dashboard-page-title-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.dashboard-page-title-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text);
+}
+
 .page-title {
   font-size: clamp(2.5rem, 4.2vw, 4rem);
   line-height: 0.95;
@@ -960,6 +1161,7 @@ body::after {
 .field {
   display: grid;
   gap: 8px;
+  min-width: 0;
 }
 
 .field label {
@@ -971,7 +1173,10 @@ body::after {
 .field input,
 .field textarea,
 .field select {
+  box-sizing: border-box;
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
   min-height: 44px;
   padding: 0 14px;
   border-radius: 16px;
@@ -1106,6 +1311,13 @@ body::after {
   background: transparent;
   color: var(--text-2);
   cursor: pointer;
+}
+
+.pollex-tab-content {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
 
 .pollex-tab.active {
@@ -1333,7 +1545,7 @@ body::after {
 .pollex-usage-chart,
 .pollex-hotspot-list {
   display: grid;
-  gap: 12px;
+  gap: 16px;
 }
 
 .pollex-line-point,
@@ -1365,7 +1577,11 @@ body::after {
 .pollex-usage-chart-fill {
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, var(--control-primary-border), var(--chart-area));
+  background: linear-gradient(
+    90deg,
+    var(--control-primary-border),
+    var(--chart-area)
+  );
 }
 
 .pollex-ranked-row,
@@ -1375,10 +1591,25 @@ body::after {
   justify-content: space-between;
   gap: 16px;
   align-items: center;
-  padding: 14px 16px;
-  border-radius: 20px;
+  padding: 16px 18px;
+  border-radius: 22px;
   border: 1px solid var(--border);
   background: var(--surface-row);
+}
+
+.pollex-list-row-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.pollex-list-row-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.02);
 }
 
 .pollex-ranked-row strong,
@@ -1559,6 +1790,13 @@ body::after {
 .pollex-chat-focus-chip.active {
   border-color: var(--control-primary-border);
   background: var(--control-primary-bg);
+  color: var(--control-primary-text);
+}
+
+.pollex-chat-focus-chip.active strong,
+.pollex-chat-focus-chip.active span,
+.pollex-chat-focus-chip.active .pollex-chat-focus-rank {
+  color: var(--control-primary-text);
 }
 
 .pollex-insight-context-head h3 {
@@ -1700,7 +1938,7 @@ body::after {
 
 .pollex-chat-avatar-assistant {
   background: var(--control-primary-bg);
-  color: var(--text);
+  color: var(--control-primary-text);
 }
 
 .pollex-chat-avatar-user {
@@ -1728,6 +1966,13 @@ body::after {
 
 .pollex-chat-bubble-user {
   background: var(--control-primary-bg);
+  color: var(--control-primary-text);
+}
+
+.pollex-chat-bubble-user p,
+.pollex-chat-bubble-user strong,
+.pollex-chat-bubble-user span {
+  color: var(--control-primary-text);
 }
 
 .pollex-chat-bubble p {
@@ -1802,15 +2047,15 @@ body::after {
   border: 1px solid var(--control-primary-border);
   border-radius: 16px;
   background: var(--control-primary-bg);
-  color: var(--text);
+  color: var(--control-primary-text);
   box-shadow:
     var(--shadow-edge),
     0 10px 24px rgba(0, 0, 0, 0.18);
 }
 
 .pollex-chat-send svg {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   fill: none;
   stroke: currentColor;
   stroke-width: 1.8;
@@ -1887,10 +2132,32 @@ body::after {
   align-content: start;
 }
 
-.pollex-heatmap-column-head span {
+.pollex-heatmap-column-head > span {
   font-size: 0.95rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+.pollex-section-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.pollex-section-heading-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text);
+}
+
+.pollex-section-label-with-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .pollex-heatmap-metric-list {
@@ -2730,25 +2997,60 @@ body::after {
   --shadow-soft: 0 24px 80px rgba(0, 0, 0, 0.35);
   --shadow-edge: inset 0 1px 0 rgba(255, 255, 255, 0.05);
   --page-background:
-    radial-gradient(circle at top left, rgba(255, 255, 255, 0.07), transparent 24%),
-    radial-gradient(circle at bottom right, rgba(181, 210, 255, 0.08), transparent 28%),
+    radial-gradient(
+      circle at top left,
+      rgba(255, 255, 255, 0.07),
+      transparent 24%
+    ),
+    radial-gradient(
+      circle at bottom right,
+      rgba(181, 210, 255, 0.08),
+      transparent 28%
+    ),
     linear-gradient(180deg, #20201f 0%, #171716 45%, #141413 100%);
   --page-background-ambient:
-    radial-gradient(circle at 12% 12%, rgba(255, 255, 255, 0.06), transparent 20%),
-    radial-gradient(circle at 82% 14%, rgba(170, 194, 230, 0.08), transparent 18%),
-    radial-gradient(circle at 55% 85%, rgba(255, 255, 255, 0.03), transparent 30%);
+    radial-gradient(
+      circle at 12% 12%,
+      rgba(255, 255, 255, 0.06),
+      transparent 20%
+    ),
+    radial-gradient(
+      circle at 82% 14%,
+      rgba(170, 194, 230, 0.08),
+      transparent 18%
+    ),
+    radial-gradient(
+      circle at 55% 85%,
+      rgba(255, 255, 255, 0.03),
+      transparent 30%
+    );
   --page-noise-opacity: 0.018;
   --brand-shadow: drop-shadow(0 10px 30px rgba(0, 0, 0, 0.24));
-  --surface-shell:
-    linear-gradient(180deg, rgba(70, 70, 72, 0.68), rgba(32, 32, 34, 0.72));
-  --surface-footer:
-    linear-gradient(180deg, rgba(52, 52, 54, 0.56), rgba(27, 27, 29, 0.72));
-  --surface-sidebar:
-    linear-gradient(180deg, rgba(64, 64, 66, 0.7), rgba(35, 35, 37, 0.82));
-  --surface-card:
-    linear-gradient(180deg, rgba(62, 62, 64, 0.72), rgba(39, 39, 41, 0.78));
-  --surface-chart:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.015));
+  --surface-shell: linear-gradient(
+    180deg,
+    rgba(70, 70, 72, 0.68),
+    rgba(32, 32, 34, 0.72)
+  );
+  --surface-footer: linear-gradient(
+    180deg,
+    rgba(52, 52, 54, 0.56),
+    rgba(27, 27, 29, 0.72)
+  );
+  --surface-sidebar: linear-gradient(
+    180deg,
+    rgba(64, 64, 66, 0.7),
+    rgba(35, 35, 37, 0.82)
+  );
+  --surface-card: linear-gradient(
+    180deg,
+    rgba(62, 62, 64, 0.72),
+    rgba(39, 39, 41, 0.78)
+  );
+  --surface-chart: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.03),
+    rgba(255, 255, 255, 0.015)
+  );
   --surface-tooltip: rgba(31, 31, 33, 0.92);
   --surface-popover: rgba(34, 34, 36, 0.94);
   --surface-row: rgba(255, 255, 255, 0.03);
@@ -2756,20 +3058,32 @@ body::after {
   --surface-press: rgba(255, 255, 255, 0.06);
   --surface-track: rgba(255, 255, 255, 0.05);
   --surface-backdrop: rgba(9, 9, 11, 0.58);
-  --surface-auth:
-    linear-gradient(180deg, rgba(60, 60, 62, 0.74), rgba(34, 34, 36, 0.82));
+  --surface-auth: linear-gradient(
+    180deg,
+    rgba(60, 60, 62, 0.74),
+    rgba(34, 34, 36, 0.82)
+  );
   --surface-auth-section: rgba(255, 255, 255, 0.04);
   --surface-auth-divider: rgba(255, 255, 255, 0.07);
-  --surface-marketing:
-    linear-gradient(180deg, rgba(60, 60, 62, 0.64), rgba(36, 36, 38, 0.78));
-  --surface-pricing:
-    linear-gradient(180deg, rgba(58, 58, 60, 0.7), rgba(35, 35, 37, 0.8));
+  --surface-marketing: linear-gradient(
+    180deg,
+    rgba(60, 60, 62, 0.64),
+    rgba(36, 36, 38, 0.78)
+  );
+  --surface-pricing: linear-gradient(
+    180deg,
+    rgba(58, 58, 60, 0.7),
+    rgba(35, 35, 37, 0.8)
+  );
   --surface-shadow-card: 0 16px 42px rgba(0, 0, 0, 0.28);
   --surface-shadow-overlay: 0 18px 32px rgba(0, 0, 0, 0.28);
   --control-bg: rgba(255, 255, 255, 0.04);
   --control-ghost-bg: rgba(255, 255, 255, 0.03);
-  --control-primary-bg:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(220, 216, 207, 0.1));
+  --control-primary-bg: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.18),
+    rgba(220, 216, 207, 0.1)
+  );
   --control-primary-border: rgba(255, 255, 255, 0.18);
   --control-primary-text: var(--text);
   min-height: 100dvh;
@@ -2816,20 +3130,39 @@ body::after {
   --pollex-copy: rgba(255, 255, 255, 0.72);
   --pollex-copy-strong: rgba(255, 255, 255, 0.92);
   --pollex-eyebrow: rgba(255, 255, 255, 0.58);
-  --pollex-highlight: radial-gradient(circle at 82% 24%, rgba(255, 255, 255, 0.08), transparent 22%);
+  --pollex-highlight: radial-gradient(
+    circle at 82% 24%,
+    rgba(255, 255, 255, 0.08),
+    transparent 22%
+  );
   --pollex-hero-bg:
-    radial-gradient(circle at 50% 16%, rgba(255, 255, 255, 0.06), transparent 20%),
+    radial-gradient(
+      circle at 50% 16%,
+      rgba(255, 255, 255, 0.06),
+      transparent 20%
+    ),
     linear-gradient(180deg, rgba(40, 40, 40, 0.92), rgba(29, 29, 29, 0.98));
   --pollex-hero-overlay:
-    radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.05), transparent 24%),
+    radial-gradient(
+      circle at 50% 0%,
+      rgba(255, 255, 255, 0.05),
+      transparent 24%
+    ),
     linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.08) 100%);
-  --pollex-button-primary:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.06));
+  --pollex-button-primary: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.18),
+    rgba(255, 255, 255, 0.06)
+  );
   --pollex-button-secondary-bg: rgba(0, 0, 0, 0.58);
   --pollex-button-secondary-text: rgba(255, 255, 255, 0.96);
   --pollex-note: rgba(255, 255, 255, 0.28);
   --pollex-logo-bg:
-    radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.05), transparent 46%),
+    radial-gradient(
+      circle at 50% 0%,
+      rgba(255, 255, 255, 0.05),
+      transparent 46%
+    ),
     linear-gradient(180deg, rgba(47, 47, 47, 0.96), rgba(37, 37, 37, 0.92));
   --pollex-flow-bg: rgba(255, 255, 255, 0.03);
   --pollex-flow-color: rgba(255, 255, 255, 0.62);
@@ -2845,30 +3178,63 @@ body::after {
 }
 
 :root[data-theme="light"] .pollex-home {
-  --pollex-surface:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(242, 233, 221, 0.95));
-  --pollex-surface-soft:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(240, 231, 219, 0.92));
+  --pollex-surface: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.88),
+    rgba(242, 233, 221, 0.95)
+  );
+  --pollex-surface-soft: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.78),
+    rgba(240, 231, 219, 0.92)
+  );
   --pollex-line: rgba(95, 115, 145, 0.16);
   --pollex-line-soft: rgba(95, 115, 145, 0.1);
   --pollex-copy: rgba(42, 34, 26, 0.72);
   --pollex-copy-strong: rgba(42, 34, 26, 0.96);
   --pollex-eyebrow: rgba(95, 115, 145, 0.66);
-  --pollex-highlight: radial-gradient(circle at 82% 24%, rgba(95, 115, 145, 0.12), transparent 22%);
+  --pollex-highlight: radial-gradient(
+    circle at 82% 24%,
+    rgba(95, 115, 145, 0.12),
+    transparent 22%
+  );
   --pollex-hero-bg:
-    radial-gradient(circle at 50% 16%, rgba(255, 255, 255, 0.56), transparent 22%),
-    linear-gradient(180deg, rgba(255, 248, 242, 0.96), rgba(243, 234, 222, 0.98));
+    radial-gradient(
+      circle at 50% 16%,
+      rgba(255, 255, 255, 0.56),
+      transparent 22%
+    ),
+    linear-gradient(
+      180deg,
+      rgba(255, 248, 242, 0.96),
+      rgba(243, 234, 222, 0.98)
+    );
   --pollex-hero-overlay:
-    radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.42), transparent 24%),
+    radial-gradient(
+      circle at 50% 0%,
+      rgba(255, 255, 255, 0.42),
+      transparent 24%
+    ),
     linear-gradient(180deg, transparent 0%, rgba(95, 115, 145, 0.06) 100%);
-  --pollex-button-primary:
-    linear-gradient(180deg, rgba(95, 115, 145, 0.18), rgba(95, 115, 145, 0.08));
+  --pollex-button-primary: linear-gradient(
+    180deg,
+    rgba(95, 115, 145, 0.18),
+    rgba(95, 115, 145, 0.08)
+  );
   --pollex-button-secondary-bg: rgba(95, 115, 145, 0.08);
   --pollex-button-secondary-text: rgba(42, 34, 26, 0.92);
   --pollex-note: rgba(95, 115, 145, 0.5);
   --pollex-logo-bg:
-    radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.38), transparent 46%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(242, 233, 221, 0.96));
+    radial-gradient(
+      circle at 50% 0%,
+      rgba(255, 255, 255, 0.38),
+      transparent 46%
+    ),
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.92),
+      rgba(242, 233, 221, 0.96)
+    );
   --pollex-flow-bg: rgba(255, 255, 255, 0.58);
   --pollex-flow-color: rgba(95, 115, 145, 0.72);
   --pollex-flow-divider: rgba(95, 115, 145, 0.28);
@@ -2876,30 +3242,63 @@ body::after {
 
 @media (prefers-color-scheme: light) {
   :root:not([data-theme]) .pollex-home {
-    --pollex-surface:
-      linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(242, 233, 221, 0.95));
-    --pollex-surface-soft:
-      linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(240, 231, 219, 0.92));
+    --pollex-surface: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.88),
+      rgba(242, 233, 221, 0.95)
+    );
+    --pollex-surface-soft: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.78),
+      rgba(240, 231, 219, 0.92)
+    );
     --pollex-line: rgba(95, 115, 145, 0.16);
     --pollex-line-soft: rgba(95, 115, 145, 0.1);
     --pollex-copy: rgba(42, 34, 26, 0.72);
     --pollex-copy-strong: rgba(42, 34, 26, 0.96);
     --pollex-eyebrow: rgba(95, 115, 145, 0.66);
-    --pollex-highlight: radial-gradient(circle at 82% 24%, rgba(95, 115, 145, 0.12), transparent 22%);
+    --pollex-highlight: radial-gradient(
+      circle at 82% 24%,
+      rgba(95, 115, 145, 0.12),
+      transparent 22%
+    );
     --pollex-hero-bg:
-      radial-gradient(circle at 50% 16%, rgba(255, 255, 255, 0.56), transparent 22%),
-      linear-gradient(180deg, rgba(255, 248, 242, 0.96), rgba(243, 234, 222, 0.98));
+      radial-gradient(
+        circle at 50% 16%,
+        rgba(255, 255, 255, 0.56),
+        transparent 22%
+      ),
+      linear-gradient(
+        180deg,
+        rgba(255, 248, 242, 0.96),
+        rgba(243, 234, 222, 0.98)
+      );
     --pollex-hero-overlay:
-      radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.42), transparent 24%),
+      radial-gradient(
+        circle at 50% 0%,
+        rgba(255, 255, 255, 0.42),
+        transparent 24%
+      ),
       linear-gradient(180deg, transparent 0%, rgba(95, 115, 145, 0.06) 100%);
-    --pollex-button-primary:
-      linear-gradient(180deg, rgba(95, 115, 145, 0.18), rgba(95, 115, 145, 0.08));
+    --pollex-button-primary: linear-gradient(
+      180deg,
+      rgba(95, 115, 145, 0.18),
+      rgba(95, 115, 145, 0.08)
+    );
     --pollex-button-secondary-bg: rgba(95, 115, 145, 0.08);
     --pollex-button-secondary-text: rgba(42, 34, 26, 0.92);
     --pollex-note: rgba(95, 115, 145, 0.5);
     --pollex-logo-bg:
-      radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.38), transparent 46%),
-      linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(242, 233, 221, 0.96));
+      radial-gradient(
+        circle at 50% 0%,
+        rgba(255, 255, 255, 0.38),
+        transparent 46%
+      ),
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.92),
+        rgba(242, 233, 221, 0.96)
+      );
     --pollex-flow-bg: rgba(255, 255, 255, 0.58);
     --pollex-flow-color: rgba(95, 115, 145, 0.72);
     --pollex-flow-divider: rgba(95, 115, 145, 0.28);
@@ -3883,9 +4282,7 @@ body::after {
 .liquid-ops-profile-popover {
   border: 1px solid var(--border);
   background: var(--liquid-panel-bg);
-  box-shadow:
-    var(--shadow-edge),
-    var(--liquid-panel-shadow);
+  box-shadow: var(--shadow-edge), var(--liquid-panel-shadow);
   backdrop-filter: var(--liquid-blur);
   -webkit-backdrop-filter: var(--liquid-blur);
 }
@@ -4057,9 +4454,15 @@ body::after {
 
 .liquid-ops-tabs button.active,
 .liquid-ops-subtabs button.active {
-  color: var(--text);
+  color: var(--control-primary-text);
   background: var(--control-primary-bg);
   box-shadow: var(--shadow-edge);
+}
+
+.liquid-ops-tabs button.active svg,
+.liquid-ops-subtabs button.active svg {
+  stroke: currentColor;
+  fill: currentColor;
 }
 
 .liquid-ops-subtabs {
@@ -4182,33 +4585,29 @@ body::after {
 }
 
 .liquid-ops-inline-create-grid {
-  grid-template-columns: minmax(220px, 1.3fr) minmax(180px, 1fr) minmax(
-      260px,
-      1.5fr
-    ) 96px 120px auto;
+  grid-template-columns:
+    minmax(220px, 1.3fr) minmax(180px, 1fr) minmax(260px, 1.5fr)
+    96px 120px auto;
   align-items: center;
 }
 
 .liquid-ops-rules-create-grid-profiles {
-  grid-template-columns: minmax(180px, 1.2fr) minmax(180px, 1.1fr) minmax(
-      260px,
-      1.5fr
-    ) 120px;
+  grid-template-columns:
+    minmax(180px, 1.2fr) minmax(180px, 1.1fr) minmax(260px, 1.5fr)
+    120px;
 }
 
 .liquid-ops-rules-create-grid-traits {
-  grid-template-columns: minmax(140px, 1fr) minmax(
-      140px,
-      1fr
-    ) 110px 140px minmax(180px, 1.15fr) minmax(180px, 1.15fr) 120px 120px auto;
+  grid-template-columns:
+    minmax(140px, 1fr) minmax(140px, 1fr)
+    110px 140px minmax(180px, 1.15fr) minmax(180px, 1.15fr) 120px 120px auto;
   align-items: center;
 }
 
 .liquid-ops-rules-create-grid-variants {
-  grid-template-columns: minmax(180px, 1.1fr) minmax(180px, 1.1fr) minmax(
-      260px,
-      1.6fr
-    ) 96px 120px auto;
+  grid-template-columns:
+    minmax(180px, 1.1fr) minmax(180px, 1.1fr) minmax(260px, 1.6fr)
+    96px 120px auto;
   align-items: center;
 }
 
@@ -4548,7 +4947,8 @@ body::after {
 .liquid-pollex-tabs .pollex-tab svg,
 .liquid-pollex-command svg,
 .liquid-pollex-icon-button svg,
-.liquid-pollex-sheet-icon svg {
+.liquid-pollex-sheet-icon svg,
+.liquid-pollex-profile-toolbar-icon svg {
   width: 16px;
   height: 16px;
 }
@@ -4566,9 +4966,7 @@ body::after {
 .liquid-pollex-composer {
   border: 1px solid var(--border);
   background: var(--liquid-panel-bg);
-  box-shadow:
-    var(--shadow-edge),
-    var(--liquid-panel-shadow);
+  box-shadow: var(--shadow-edge), var(--liquid-panel-shadow);
   backdrop-filter: var(--liquid-blur);
   -webkit-backdrop-filter: var(--liquid-blur);
 }
@@ -4623,6 +5021,7 @@ body::after {
 .liquid-pollex-sheet-metrics,
 .liquid-pollex-form-grid,
 .liquid-pollex-trait-builder,
+.liquid-pollex-profile-facts,
 .liquid-pollex-profile-grid,
 .liquid-pollex-trait-grid,
 .liquid-pollex-insights-grid,
@@ -4687,32 +5086,138 @@ body::after {
 }
 
 .liquid-pollex-command {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  min-height: 46px;
-  padding: 0 18px;
+  gap: 0;
+  min-height: 48px;
+  min-width: 48px;
+  padding: 0;
   border-radius: 999px;
-  border: 1px solid var(--border-strong);
-  background: var(--control-primary-bg);
-  color: var(--text);
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--text-2);
   box-shadow: var(--shadow-edge);
   cursor: pointer;
+  overflow: hidden;
+  isolation: isolate;
+  transition:
+    border-color 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    background 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    color 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.liquid-pollex-command::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(180deg, #2c2f34 0%, #1f2126 100%);
+  opacity: 0;
+  transform: scale(0.86);
+  transition:
+    opacity 240ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 280ms cubic-bezier(0.22, 1, 0.36, 1);
+  z-index: 0;
 }
 
 .liquid-pollex-command:disabled {
   opacity: 0.45;
+  cursor: default;
 }
 
 .liquid-pollex-command-glyph,
 .liquid-pollex-sheet-icon {
+  position: relative;
+  z-index: 1;
   display: inline-grid;
   place-items: center;
-  width: 26px;
-  height: 26px;
+  width: 32px;
+  height: 32px;
   border-radius: 999px;
-  background: var(--surface-press);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.12),
+    rgba(255, 255, 255, 0.05)
+  );
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: var(--text);
+  flex: 0 0 auto;
+  transition:
+    background 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 280ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.liquid-pollex-command-label {
+  position: relative;
+  z-index: 1;
+  max-width: 0;
+  padding-left: 0;
+  padding-right: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  opacity: 0;
+  transform: translateX(-10px) scale(0.96);
+  transform-origin: left center;
+  font-size: 0.88rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  transition:
+    max-width 280ms cubic-bezier(0.22, 1, 0.36, 1),
+    padding-left 280ms cubic-bezier(0.22, 1, 0.36, 1),
+    padding-right 280ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 180ms ease,
+    transform 280ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.liquid-pollex-command:is(:hover, :focus-visible, :active, .is-expanded):not(
+    :disabled
+  ) {
+  justify-content: flex-start;
+  padding-left: 8px;
+  border-color: #3a3d42;
+  background: rgba(255, 255, 255, 0.04);
+  color: #ffffff;
+  box-shadow:
+    0 18px 34px rgba(0, 0, 0, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  transform: translateY(-1px);
+}
+
+.liquid-pollex-command:is(:hover, :focus-visible, :active, .is-expanded):not(
+    :disabled
+  )::before {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.liquid-pollex-command:is(:hover, :focus-visible, :active, .is-expanded):not(
+    :disabled
+  )
+  .liquid-pollex-command-glyph {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.22),
+    rgba(255, 255, 255, 0.08)
+  );
+  border-color: rgba(255, 255, 255, 0.22);
+  color: var(--text);
+  transform: scale(1.02);
+}
+
+.liquid-pollex-command:is(:hover, :focus-visible, :active, .is-expanded):not(
+    :disabled
+  )
+  .liquid-pollex-command-label {
+  max-width: 160px;
+  padding-right: 16px;
+  padding-left: 10px;
+  opacity: 1;
+  transform: translateX(0) scale(1);
 }
 
 .liquid-pollex-table-wrap {
@@ -4926,10 +5431,71 @@ body::after {
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
 }
 
+.liquid-pollex-trait-grid {
+  gap: 18px;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  align-items: start;
+}
+
 .liquid-pollex-profile-card,
 .liquid-pollex-trait-card {
   position: relative;
   overflow: hidden;
+}
+
+.liquid-pollex-trait-card {
+  display: grid;
+  gap: 16px;
+  align-content: start;
+}
+
+.liquid-pollex-trait-card.is-custom {
+  border-color: rgba(125, 176, 255, 0.2);
+  box-shadow:
+    var(--shadow-edge),
+    var(--liquid-panel-shadow),
+    inset 0 1px 0 rgba(125, 176, 255, 0.08);
+}
+
+.liquid-pollex-trait-card.is-custom::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    rgba(125, 176, 255, 0.78),
+    rgba(125, 176, 255, 0.16) 42%,
+    transparent 78%
+  );
+  pointer-events: none;
+  opacity: 0.85;
+}
+
+.liquid-pollex-trait-card .liquid-pollex-trait-card-head {
+  gap: 16px;
+}
+
+.liquid-pollex-trait-card p {
+  max-width: 34ch;
+}
+
+.liquid-pollex-trait-card .liquid-pollex-pill-row {
+  gap: 8px;
+}
+
+.liquid-pollex-trait-card .liquid-pollex-profile-facts {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.liquid-pollex-trait-card .liquid-pollex-profile-facts > div:last-child {
+  grid-column: 1 / -1;
+}
+
+.liquid-pollex-trait-card .liquid-pollex-row-actions {
+  margin-top: auto;
+  padding-top: 4px;
 }
 
 .liquid-pollex-profile-card.is-selected,
@@ -4955,7 +5521,7 @@ body::after {
 
 .liquid-pollex-variant-groups,
 .liquid-pollex-ranked-list {
-  gap: 14px;
+  gap: 16px;
 }
 
 .liquid-pollex-variant-group,
@@ -5014,10 +5580,17 @@ body::after {
 
 .liquid-pollex-profile-facts > div,
 .liquid-pollex-sheet-metrics > div {
+  display: grid;
   padding: 12px 14px;
+  gap: 4px;
   border-radius: 18px;
   border: 1px solid var(--border);
   background: var(--liquid-panel-subtle);
+}
+
+.liquid-pollex-profile-facts strong,
+.liquid-pollex-sheet-metrics strong {
+  display: block;
 }
 
 .liquid-pollex-trait-builder-row {
@@ -5053,8 +5626,8 @@ body::after {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 12px 14px;
-  border-radius: 18px;
+  padding: 14px 16px;
+  border-radius: 20px;
   background: var(--liquid-panel-subtle);
 }
 
@@ -5092,7 +5665,7 @@ body::after {
   height: 46px;
   border: 1px solid var(--border-strong);
   border-radius: 999px;
-  background: var(--control-primary-bg);
+  background: var(--control-ghost-bg);
   color: var(--text);
   box-shadow: var(--shadow-edge);
   cursor: pointer;
@@ -5476,5 +6049,1913 @@ body::after {
 
   .liquid-pollex-profile-editor-trait-spacer {
     display: none;
+  }
+}
+
+/* Strict Pollex landing system */
+.pollex-system-shell {
+  --pollex-bg: #0e0e0f;
+  --pollex-surface: #171719;
+  --pollex-surface-elevated: #1f1f24;
+  --pollex-border: #2a2d31;
+  --pollex-text: #ffffff;
+  --pollex-text-secondary: #a1a1aa;
+  --pollex-text-disabled: #666a70;
+  --pollex-shadow: 0 24px 80px rgba(0, 0, 0, 0.34);
+  position: relative;
+  min-height: 100vh;
+  background:
+    radial-gradient(
+      circle at 18% 14%,
+      rgba(255, 255, 255, 0.06),
+      transparent 18%
+    ),
+    radial-gradient(
+      circle at 82% 12%,
+      rgba(255, 255, 255, 0.04),
+      transparent 16%
+    ),
+    linear-gradient(180deg, #101011 0%, #0e0e0f 55%, #101011 100%);
+  color: var(--pollex-text);
+  isolation: isolate;
+}
+
+.pollex-system-shell::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+    linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+  background-size: 96px 96px;
+  opacity: 0.18;
+  pointer-events: none;
+  z-index: -2;
+}
+
+.pollex-system-main,
+.pollex-system-header,
+.pollex-system-footer {
+  width: min(1380px, calc(100% - 48px));
+  margin: 0 auto;
+}
+
+.pollex-system-main {
+  display: grid;
+  gap: 32px;
+  padding-top: 20px;
+}
+
+.pollex-system-header {
+  position: sticky;
+  top: calc(env(safe-area-inset-top) + 16px);
+  z-index: 40;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 24px;
+  padding: 14px 18px;
+  margin-top: 16px;
+  border: 1px solid var(--pollex-border);
+  border-radius: 24px;
+  background: rgba(23, 23, 25, 0.92);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: var(--pollex-shadow);
+}
+
+.pollex-system-header-brand,
+.pollex-system-header-nav,
+.pollex-system-header-actions {
+  min-width: 0;
+}
+
+.pollex-system-header-nav,
+.pollex-system-header-actions,
+.pollex-system-footer-links,
+.pollex-system-actions,
+.pollex-system-mini-actions,
+.pollex-system-window-nav,
+.pollex-system-window-actions,
+.pollex-system-dot-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.pollex-system-header-nav {
+  justify-content: center;
+}
+
+.pollex-system-header-link,
+.pollex-system-footer-link {
+  color: var(--pollex-text-secondary);
+  font-size: 0.88rem;
+  transition:
+    color 0.2s ease,
+    opacity 0.2s ease;
+}
+
+.pollex-system-header-link:hover,
+.pollex-system-footer-link:hover {
+  color: var(--pollex-text);
+}
+
+.pollex-system-header-actions {
+  justify-content: flex-end;
+}
+
+.pollex-system-header-button,
+.pollex-system-button {
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: 999px;
+  border: 1px solid var(--pollex-border);
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--pollex-text);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  transition:
+    transform 0.2s ease,
+    background 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.pollex-system-header-button:hover,
+.pollex-system-button:hover {
+  transform: translateY(-1px);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.pollex-system-header-button.is-primary,
+.pollex-system-button.is-primary {
+  background: var(--pollex-text);
+  color: var(--pollex-bg);
+  border-color: var(--pollex-text);
+}
+
+.pollex-system-header .locale-switcher {
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1px solid var(--pollex-border);
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--pollex-text);
+}
+
+.pollex-system-header .locale-switcher strong,
+.pollex-system-header .locale-switcher-label {
+  color: inherit;
+}
+
+.pollex-system-header .mobile-topbar {
+  display: none;
+}
+
+.pollex-system-page {
+  display: grid;
+  gap: 32px;
+  padding-bottom: 12px;
+}
+
+.pollex-system-hero {
+  position: relative;
+  width: 100vw;
+  min-height: calc(100svh - 32px);
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+  overflow: hidden;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  background:
+    radial-gradient(
+      circle at center,
+      rgba(255, 255, 255, 0.07),
+      transparent 35%
+    ),
+    linear-gradient(180deg, rgba(23, 23, 25, 0.48), rgba(14, 14, 15, 0.96));
+}
+
+.pollex-system-hero::after,
+.pollex-system-cta::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(14, 14, 15, 0.16), rgba(14, 14, 15, 0.82)),
+    radial-gradient(
+      circle at center,
+      transparent 0,
+      rgba(14, 14, 15, 0.58) 100%
+    );
+  pointer-events: none;
+}
+
+.pollex-system-hero-inner {
+  position: relative;
+  z-index: 1;
+  width: min(1380px, calc(100% - 48px));
+  margin: 0 auto;
+  min-height: calc(100svh - 32px);
+  display: grid;
+  grid-template-columns: minmax(0, 0.78fr) minmax(0, 1.12fr);
+  gap: 32px;
+  align-items: center;
+  padding: 132px 0 72px;
+}
+
+.pollex-system-hero-copy,
+.pollex-system-stage,
+.pollex-system-section,
+.pollex-system-cta {
+  position: relative;
+  z-index: 1;
+}
+
+.pollex-system-hero-copy {
+  display: grid;
+  gap: 20px;
+  max-width: 560px;
+  animation: pollex-system-rise 0.7s ease both;
+}
+
+.pollex-system-eyebrow {
+  margin: 0;
+  color: var(--pollex-text-secondary);
+  font-size: 0.78rem;
+  line-height: 1;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.pollex-system-hero-copy h1,
+.pollex-system-section-lead h2,
+.pollex-system-cta-copy h2,
+.pollex-system-desktop-copy h2,
+.pollex-system-mobile-copy h3 {
+  margin: 0;
+  letter-spacing: -0.06em;
+}
+
+.pollex-system-hero-copy h1 {
+  font-size: clamp(3.1rem, 6vw, 5.4rem);
+  line-height: 0.92;
+  max-width: 10ch;
+}
+
+.pollex-system-hero-body,
+.pollex-system-section-lead > p,
+.pollex-system-cta-copy > p,
+.pollex-system-desktop-copy p,
+.pollex-system-mobile-copy p,
+.pollex-system-pillar p,
+.pollex-system-panel p,
+.pollex-system-feature-card p,
+.pollex-system-signal-card p,
+.pollex-system-workspace-side li {
+  margin: 0;
+  color: var(--pollex-text-secondary);
+  line-height: 1.6;
+}
+
+.pollex-system-facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+}
+
+.pollex-system-facts div,
+.pollex-system-pillar,
+.pollex-system-panel,
+.pollex-system-feature-card,
+.pollex-system-signal-card,
+.pollex-system-mobile-panel,
+.pollex-system-comparison-row,
+.pollex-system-comparison-head,
+.pollex-system-workspace-main article,
+.pollex-system-workspace-side,
+.pollex-system-signal-row,
+.pollex-system-compare-card,
+.pollex-system-mobile-list div {
+  border: 1px solid var(--pollex-border);
+  background: rgba(23, 23, 25, 0.82);
+}
+
+.pollex-system-facts div {
+  padding: 14px 16px;
+  border-radius: 18px;
+}
+
+.pollex-system-facts dt,
+.pollex-system-window-actions span,
+.pollex-system-window-nav span,
+.pollex-system-desktop-copy .pollex-system-inline-brand,
+.pollex-system-pillar-top span,
+.pollex-system-signal-row span,
+.pollex-system-compare-card > span,
+.pollex-system-workspace-header span,
+.pollex-system-workspace-side > span {
+  color: var(--pollex-text-disabled);
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.pollex-system-facts dd,
+.pollex-system-signal-row strong,
+.pollex-system-compare-card strong,
+.pollex-system-workspace-header strong,
+.pollex-system-mobile-list strong,
+.pollex-system-feature-card strong,
+.pollex-system-workspace-main strong,
+.pollex-system-desktop-copy .pollex-system-inline-brand {
+  margin: 8px 0 0;
+  color: var(--pollex-text);
+  font-size: 0.94rem;
+  font-weight: 600;
+}
+
+.pollex-system-stage {
+  position: relative;
+  min-height: 640px;
+  animation: pollex-system-rise 0.82s ease both;
+}
+
+.pollex-system-desktop,
+.pollex-system-mobile {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(
+    180deg,
+    rgba(31, 31, 36, 0.96),
+    rgba(17, 17, 19, 0.98)
+  );
+  box-shadow: var(--pollex-shadow);
+}
+
+.pollex-system-desktop {
+  position: relative;
+  width: min(100%, 920px);
+  margin-left: auto;
+  border-radius: 28px;
+  overflow: hidden;
+}
+
+.pollex-system-window-bar,
+.pollex-system-workspace-header {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 16px;
+  align-items: center;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--pollex-border);
+}
+
+.pollex-system-dot-row span {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.pollex-system-window-nav {
+  justify-content: center;
+}
+
+.pollex-system-window-actions {
+  justify-content: flex-end;
+}
+
+.pollex-system-window-actions .is-active,
+.pollex-system-mini-actions .is-active {
+  color: var(--pollex-text);
+}
+
+.pollex-system-desktop-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(280px, 0.92fr);
+  gap: 20px;
+  padding: 28px;
+  border-bottom: 1px solid var(--pollex-border);
+}
+
+.pollex-system-desktop-copy {
+  display: grid;
+  align-content: start;
+  gap: 14px;
+}
+
+.pollex-system-desktop-copy h2 {
+  font-size: clamp(2rem, 4vw, 3.4rem);
+  line-height: 0.95;
+  max-width: 10ch;
+}
+
+.pollex-system-mini-actions span {
+  min-height: 38px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid var(--pollex-border);
+  display: inline-flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--pollex-text-secondary);
+}
+
+.pollex-system-desktop-signals,
+.pollex-system-feature-strip,
+.pollex-system-pillars,
+.pollex-system-section-grid,
+.pollex-system-workspace-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.pollex-system-desktop-signals {
+  align-content: stretch;
+}
+
+.pollex-system-signal-card,
+.pollex-system-feature-card {
+  padding: 18px;
+  border-radius: 22px;
+}
+
+.pollex-system-signal-card small {
+  color: var(--pollex-text-disabled);
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.pollex-system-feature-strip {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  padding: 20px 28px 28px;
+}
+
+.pollex-system-mobile {
+  position: absolute;
+  right: 28px;
+  bottom: -12px;
+  width: min(296px, 42%);
+  display: grid;
+  gap: 18px;
+  padding: 18px;
+  border-radius: 30px;
+}
+
+.pollex-system-mobile-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--pollex-text-secondary);
+  font-size: 0.74rem;
+}
+
+.pollex-system-mobile-copy {
+  display: grid;
+  gap: 12px;
+}
+
+.pollex-system-mobile-copy h3 {
+  font-size: 2rem;
+  line-height: 0.98;
+}
+
+.pollex-system-mobile-list {
+  display: grid;
+  gap: 10px;
+}
+
+.pollex-system-mobile-list div,
+.pollex-system-mobile-panel {
+  padding: 14px;
+  border-radius: 18px;
+}
+
+.pollex-system-mobile-list span {
+  color: var(--pollex-text-disabled);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.pollex-system-mobile-panel strong,
+.pollex-system-pillar h3,
+.pollex-system-section-lead h2,
+.pollex-system-cta-copy h2,
+.pollex-system-workspace-main article strong {
+  font-size: 1.08rem;
+}
+
+.pollex-system-accent {
+  position: absolute;
+  left: var(--pollex-accent-left);
+  top: var(--pollex-accent-top);
+  transform: translate(-50%, -50%) rotate(var(--pollex-accent-rotate));
+  opacity: 0.92;
+  animation: pollex-system-drift 7s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.pollex-system-accent.is-line {
+  animation-delay: 0.6s;
+}
+
+.pollex-system-accent.is-triangle {
+  animation-delay: 1.1s;
+}
+
+.pollex-system-accent.is-cross {
+  animation-delay: 1.7s;
+}
+
+.pollex-system-section,
+.pollex-system-cta {
+  border: 1px solid var(--pollex-border);
+  border-radius: 32px;
+  background: linear-gradient(
+    180deg,
+    rgba(23, 23, 25, 0.9),
+    rgba(17, 17, 19, 0.96)
+  );
+  box-shadow: var(--pollex-shadow);
+}
+
+.pollex-system-section {
+  padding: 28px;
+}
+
+.pollex-system-section-lead,
+.pollex-system-workspace-main,
+.pollex-system-workspace-side,
+.pollex-system-cta-copy {
+  display: grid;
+  gap: 12px;
+}
+
+.pollex-system-section-lead {
+  max-width: 720px;
+  margin-bottom: 20px;
+}
+
+.pollex-system-section-lead h2,
+.pollex-system-cta-copy h2 {
+  font-size: clamp(2rem, 3vw, 3rem);
+  line-height: 0.98;
+}
+
+.pollex-system-pillars {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.pollex-system-pillar {
+  display: grid;
+  align-content: start;
+  gap: 18px;
+  padding: 22px;
+  border-radius: 24px;
+}
+
+.pollex-system-pillar-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.pollex-system-section-grid {
+  grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr);
+}
+
+.pollex-system-panel {
+  padding: 24px;
+  border-radius: 28px;
+}
+
+.pollex-system-panel-wide {
+  min-height: 100%;
+}
+
+.pollex-system-signal-table,
+.pollex-system-comparison-table,
+.pollex-system-workspace,
+.pollex-system-compare {
+  display: grid;
+  gap: 14px;
+}
+
+.pollex-system-signal-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 220px) minmax(0, 1fr);
+  gap: 20px;
+  padding: 16px 18px;
+  border-radius: 22px;
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.pollex-system-signal-row:hover,
+.pollex-system-comparison-row:hover,
+.pollex-system-workspace-main article:hover {
+  transform: translateY(-1px);
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+.pollex-system-compare {
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+}
+
+.pollex-system-compare-card {
+  display: grid;
+  gap: 12px;
+  min-height: 100%;
+  padding: 20px;
+  border-radius: 24px;
+}
+
+.pollex-system-compare-card.is-active {
+  background: rgba(31, 31, 36, 0.96);
+}
+
+.pollex-system-form-stack {
+  display: grid;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.pollex-system-form-stack span {
+  min-height: 44px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.06);
+  display: block;
+}
+
+.pollex-system-form-stack.is-muted span {
+  opacity: 0.56;
+}
+
+.pollex-system-compare-arrow {
+  display: grid;
+  place-items: center;
+}
+
+.pollex-system-workspace {
+  grid-template-columns: minmax(0, 1.2fr) minmax(260px, 0.8fr);
+}
+
+.pollex-system-workspace-main {
+  padding: 0;
+}
+
+.pollex-system-workspace-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.pollex-system-workspace-main article,
+.pollex-system-workspace-side {
+  padding: 18px;
+  border-radius: 22px;
+}
+
+.pollex-system-workspace-side ul {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 10px;
+}
+
+.pollex-system-comparison-head,
+.pollex-system-comparison-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 0.9fr);
+  gap: 20px;
+  padding: 16px 18px;
+  border-radius: 20px;
+}
+
+.pollex-system-comparison-head {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.pollex-system-comparison-row strong {
+  font-size: 0.96rem;
+}
+
+.pollex-system-cta {
+  overflow: hidden;
+  padding: 44px 28px;
+}
+
+.pollex-system-cta-copy {
+  position: relative;
+  z-index: 1;
+  max-width: 760px;
+}
+
+.pollex-system-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 18px 20px 28px;
+}
+
+.pollex-system-footer-copy {
+  margin: 10px 0 0;
+  color: var(--pollex-text-disabled);
+  font-size: 0.84rem;
+}
+
+.pollex-system-footer-links {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+@keyframes pollex-system-rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pollex-system-drift {
+  0%,
+  100% {
+    transform: translate(-50%, -50%) rotate(var(--pollex-accent-rotate))
+      translateY(0);
+  }
+
+  50% {
+    transform: translate(-50%, -50%) rotate(var(--pollex-accent-rotate))
+      translateY(-10px);
+  }
+}
+
+@media (max-width: 1180px) {
+  .pollex-system-hero-inner,
+  .pollex-system-section-grid,
+  .pollex-system-workspace,
+  .pollex-system-workspace-grid,
+  .pollex-system-feature-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .pollex-system-stage {
+    min-height: 0;
+    padding-bottom: 260px;
+  }
+
+  .pollex-system-mobile {
+    width: min(320px, calc(100% - 56px));
+  }
+}
+
+@media (max-width: 900px) {
+  .pollex-system-main,
+  .pollex-system-header,
+  .pollex-system-footer {
+    width: calc(100% - 24px);
+  }
+
+  .pollex-system-header {
+    position: static;
+    display: block;
+    padding: 0;
+    margin-top: 12px;
+    border: 0;
+    background: transparent;
+    backdrop-filter: none;
+    box-shadow: none;
+  }
+
+  .pollex-system-header-brand,
+  .pollex-system-header-nav,
+  .pollex-system-header-actions {
+    display: none;
+  }
+
+  .pollex-system-header .mobile-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 16px;
+    border: 1px solid var(--pollex-border);
+    border-radius: 22px;
+    background: rgba(23, 23, 25, 0.94);
+    box-shadow: var(--pollex-shadow);
+  }
+
+  .pollex-system-shell .mobile-menu-toggle,
+  .pollex-system-shell .mobile-drawer-close,
+  .pollex-system-shell .mobile-drawer-link,
+  .pollex-system-shell .mobile-drawer-link-primary {
+    border-radius: 999px;
+  }
+
+  .pollex-system-shell .mobile-menu-toggle,
+  .pollex-system-shell .mobile-drawer-close {
+    border: 1px solid var(--pollex-border);
+    background: rgba(255, 255, 255, 0.02);
+    color: var(--pollex-text);
+  }
+
+  .pollex-system-shell .mobile-drawer-panel {
+    background: rgba(17, 17, 19, 0.98);
+    border: 1px solid var(--pollex-border);
+  }
+
+  .pollex-system-shell .mobile-drawer-link {
+    border: 1px solid var(--pollex-border);
+    background: rgba(255, 255, 255, 0.02);
+    color: var(--pollex-text-secondary);
+  }
+
+  .pollex-system-shell .mobile-drawer-link-primary {
+    background: var(--pollex-text);
+    color: var(--pollex-bg);
+    border-color: var(--pollex-text);
+  }
+
+  .pollex-system-hero {
+    min-height: auto;
+  }
+
+  .pollex-system-hero-inner {
+    min-height: auto;
+    padding: 108px 0 40px;
+  }
+
+  .pollex-system-stage {
+    padding-bottom: 0;
+  }
+
+  .pollex-system-desktop {
+    margin-left: 0;
+  }
+
+  .pollex-system-mobile {
+    position: static;
+    width: 100%;
+    margin-top: 16px;
+  }
+
+  .pollex-system-pillars,
+  .pollex-system-facts,
+  .pollex-system-compare {
+    grid-template-columns: 1fr;
+  }
+
+  .pollex-system-compare-arrow {
+    transform: rotate(90deg);
+  }
+
+  .pollex-system-footer {
+    flex-direction: column;
+    align-items: flex-start;
+    padding-inline: 0;
+  }
+
+  .pollex-system-footer-links {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 640px) {
+  .pollex-system-hero-inner {
+    width: calc(100% - 24px);
+    padding-top: 92px;
+  }
+
+  .pollex-system-hero-copy h1 {
+    font-size: clamp(2.6rem, 13vw, 4rem);
+  }
+
+  .pollex-system-section,
+  .pollex-system-panel,
+  .pollex-system-cta,
+  .pollex-system-desktop-hero,
+  .pollex-system-feature-strip {
+    padding: 18px;
+  }
+
+  .pollex-system-window-bar,
+  .pollex-system-workspace-header,
+  .pollex-system-signal-row,
+  .pollex-system-comparison-head,
+  .pollex-system-comparison-row {
+    grid-template-columns: 1fr;
+  }
+
+  .pollex-system-desktop-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .pollex-system-window-nav,
+  .pollex-system-window-actions {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .pollex-system-desktop-hero,
+  .pollex-system-signal-row {
+    gap: 14px;
+  }
+
+  .pollex-system-desktop-copy h2 {
+    font-size: 1.9rem;
+  }
+
+  .pollex-system-mobile-copy h3 {
+    font-size: 1.6rem;
+  }
+}
+
+/* Shared Pollex application system */
+html,
+body {
+  width: 100%;
+  min-height: 100%;
+  margin: 0;
+  padding: 0;
+  background-color: #0e0e0f;
+}
+
+body {
+  background:
+    radial-gradient(
+      circle at 20% 12%,
+      rgba(255, 255, 255, 0.04),
+      transparent 16%
+    ),
+    radial-gradient(
+      circle at 82% 10%,
+      rgba(255, 255, 255, 0.03),
+      transparent 14%
+    ),
+    linear-gradient(180deg, #101011 0%, #0e0e0f 54%, #101011 100%);
+  color: #ffffff;
+}
+
+body::before {
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+    linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+  background-size: 96px 96px;
+  opacity: 0.12;
+}
+
+:root {
+  --bg: #0e0e0f;
+  --bg-2: #171719;
+  --surface-0: rgba(23, 23, 25, 0.88);
+  --surface-1: rgba(23, 23, 25, 0.94);
+  --surface-2: rgba(31, 31, 36, 0.96);
+  --surface-3: rgba(31, 31, 36, 0.98);
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: #2a2d31;
+  --border-glow: rgba(255, 255, 255, 0.16);
+  --text: #ffffff;
+  --text-2: #a1a1aa;
+  --text-3: #666a70;
+  --accent: #ffffff;
+  --accent-2: #ffffff;
+  --accent-3: #ffffff;
+  --accent-dim: rgba(255, 255, 255, 0.08);
+  --shadow-soft: 0 24px 80px rgba(0, 0, 0, 0.34);
+  --shadow-edge: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  --surface-shell: rgba(23, 23, 25, 0.92);
+  --surface-footer: rgba(17, 17, 19, 0.96);
+  --surface-sidebar: rgba(23, 23, 25, 0.94);
+  --surface-card: linear-gradient(
+    180deg,
+    rgba(23, 23, 25, 0.96),
+    rgba(17, 17, 19, 0.98)
+  );
+  --surface-chart: rgba(255, 255, 255, 0.03);
+  --surface-tooltip: rgba(17, 17, 19, 0.96);
+  --surface-popover: rgba(17, 17, 19, 0.98);
+  --surface-row: rgba(255, 255, 255, 0.02);
+  --surface-row-strong: rgba(255, 255, 255, 0.04);
+  --surface-press: rgba(255, 255, 255, 0.035);
+  --surface-track: rgba(255, 255, 255, 0.05);
+  --surface-backdrop: rgba(9, 9, 11, 0.64);
+  --surface-auth: linear-gradient(
+    180deg,
+    rgba(23, 23, 25, 0.96),
+    rgba(17, 17, 19, 0.98)
+  );
+  --surface-auth-section: rgba(255, 255, 255, 0.03);
+  --surface-auth-divider: rgba(255, 255, 255, 0.05);
+  --surface-marketing: linear-gradient(
+    180deg,
+    rgba(23, 23, 25, 0.96),
+    rgba(17, 17, 19, 0.98)
+  );
+  --surface-pricing: linear-gradient(
+    180deg,
+    rgba(23, 23, 25, 0.96),
+    rgba(17, 17, 19, 0.98)
+  );
+  --surface-shadow-card: 0 18px 60px rgba(0, 0, 0, 0.3);
+  --surface-shadow-overlay: 0 18px 32px rgba(0, 0, 0, 0.28);
+  --control-bg: rgba(255, 255, 255, 0.02);
+  --control-ghost-bg: rgba(255, 255, 255, 0.02);
+  --control-primary-bg: #ffffff;
+  --control-primary-border: #ffffff;
+  --control-primary-text: #0e0e0f;
+  --table-cell-bg: rgba(255, 255, 255, 0.02);
+  --table-cell-border: rgba(255, 255, 255, 0.06);
+  --chart-line: #ffffff;
+  --chart-area: rgba(255, 255, 255, 0.3);
+  --chart-area-secondary: rgba(161, 161, 170, 0.28);
+  --chart-bar: #ffffff;
+  --chart-bar-soft: #a1a1aa;
+  --chart-grid: rgba(255, 255, 255, 0.07);
+  --chart-axis: rgba(161, 161, 170, 0.82);
+  --chart-cursor-stroke: rgba(255, 255, 255, 0.12);
+  --chart-cursor-fill: rgba(255, 255, 255, 0.03);
+  --chart-separator: rgba(0, 0, 0, 0.36);
+  --heatmap-placeholder: rgba(255, 255, 255, 0.04);
+  --heatmap-placeholder-accent: rgba(255, 255, 255, 0.08);
+  --heatmap-placeholder-border: rgba(255, 255, 255, 0.07);
+}
+
+.pollex-app-shell,
+.pollex-dashboard-shell,
+.pollex-auth-shell {
+  position: relative;
+}
+
+.pollex-dashboard-shell {
+  width: calc(100% - 32px);
+  max-width: none;
+  margin-inline: auto;
+  padding: 16px 0 44px;
+  min-width: 0;
+}
+
+.site-frame {
+  width: min(1380px, calc(100% - 48px));
+  margin-inline: auto;
+  padding: 16px 0 44px;
+}
+
+.site-shell-header,
+.site-shell-footer,
+.dashboard-sidebar,
+.pollex-surface,
+.pollex-stat-card,
+.marketing-hero,
+.pricing-card,
+.docs-nav,
+.docs-section,
+.legal-content,
+.apple-auth-card,
+.card {
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.site-shell-header,
+.site-shell-footer,
+.dashboard-sidebar,
+.card,
+.pollex-surface,
+.pollex-stat-card,
+.marketing-hero,
+.pricing-card,
+.docs-nav,
+.docs-section,
+.legal-content,
+.apple-auth-card {
+  border-color: #2a2d31;
+  box-shadow: var(--shadow-soft);
+}
+
+.site-shell-header,
+.site-shell-footer {
+  background: rgba(23, 23, 25, 0.92);
+}
+
+.site-shell-header {
+  position: sticky;
+  top: calc(env(safe-area-inset-top) + 16px);
+  z-index: 30;
+  padding: 14px 18px;
+  border-radius: 24px;
+}
+
+.site-shell-main {
+  gap: 24px;
+  margin-top: 24px;
+}
+
+.site-shell-main > * {
+  width: 100%;
+  min-width: 0;
+}
+
+.site-shell-footer {
+  padding: 18px 20px;
+  border-radius: 24px;
+}
+
+.site-shell-nav a,
+.footer-links a,
+.dashboard-app-footer-links a {
+  color: var(--text-2);
+}
+
+.site-shell-nav a:hover,
+.footer-links a:hover,
+.dashboard-app-footer-links a:hover {
+  color: var(--text);
+}
+
+.btn,
+.locale-switcher,
+.theme-switcher,
+.surface-select-trigger,
+.mobile-menu-toggle,
+.mobile-drawer-close,
+.mobile-drawer-link {
+  border: 1px solid #2a2d31;
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--text);
+  box-shadow: none;
+}
+
+.btn-primary,
+.mobile-drawer-link-primary {
+  background: linear-gradient(180deg, #26282d 0%, #1c1e22 100%);
+  border-color: #3a3d42;
+  color: #ffffff;
+}
+
+.btn-primary:hover,
+.mobile-drawer-link-primary:hover {
+  background: linear-gradient(180deg, #2d3036 0%, #202328 100%);
+}
+
+.btn-lg {
+  min-height: 48px;
+  padding: 0 18px;
+  font-size: 0.92rem;
+}
+
+.btn-ghost {
+  color: var(--text-2);
+}
+
+.card,
+.pollex-surface,
+.pollex-stat-card,
+.marketing-hero,
+.pricing-card,
+.docs-section,
+.legal-content {
+  background: linear-gradient(
+    180deg,
+    rgba(23, 23, 25, 0.96),
+    rgba(17, 17, 19, 0.98)
+  );
+}
+
+.card,
+.pollex-surface,
+.pollex-stat-card {
+  border-radius: 24px;
+}
+
+.card-accent,
+.pricing-card.featured {
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+.tag {
+  min-height: 30px;
+  padding: 0 12px;
+  border: 1px solid #2a2d31;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-2);
+}
+
+.tag-accent {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+}
+
+.field input,
+.field textarea,
+.field select {
+  border: 1px solid #2a2d31;
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--text);
+}
+
+.field input:focus,
+.field textarea:focus,
+.field select:focus {
+  border-color: rgba(255, 255, 255, 0.18);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.dashboard-shell {
+  grid-template-columns: 250px minmax(0, 1fr);
+  gap: 24px;
+  padding-top: 16px;
+}
+
+.dashboard-sidebar {
+  top: 16px;
+  height: calc(100svh - 32px);
+  padding: 18px 14px;
+  border-radius: 28px;
+  background: rgba(23, 23, 25, 0.94);
+}
+
+.dashboard-sidebar-link {
+  min-height: 46px;
+  border-radius: 16px;
+}
+
+.dashboard-sidebar-link:hover,
+.dashboard-sidebar-link.active {
+  background: rgba(255, 255, 255, 0.035);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.dashboard-sidebar-link.active .dashboard-sidebar-link-indicator {
+  background: #ffffff;
+  box-shadow: none;
+}
+
+.dashboard-main {
+  gap: 20px;
+}
+
+.dashboard-page-header {
+  padding: 8px 4px 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 20px;
+  align-items: start;
+}
+
+.dashboard-page-copy {
+  gap: 8px;
+}
+
+.dashboard-page-subtitle {
+  margin: 0;
+  max-width: 68ch;
+  color: var(--text-2);
+  line-height: 1.5;
+}
+
+.dashboard-page-tools {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.dashboard-page-body {
+  display: grid;
+  gap: 20px;
+}
+
+.dashboard-app-footer {
+  padding: 18px 0 4px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.dashboard-app-footer-copy span {
+  color: var(--text-3);
+}
+
+.page-title,
+.display,
+.display-sm,
+.heading,
+.marketing-hero h1,
+.legal-content h1,
+.docs-section h2,
+.pricing-price {
+  letter-spacing: -0.06em;
+}
+
+.page-title {
+  margin: 0;
+  font-size: clamp(2rem, 4vw, 3.4rem);
+  line-height: 0.96;
+}
+
+.display {
+  font-size: clamp(2.6rem, 6vw, 4.6rem);
+  line-height: 0.92;
+}
+
+.display-sm {
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 0.96;
+}
+
+.gradient-text {
+  color: var(--text-2);
+  background: none;
+  -webkit-text-fill-color: currentColor;
+}
+
+.subtext,
+.panel-copy,
+.legal-content p,
+.docs-section p {
+  color: var(--text-2);
+}
+
+.marketing-hero,
+.docs-section,
+.legal-content,
+.pricing-card {
+  padding: 28px;
+  border-radius: 28px;
+}
+
+.docs-layout {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: 18px;
+}
+
+.docs-nav {
+  position: sticky;
+  top: 92px;
+  background: rgba(23, 23, 25, 0.9);
+}
+
+.docs-nav-link {
+  border: 1px solid transparent;
+}
+
+.docs-nav-link:hover {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.docs-code-block {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid #2a2d31;
+}
+
+.pricing-grid {
+  gap: 18px;
+}
+
+.pricing-card {
+  display: grid;
+  gap: 18px;
+}
+
+.pricing-card .pricing-price {
+  font-size: 2.4rem;
+  line-height: 1;
+}
+
+.pricing-features li {
+  color: var(--text-2);
+}
+
+.pricing-features {
+  margin: 0;
+  padding-left: 20px;
+  display: grid;
+  gap: 8px;
+}
+
+.legal-content {
+  gap: 18px;
+}
+
+.legal-content h2 {
+  letter-spacing: -0.04em;
+}
+
+.pollex-auth-shell {
+  width: min(1280px, calc(100% - 48px));
+  margin: 16px auto 44px;
+}
+
+.apple-auth-card {
+  grid-template-columns: minmax(0, 1fr) 420px;
+  border-radius: 30px;
+  background: linear-gradient(
+    180deg,
+    rgba(23, 23, 25, 0.96),
+    rgba(17, 17, 19, 0.98)
+  );
+}
+
+.apple-auth-aside,
+.apple-auth-main {
+  padding: 28px;
+}
+
+.apple-auth-aside {
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.apple-auth-stat {
+  border: 1px solid #2a2d31;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.list-row {
+  border: 1px solid #2a2d31;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.data-table td {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.surface-select-popover,
+.mobile-drawer-panel {
+  background: rgba(17, 17, 19, 0.98);
+  border: 1px solid #2a2d31;
+}
+
+.surface-select-option.active,
+.surface-select-option:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.pollex-tab {
+  border: 1px solid #2a2d31;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.pollex-tab.active {
+  background: linear-gradient(180deg, #2a2d31 0%, #1e2024 100%);
+  color: #ffffff;
+  border-color: #3a3d42;
+}
+
+@media (max-width: 1080px) {
+  .pricing-grid,
+  .docs-layout,
+  .dashboard-shell,
+  .apple-auth-card,
+  .dashboard-page-header {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-sidebar {
+    display: none;
+  }
+
+  .dashboard-page-tools {
+    justify-content: flex-start;
+  }
+
+  .docs-nav {
+    position: static;
+  }
+
+  .apple-auth-aside {
+    border-right: 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  }
+}
+
+@media (max-width: 760px) {
+  .site-frame,
+  .pollex-dashboard-shell,
+  .pollex-auth-shell {
+    width: calc(100% - 24px);
+  }
+
+  .site-shell-header {
+    position: static;
+    grid-template-columns: 1fr;
+  }
+
+  .site-shell-brand,
+  .site-shell-nav,
+  .site-shell-actions {
+    display: none;
+  }
+
+  .site-shell-header .mobile-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .site-shell-footer,
+  .dashboard-app-footer {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .marketing-hero,
+  .docs-section,
+  .legal-content,
+  .pricing-card,
+  .card,
+  .pollex-surface,
+  .pollex-stat-card,
+  .apple-auth-aside,
+  .apple-auth-main {
+    padding: 18px;
+  }
+}
+
+.pollex-page-stack {
+  display: grid;
+  gap: 24px;
+  width: 100%;
+  min-width: 0;
+}
+
+.pollex-page-hero {
+  display: grid;
+  gap: 16px;
+  max-width: 760px;
+}
+
+.pollex-page-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.pollex-page-grid-2,
+.pollex-inline-grid-2,
+.pollex-account-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.pollex-inline-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.pollex-card-stack,
+.pollex-account-stack,
+.pollex-list-stack {
+  display: grid;
+  gap: 18px;
+}
+
+.pollex-page-note,
+.pollex-muted-code {
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid #2a2d31;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.pollex-muted-code {
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  color: var(--text-2);
+}
+
+.pollex-checklist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.pollex-checklist li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  color: var(--text-2);
+}
+
+.pollex-checklist-marker {
+  color: var(--text);
+  font-size: 0.78rem;
+  line-height: 1.6;
+}
+
+.pollex-avatar {
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #2a2d31 0%, #1d1f23 100%);
+  border: 1px solid #3a3d42;
+  color: #ffffff;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  flex: 0 0 auto;
+}
+
+.pollex-avatar-lg {
+  width: 64px;
+  height: 64px;
+  font-size: 1.3rem;
+}
+
+.pollex-profile-hero {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.pollex-profile-hero-copy {
+  display: grid;
+  gap: 4px;
+}
+
+.pollex-profile-hero-title {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.pollex-inline-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.pollex-panel-intro {
+  margin: 12px 0 20px;
+  font-size: 0.88rem;
+  color: var(--text-2);
+}
+
+.pollex-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.pollex-detail-card {
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.pollex-detail-card strong {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.pollex-form-stack {
+  display: grid;
+  gap: 14px;
+}
+
+.pollex-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.pollex-inline-status {
+  font-size: 0.82rem;
+  color: var(--text-2);
+}
+
+.pollex-inline-status.is-error {
+  color: #f0b6b6;
+}
+
+.pollex-inline-status.is-success {
+  color: #d5d8dc;
+}
+
+.pollex-status-banner {
+  padding: 10px 14px;
+  border-radius: 14px;
+  border: 1px solid #2a2d31;
+  background: rgba(255, 255, 255, 0.03);
+  font-size: 0.82rem;
+  color: var(--text-2);
+  word-break: break-word;
+}
+
+.pollex-status-banner.ok {
+  border-color: #3a3d42;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+}
+
+.pollex-status-banner.error {
+  border-color: rgba(217, 139, 139, 0.28);
+  color: #f0b6b6;
+}
+
+.pollex-key-count {
+  margin-bottom: 10px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+.pollex-key-list {
+  display: grid;
+}
+
+.pollex-key-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.pollex-key-copy {
+  min-width: 0;
+}
+
+.pollex-key-name {
+  margin-bottom: 3px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.pollex-key-token {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--text-3);
+  word-break: break-all;
+}
+
+.pollex-key-meta {
+  flex: 0 0 auto;
+  font-size: 0.78rem;
+  color: var(--text-3);
+  white-space: nowrap;
+}
+
+.pollex-service-name {
+  margin-bottom: 2px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.pollex-service-path {
+  font-size: 0.76rem;
+  color: var(--text-3);
+}
+
+.pollex-form-note {
+  font-size: 0.78rem;
+  color: var(--text-3);
+}
+
+.pollex-legal-intro {
+  max-width: 760px;
+}
+
+.pollex-legal-content {
+  display: grid;
+  gap: 18px;
+}
+
+.pollex-legal-content section {
+  display: grid;
+  gap: 6px;
+}
+
+.pollex-docs-env-row {
+  padding: 14px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  display: grid;
+  gap: 4px;
+}
+
+.pollex-docs-env-row:last-child {
+  border-bottom: 0;
+}
+
+.pollex-auth-copy {
+  display: grid;
+  gap: 16px;
+}
+
+.pollex-auth-legal {
+  margin: 0;
+  text-align: center;
+  color: var(--text-2);
+  font-size: 0.84rem;
+}
+
+.pollex-auth-legal a {
+  color: var(--text);
+}
+
+@media (max-width: 900px) {
+  .pollex-page-grid-2,
+  .pollex-inline-grid-2,
+  .pollex-account-grid,
+  .pollex-inline-grid-3,
+  .pollex-detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .pollex-profile-hero,
+  .pollex-key-row,
+  .pollex-form-actions {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .pollex-key-meta {
+    white-space: normal;
+  }
+}
+
+/* Landing header restore */
+.pollex-home-shell .pollex-home-header-shell {
+  position: absolute;
+  top: calc(env(safe-area-inset-top) + clamp(12px, 2vw, 24px));
+  left: 50%;
+  z-index: 30;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  width: min(1380px, calc(100% - 48px));
+  margin: 0 auto;
+  padding: 16px 22px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 28px;
+  background: rgba(23, 23, 25, 0.84);
+  box-shadow: var(--shadow-soft), var(--shadow-edge);
+  transform: translateX(-50%);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.pollex-home-shell .pollex-home-header-shell .site-shell-brand {
+  justify-self: start;
+}
+
+.pollex-home-shell .pollex-home-header-shell .site-shell-nav {
+  position: absolute;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  justify-self: auto;
+  transform: translateX(-50%);
+}
+
+.pollex-home-shell .pollex-home-header-shell .site-shell-actions {
+  justify-self: end;
+}
+
+@media (max-width: 900px) {
+  .pollex-home-shell .pollex-home-header-shell {
+    position: absolute;
+    grid-template-columns: 1fr;
+    width: calc(100% - 24px);
+    padding: 14px 16px;
+  }
+
+  .pollex-home-shell .pollex-home-header-shell .site-shell-nav,
+  .pollex-home-shell .pollex-home-header-shell .site-shell-brand,
+  .pollex-home-shell .pollex-home-header-shell .site-shell-actions {
+    display: none;
+  }
+
+  .pollex-home-shell .pollex-home-header-shell .mobile-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
   }
 }

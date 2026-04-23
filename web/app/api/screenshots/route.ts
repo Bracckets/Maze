@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { backendBaseUrl } from "@/lib/service-gateway";
 
+type DeviceClass = "phone" | "desktop";
+
 async function readJsonSafely(response: Response) {
   const text = await response.text();
   if (!text) {
@@ -31,14 +33,33 @@ function rewriteScreenshotUrl(signedUrl: string, origin: string) {
   }
 }
 
+function normalizeDeviceClass(deviceClass: string | null): DeviceClass | null {
+  if (deviceClass === "desktop") {
+    return "desktop";
+  }
+  if (deviceClass === "phone") {
+    return "phone";
+  }
+  return null;
+}
+
 export async function GET(request: NextRequest) {
   const token = request.cookies.get("maze_session_token")?.value;
   if (!token) {
     return NextResponse.json({ error: "Missing session." }, { status: 401 });
   }
 
-  const query = request.nextUrl.searchParams.toString();
-  const suffix = query ? `?${query}` : "";
+  const query = new URLSearchParams(request.nextUrl.searchParams);
+  const rawDeviceClass = query.get("device_class");
+  const deviceClass = normalizeDeviceClass(rawDeviceClass);
+  if (rawDeviceClass !== null && deviceClass === null) {
+    return NextResponse.json({ error: "device_class must be 'phone' or 'desktop'." }, { status: 400 });
+  }
+  if (deviceClass) {
+    query.set("device_class", deviceClass);
+  }
+
+  const suffix = query.toString() ? `?${query.toString()}` : "";
   let response: Response;
   try {
     response = await fetch(`${backendBaseUrl}/screenshots${suffix}`, {
@@ -48,9 +69,18 @@ export async function GET(request: NextRequest) {
       cache: "no-store",
     });
   } catch {
-    return NextResponse.json([], { status: 200 });
+    return NextResponse.json({ error: "Unable to reach the screenshot service." }, { status: 502 });
   }
   const data = (await readJsonSafely(response)) ?? [];
+  if (!response.ok) {
+    const error =
+      data && typeof data === "object" && "detail" in data && typeof data.detail === "string"
+        ? { error: data.detail }
+        : data && typeof data === "object" && "error" in data && typeof data.error === "string"
+          ? { error: data.error }
+          : { error: "Screenshot request failed." };
+    return NextResponse.json(error, { status: response.status });
+  }
   const rewrittenData = Array.isArray(data)
     ? data.map((entry) => {
         if (!entry || typeof entry !== "object" || typeof entry.signed_url !== "string") {

@@ -17,64 +17,112 @@ from app.liquid.schemas import LiquidContentPayload
 RUNTIME_TTL_SECONDS = 60
 LOW_COVERAGE_THRESHOLD = 40.0
 COMPUTED_TRAIT_CACHE_MINUTES = 15
+COMPUTED_SOURCE_TYPE = "pollex_computed"
+LEGACY_COMPUTED_SOURCE_TYPE = "maze_computed"
+COMPUTED_TRAIT_KEY_ALIASES: dict[str, tuple[str, ...]] = {
+    "pollex.intent_level": ("pollex.intent_level", "maze.intent_level"),
+    "pollex.usage_depth": ("pollex.usage_depth", "maze.usage_depth"),
+    "pollex.recent_activity": ("pollex.recent_activity", "maze.recent_activity"),
+    "pollex.paywall_fatigue": ("pollex.paywall_fatigue", "maze.paywall_fatigue"),
+    "pollex.onboarding_stage": ("pollex.onboarding_stage", "maze.onboarding_stage"),
+}
+COMPUTED_TRAIT_KEY_CANONICAL = {
+    alias: canonical
+    for canonical, aliases in COMPUTED_TRAIT_KEY_ALIASES.items()
+    for alias in aliases
+}
 
 BUILTIN_COMPUTED_TRAITS: tuple[dict[str, Any], ...] = (
     {
-        "id": "builtin:maze.intent_level",
-        "traitKey": "maze.intent_level",
+        "id": "builtin:pollex.intent_level",
+        "traitKey": "pollex.intent_level",
         "label": "Intent level",
-        "description": "Behavior-derived purchase or conversion intent from recent Maze activity.",
+        "description": "Behavior-derived purchase or conversion intent from recent Pollex activity.",
         "valueType": "select",
-        "sourceType": "maze_computed",
-        "sourceKey": "maze.intent_level",
+        "sourceType": COMPUTED_SOURCE_TYPE,
+        "sourceKey": "pollex.intent_level",
         "exampleValues": ["low", "medium", "high"],
         "enabled": True,
     },
     {
-        "id": "builtin:maze.usage_depth",
-        "traitKey": "maze.usage_depth",
+        "id": "builtin:pollex.usage_depth",
+        "traitKey": "pollex.usage_depth",
         "label": "Usage depth",
         "description": "Behavior-derived usage tier based on screen breadth and event volume.",
         "valueType": "select",
-        "sourceType": "maze_computed",
-        "sourceKey": "maze.usage_depth",
+        "sourceType": COMPUTED_SOURCE_TYPE,
+        "sourceKey": "pollex.usage_depth",
         "exampleValues": ["light", "active", "power"],
         "enabled": True,
     },
     {
-        "id": "builtin:maze.recent_activity",
-        "traitKey": "maze.recent_activity",
+        "id": "builtin:pollex.recent_activity",
+        "traitKey": "pollex.recent_activity",
         "label": "Recent activity",
-        "description": "Behavior-derived recency signal from the most recent Maze events.",
+        "description": "Behavior-derived recency signal from the most recent Pollex events.",
         "valueType": "select",
-        "sourceType": "maze_computed",
-        "sourceKey": "maze.recent_activity",
+        "sourceType": COMPUTED_SOURCE_TYPE,
+        "sourceKey": "pollex.recent_activity",
         "exampleValues": ["active_24h", "active_7d", "idle"],
         "enabled": True,
     },
     {
-        "id": "builtin:maze.paywall_fatigue",
-        "traitKey": "maze.paywall_fatigue",
+        "id": "builtin:pollex.paywall_fatigue",
+        "traitKey": "pollex.paywall_fatigue",
         "label": "Paywall fatigue",
         "description": "Behavior-derived boolean that flags repeated paywall exposure.",
         "valueType": "boolean",
-        "sourceType": "maze_computed",
-        "sourceKey": "maze.paywall_fatigue",
+        "sourceType": COMPUTED_SOURCE_TYPE,
+        "sourceKey": "pollex.paywall_fatigue",
         "exampleValues": ["true", "false"],
         "enabled": True,
     },
     {
-        "id": "builtin:maze.onboarding_stage",
-        "traitKey": "maze.onboarding_stage",
+        "id": "builtin:pollex.onboarding_stage",
+        "traitKey": "pollex.onboarding_stage",
         "label": "Onboarding stage",
         "description": "Behavior-derived onboarding progress based on recent onboarding and non-onboarding screens.",
         "valueType": "select",
-        "sourceType": "maze_computed",
-        "sourceKey": "maze.onboarding_stage",
+        "sourceType": COMPUTED_SOURCE_TYPE,
+        "sourceKey": "pollex.onboarding_stage",
         "exampleValues": ["unknown", "in_progress", "stalled", "completed"],
         "enabled": True,
     },
 )
+
+
+def _is_computed_source_type(source_type: str | None) -> bool:
+    return str(source_type or "") in {COMPUTED_SOURCE_TYPE, LEGACY_COMPUTED_SOURCE_TYPE}
+
+
+def _canonical_trait_source_type(source_type: str | None) -> str:
+    if _is_computed_source_type(source_type):
+        return COMPUTED_SOURCE_TYPE
+    return str(source_type or "app_profile")
+
+
+def _canonical_computed_trait_key(trait_key: str | None) -> str | None:
+    if trait_key is None:
+        return None
+    return COMPUTED_TRAIT_KEY_CANONICAL.get(trait_key, trait_key)
+
+
+def _canonical_builtin_trait_id(trait_id: str | None) -> str | None:
+    if trait_id is None:
+        return None
+    if not trait_id.startswith("builtin:"):
+        return trait_id
+    canonical_trait_key = _canonical_computed_trait_key(trait_id.removeprefix("builtin:"))
+    return f"builtin:{canonical_trait_key}" if canonical_trait_key else trait_id
+
+
+def _canonicalize_computed_trait_payload(payload: dict[str, Any] | None) -> dict[str, Any]:
+    normalized: dict[str, Any] = {}
+    for key, value in dict(payload or {}).items():
+        canonical_key = _canonical_computed_trait_key(str(key))
+        if canonical_key not in normalized:
+            normalized[canonical_key] = value
+    return normalized
 
 
 def get_liquid_overview(db: Session, workspace_id: str) -> dict[str, Any]:
@@ -126,7 +174,7 @@ def get_liquid_integration_status(db: Session, workspace_id: str) -> dict[str, A
                     ), 0)::float AS app_trait_coverage,
                     COALESCE(AVG(
                         CASE
-                            WHEN (resolved_traits ? 'maze.intent_level') THEN 100
+                            WHEN (resolved_traits ? 'pollex.intent_level' OR resolved_traits ? 'maze.intent_level') THEN 100
                             ELSE 0
                         END
                     ), 0)::float AS computed_trait_coverage,
@@ -1007,13 +1055,13 @@ def list_liquid_traits(db: Session, workspace_id: str) -> list[dict[str, Any]]:
     )
     for row in rows:
         trait_key = str(row["trait_key"])
-        if trait_key in traits_by_key or str(row.get("source_type") or "") == "maze_computed":
+        if trait_key in traits_by_key or _is_computed_source_type(row.get("source_type")):
             continue
         traits_by_key[trait_key] = _trait_out(db, workspace_id, row)
     return sorted(
         traits_by_key.values(),
         key=lambda trait: (
-            0 if trait["sourceType"] == "maze_computed" else 1,
+            0 if trait["sourceType"] == COMPUTED_SOURCE_TYPE else 1,
             str(trait["label"]).lower(),
             str(trait["traitKey"]).lower(),
         ),
@@ -1073,7 +1121,7 @@ def create_liquid_trait(db: Session, workspace_id: str, user_id: str | None, pay
 
 def update_liquid_trait(db: Session, workspace_id: str, user_id: str | None, trait_id: str, payload: dict[str, Any]) -> dict[str, Any]:
     if _builtin_trait_by_id(trait_id):
-        raise ValueError("Maze-computed traits are built in and cannot be edited.")
+        raise ValueError("Pollex-computed traits are built in and cannot be edited.")
     _assert_custom_trait_allowed(payload)
     row = db.execute(
         text(
@@ -1148,7 +1196,7 @@ def get_liquid_trait(db: Session, workspace_id: str, trait_id: str) -> dict[str,
 
 def delete_liquid_trait(db: Session, workspace_id: str, trait_id: str) -> None:
     if _builtin_trait_by_id(trait_id):
-        raise ValueError("Maze-computed traits are built in and cannot be deleted.")
+        raise ValueError("Pollex-computed traits are built in and cannot be deleted.")
     deleted = db.execute(
         text(
             """
@@ -2360,7 +2408,7 @@ def _trait_definition_map(db: Session, workspace_id: str) -> dict[str, dict[str,
     }
     for row in rows:
         trait_key = str(row["trait_key"])
-        if trait_key in trait_map or str(row.get("source_type") or "") == "maze_computed":
+        if trait_key in trait_map or _is_computed_source_type(row.get("source_type")):
             continue
         trait_map[trait_key] = {
             "id": row["id"],
@@ -2368,8 +2416,8 @@ def _trait_definition_map(db: Session, workspace_id: str) -> dict[str, dict[str,
             "label": row["label"],
             "description": row["description"],
             "valueType": row["value_type"],
-            "sourceType": row["source_type"],
-            "sourceKey": row["source_key"],
+            "sourceType": _canonical_trait_source_type(row["source_type"]),
+            "sourceKey": _canonical_computed_trait_key(row["source_key"]),
             "exampleValues": list(row["example_values"] or []),
             "liveEligible": row["source_type"] != "manual_test",
             "coveragePercent": _trait_coverage_percent(db, workspace_id, row["source_type"], row["source_key"], row["trait_key"]),
@@ -2626,13 +2674,15 @@ def _format_profile_number(value: float) -> str:
 def _builtin_trait_by_id(trait_id: str | None) -> dict[str, Any] | None:
     if not trait_id:
         return None
-    return next((trait for trait in BUILTIN_COMPUTED_TRAITS if trait["id"] == trait_id), None)
+    canonical_trait_id = _canonical_builtin_trait_id(trait_id)
+    return next((trait for trait in BUILTIN_COMPUTED_TRAITS if trait["id"] == canonical_trait_id), None)
 
 
 def _builtin_trait_by_key(trait_key: str | None) -> dict[str, Any] | None:
     if not trait_key:
         return None
-    return next((trait for trait in BUILTIN_COMPUTED_TRAITS if trait["traitKey"] == trait_key), None)
+    canonical_trait_key = _canonical_computed_trait_key(trait_key)
+    return next((trait for trait in BUILTIN_COMPUTED_TRAITS if trait["traitKey"] == canonical_trait_key), None)
 
 
 def _builtin_trait_out(db: Session, workspace_id: str, trait: dict[str, Any]) -> dict[str, Any]:
@@ -2653,16 +2703,16 @@ def _builtin_trait_out(db: Session, workspace_id: str, trait: dict[str, Any]) ->
 def _assert_custom_trait_allowed(payload: dict[str, Any]) -> None:
     source_type = str(payload.get("sourceType") or "app_profile")
     trait_key = str(payload.get("traitKey") or "").strip()
-    if source_type == "maze_computed":
-        raise ValueError("Maze-computed traits are built in. Create an app or manual test trait instead.")
+    if _is_computed_source_type(source_type):
+        raise ValueError("Pollex-computed traits are built in. Create an app or manual test trait instead.")
     if _builtin_trait_by_key(trait_key):
-        raise ValueError("That trait key is reserved for a built-in Maze-computed trait.")
+        raise ValueError("That trait key is reserved for a built-in Pollex-computed trait.")
 
 
 def _trait_out(db: Session, workspace_id: str, row: dict[str, Any]) -> dict[str, Any]:
-    source_type = str(row.get("source_type") or "app_profile")
-    source_key = row.get("source_key")
-    trait_key = row["trait_key"]
+    source_type = _canonical_trait_source_type(row.get("source_type"))
+    source_key = _canonical_computed_trait_key(row.get("source_key"))
+    trait_key = _canonical_computed_trait_key(row["trait_key"])
     return {
         "id": row["id"],
         "traitKey": trait_key,
@@ -2688,7 +2738,7 @@ def _trait_coverage_percent(
 ) -> float:
     if source_type == "manual_test":
         return 0.0
-    table_name = "liquid_computed_traits" if source_type == "maze_computed" else "liquid_subject_traits"
+    table_name = "liquid_computed_traits" if _is_computed_source_type(source_type) else "liquid_subject_traits"
     rows = db.execute(
         text(
             f"""
@@ -2704,7 +2754,7 @@ def _trait_coverage_percent(
     matches = 0
     candidates = _trait_lookup_candidates(source_key, trait_key)
     for row in rows:
-        traits = row["traits"] or {}
+        traits = row.get("traits") or {}
         if any(_lookup_trait_value(traits, candidate, trait_key) is not None for candidate in candidates):
             matches += 1
     return round((matches / len(rows)) * 100, 1)
@@ -2717,7 +2767,19 @@ def _trait_lookup_candidates(source_key: str | None, trait_key: str) -> list[str
         if "." in source_key:
             candidates.append(source_key.split(".")[-1])
     candidates.append(trait_key)
-    return list(dict.fromkeys([candidate for candidate in candidates if candidate]))
+    expanded: list[str] = []
+    for candidate in candidates:
+        if not candidate:
+            continue
+        aliases = COMPUTED_TRAIT_KEY_ALIASES.get(
+            _canonical_computed_trait_key(candidate) or candidate,
+            (candidate,),
+        )
+        for alias in aliases:
+            expanded.append(alias)
+            if "." in alias:
+                expanded.append(alias.split(".")[-1])
+    return list(dict.fromkeys(expanded))
 
 
 def _lookup_trait_value(payload: dict[str, Any], source_key: str | None, trait_key: str) -> Any:
@@ -2740,11 +2802,11 @@ def _lookup_trait_value(payload: dict[str, Any], source_key: str | None, trait_k
 
 def _trait_status(trait: dict[str, Any]) -> str:
     source_key = str(trait.get("sourceKey") or "").strip()
-    source_type = str(trait.get("sourceType") or "app_profile")
+    source_type = _canonical_trait_source_type(trait.get("sourceType"))
     coverage = float(trait.get("coveragePercent") or 0)
     if source_type == "manual_test":
         return "test_only"
-    if source_type in {"app_profile", "maze_computed"} and not source_key:
+    if source_type in {"app_profile", COMPUTED_SOURCE_TYPE} and not source_key:
         return "missing_source"
     if source_type != "manual_test" and coverage < LOW_COVERAGE_THRESHOLD:
         return "low_coverage"
@@ -2927,7 +2989,7 @@ def _resolved_computed_traits(
     if row and not force_refresh:
         updated_at = row["updated_at"]
         if updated_at and updated_at >= datetime.now(UTC) - timedelta(minutes=COMPUTED_TRAIT_CACHE_MINUTES):
-            return dict(row["traits"] or {})
+            return _canonicalize_computed_trait_payload(row["traits"] or {})
     computed = _compute_behavior_traits(db, workspace_id, subject_id)
     db.execute(
         text(
@@ -2994,11 +3056,11 @@ def _compute_behavior_traits(db: Session, workspace_id: str, subject_id: str) ->
     else:
         onboarding_stage = "in_progress"
     return {
-        "maze.intent_level": intent_level,
-        "maze.usage_depth": usage_depth,
-        "maze.recent_activity": recent_activity,
-        "maze.paywall_fatigue": paywall_hits >= 3,
-        "maze.onboarding_stage": onboarding_stage,
+        "pollex.intent_level": intent_level,
+        "pollex.usage_depth": usage_depth,
+        "pollex.recent_activity": recent_activity,
+        "pollex.paywall_fatigue": paywall_hits >= 3,
+        "pollex.onboarding_stage": onboarding_stage,
     }
 
 
@@ -3013,17 +3075,18 @@ def _merged_resolution_traits(
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     stored_subject_traits = _subject_traits_for_subject(db, workspace_id, subject_id)
     trait_map = _trait_definition_map(db, workspace_id)
+    computed_traits = _canonicalize_computed_trait_payload(computed_traits)
     merged = {**computed_traits, **stored_subject_traits, **request_traits}
     diagnostics: dict[str, Any] = {"resolvedTraits": [], "missingTraits": [], "traitSources": {}}
     for trait_key, definition in trait_map.items():
-        source_type = str(definition.get("sourceType") or "app_profile")
-        source_key = definition.get("sourceKey")
+        source_type = _canonical_trait_source_type(definition.get("sourceType"))
+        source_key = _canonical_computed_trait_key(definition.get("sourceKey"))
         value = None
         present = False
         if stage == "draft" and trait_key in preview_overrides:
             value = preview_overrides[trait_key]
             present = True
-        elif source_type == "maze_computed":
+        elif source_type == COMPUTED_SOURCE_TYPE:
             value = _lookup_trait_value(computed_traits, source_key, trait_key)
             present = value is not None
         elif source_type == "manual_test":

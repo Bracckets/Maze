@@ -5,6 +5,7 @@ import { ReactNode } from "react";
 import { Brand } from "@/components/brand";
 import { LocaleSwitcher } from "@/components/locale-switcher";
 import { MobileNavMenu } from "@/components/mobile-nav-menu";
+import { PollexAppIcon } from "@/components/pollex-app-icon";
 import { getMessages } from "@/lib/i18n";
 import { getRequestLocale } from "@/lib/i18n-server";
 import { getCurrentUser } from "@/lib/service-gateway";
@@ -33,7 +34,7 @@ export async function SiteShell({
   ];
 
   return (
-    <div className="site-frame">
+    <div className="site-frame pollex-app-shell">
       <header className="site-shell-header">
         <div className="site-shell-brand">
           <Brand href={user ? "/dashboard" : "/"} />
@@ -118,22 +119,25 @@ export async function DashboardShell({
   const messages = getMessages(locale);
   const currentUser = await getCurrentUser();
   const user = "user" in currentUser.data ? currentUser.data.user : null;
-  const navItems: Array<{ href: Route; label: string }> = [
-    { href: "/dashboard" as Route, label: messages.nav.dashboard },
-    { href: "/usage" as Route, label: messages.nav.usage },
-    { href: "/heatmap" as Route, label: messages.nav.heatmap },
-    { href: "/liquid" as Route, label: messages.nav.liquid },
-    { href: "/profile" as Route, label: messages.nav.profile },
-    { href: "/settings" as Route, label: messages.nav.settings },
+  const navItems: Array<{ href: Route; icon: Parameters<typeof PollexAppIcon>[0]["icon"]; label: string }> = [
+    { href: "/dashboard" as Route, icon: "dashboard", label: messages.nav.dashboard },
+    { href: "/usage" as Route, icon: "usage", label: messages.nav.usage },
+    { href: "/heatmap" as Route, icon: "heatmap", label: messages.nav.heatmap },
+    { href: "/liquid" as Route, icon: "liquid", label: messages.nav.liquid },
+    { href: "/profile" as Route, icon: "profile", label: messages.nav.profile },
+    { href: "/settings" as Route, icon: "settings", label: messages.nav.settings },
   ] as const;
-  const resourceItems: Array<{ href: Route; label: string }> = [
-    { href: "/pricing" as Route, label: messages.nav.pricing },
-    { href: "/docs" as Route, label: messages.nav.docs },
+  const resourceItems: Array<{ href: Route; icon: Parameters<typeof PollexAppIcon>[0]["icon"]; label: string }> = [
+    { href: "/pricing" as Route, icon: "pricing", label: messages.nav.pricing },
+    { href: "/docs" as Route, icon: "docs", label: messages.nav.docs },
   ] as const;
   const initials = user?.email.slice(0, 2).toUpperCase() ?? "PL";
+  const activeItem =
+    [...navItems, ...resourceItems].find((item) => item.href === activePath) ??
+    { href: "/dashboard" as Route, icon: "dashboard" as const, label: messages.nav.dashboard };
 
   return (
-    <div className="dashboard-shell">
+    <div className="dashboard-shell pollex-dashboard-shell">
       <aside className="dashboard-sidebar">
         <div className="dashboard-sidebar-brand">
           <Brand sidebar href="/dashboard" />
@@ -148,8 +152,10 @@ export async function DashboardShell({
                 href={item.href}
                 className={`dashboard-sidebar-link ${item.href === activePath ? "active" : ""}`.trim()}
               >
-                <span className="dashboard-sidebar-link-indicator" aria-hidden="true" />
-                <span>{item.label}</span>
+                <span className="dashboard-sidebar-link-icon" aria-hidden="true">
+                  <PollexAppIcon icon={item.icon} />
+                </span>
+                <span className="dashboard-sidebar-link-copy">{item.label}</span>
               </Link>
             ))}
           </div>
@@ -158,8 +164,10 @@ export async function DashboardShell({
             <p className="dashboard-sidebar-label">{messages.nav.resources}</p>
             {resourceItems.map((item) => (
               <Link key={item.href} href={item.href} className="dashboard-sidebar-link">
-                <span className="dashboard-sidebar-link-indicator" aria-hidden="true" />
-                <span>{item.label}</span>
+                <span className="dashboard-sidebar-link-icon" aria-hidden="true">
+                  <PollexAppIcon icon={item.icon} />
+                </span>
+                <span className="dashboard-sidebar-link-copy">{item.label}</span>
               </Link>
             ))}
           </div>
@@ -195,12 +203,18 @@ export async function DashboardShell({
 
         <div className="dashboard-page-header">
           <div className="dashboard-page-copy">
-            <h1 className="page-title">{title}</h1>
+            <div className="dashboard-page-title-row">
+              <span className="dashboard-page-title-icon" aria-hidden="true">
+                <PollexAppIcon icon={activeItem.icon} />
+              </span>
+              <h1 className="page-title">{title}</h1>
+            </div>
+            {subtitle ? <p className="dashboard-page-subtitle">{subtitle}</p> : null}
           </div>
-        <div className="dashboard-page-tools">
-          {headerAction}
-          <LocaleSwitcher />
-        </div>
+          <div className="dashboard-page-tools">
+            {headerAction}
+            <LocaleSwitcher />
+          </div>
         </div>
 
         <div className="dashboard-page-body">{children}</div>

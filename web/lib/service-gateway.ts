@@ -88,7 +88,7 @@ export type LiquidConditionGroup = {
   any: LiquidCondition[];
 };
 
-export type LiquidTraitSourceType = "app_profile" | "maze_computed" | "manual_test";
+export type LiquidTraitSourceType = "app_profile" | "pollex_computed" | "manual_test";
 export type LiquidReadinessState = "ready" | "missing_source" | "test_only" | "low_coverage" | "fallback_only";
 
 export type LiquidKeyDependency = {

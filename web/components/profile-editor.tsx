@@ -33,38 +33,40 @@ export function ProfileEditor({ initialEmail, initialWorkspaceName }: Props) {
       const data = await response.json();
       if (!response.ok) {
         setIsError(true);
-        setMessage(data.error ?? (locale === "ar" ? "تعذر تحديث الملف الشخصي." : "Unable to update profile."));
+        setMessage(data.error ?? (locale === "ar" ? "طھط¹ط°ط± طھط­ط¯ظٹط« ط§ظ„ظ…ظ„ظپ ط§ظ„ط´ط®طµظٹ." : "Unable to update profile."));
       } else {
-        setMessage(locale === "ar" ? "تم تحديث الملف الشخصي." : "Profile updated.");
+        setMessage(locale === "ar" ? "طھظ… طھط­ط¯ظٹط« ط§ظ„ظ…ظ„ظپ ط§ظ„ط´ط®طµظٹ." : "Profile updated.");
         router.refresh();
       }
     } catch {
       setIsError(true);
-      setMessage(locale === "ar" ? "تعذر الوصول إلى الخادم حالياً." : "Unable to reach the backend right now.");
+      setMessage(locale === "ar" ? "طھط¹ط°ط± ط§ظ„ظˆطµظˆظ„ ط¥ظ„ظ‰ ط§ظ„ط®ط§ط¯ظ… ط­ط§ظ„ظٹط§ظ‹." : "Unable to reach the backend right now.");
     } finally {
       setIsSaving(false);
     }
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+    <div className="pollex-form-stack">
       <div className="field">
-        <label htmlFor="profile-email">{locale === "ar" ? "البريد الإلكتروني" : "Email address"}</label>
+        <label htmlFor="profile-email">{locale === "ar" ? "ط§ظ„ط¨ط±ظٹط¯ ط§ظ„ط¥ظ„ظƒطھط±ظˆظ†ظٹ" : "Email address"}</label>
         <input id="profile-email" value={email} onChange={(event) => setEmail(event.target.value)} />
       </div>
 
       <div className="field">
-        <label htmlFor="profile-workspace">{locale === "ar" ? "اسم مساحة العمل" : "Workspace name"}</label>
+        <label htmlFor="profile-workspace">{locale === "ar" ? "ط§ط³ظ… ظ…ط³ط§ط­ط© ط§ظ„ط¹ظ…ظ„" : "Workspace name"}</label>
         <input id="profile-workspace" value={workspaceName} onChange={(event) => setWorkspaceName(event.target.value)} />
       </div>
 
-      <button className="btn btn-primary" type="button" onClick={saveProfile} disabled={isSaving} style={{ alignSelf: "flex-start" }}>
-        {isSaving ? (locale === "ar" ? "جارٍ الحفظ..." : "Saving...") : (locale === "ar" ? "حفظ الملف" : "Save profile")}
-      </button>
+      <div className="pollex-form-actions">
+        <button className="btn btn-primary" type="button" onClick={saveProfile} disabled={isSaving}>
+          {isSaving ? (locale === "ar" ? "ط¬ط§ط±ظچ ط§ظ„ط­ظپط¸..." : "Saving...") : (locale === "ar" ? "ط­ظپط¸ ط§ظ„ظ…ظ„ظپ" : "Save profile")}
+        </button>
 
-      {message ? (
-        <p style={{ fontSize: "0.82rem", color: isError ? "var(--red)" : "var(--text-2)" }}>{message}</p>
-      ) : null}
+        {message ? (
+          <p className={`pollex-inline-status ${isError ? "is-error" : "is-success"}`.trim()}>{message}</p>
+        ) : null}
+      </div>
     </div>
   );
 }

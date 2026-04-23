@@ -1,5 +1,5 @@
 {
-  "name": "pollex-web-sdk",
+  "name": "@pollex/sdk",
   "version": "0.1.0",
   "description": "Browser SDK for Pollex telemetry and Liquid runtime resolution.",
   "license": "MIT",
