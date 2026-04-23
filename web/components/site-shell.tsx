@@ -3,9 +3,10 @@ import Link from "next/link";
 import { ReactNode } from "react";
 
 import { Brand } from "@/components/brand";
+import { DashboardSidebarFrame } from "@/components/dashboard-sidebar-frame";
 import { LocaleSwitcher } from "@/components/locale-switcher";
 import { MobileNavMenu } from "@/components/mobile-nav-menu";
-import { PollexAppIcon } from "@/components/pollex-app-icon";
+import { PollexAppIcon, type PollexAppIconName } from "@/components/pollex-app-icon";
 import { getMessages } from "@/lib/i18n";
 import { getRequestLocale } from "@/lib/i18n-server";
 import { getCurrentUser } from "@/lib/service-gateway";
@@ -119,7 +120,7 @@ export async function DashboardShell({
   const messages = getMessages(locale);
   const currentUser = await getCurrentUser();
   const user = "user" in currentUser.data ? currentUser.data.user : null;
-  const navItems: Array<{ href: Route; icon: Parameters<typeof PollexAppIcon>[0]["icon"]; label: string }> = [
+  const navItems: Array<{ href: Route; icon: PollexAppIconName; label: string }> = [
     { href: "/dashboard" as Route, icon: "dashboard", label: messages.nav.dashboard },
     { href: "/usage" as Route, icon: "usage", label: messages.nav.usage },
     { href: "/heatmap" as Route, icon: "heatmap", label: messages.nav.heatmap },
@@ -127,7 +128,7 @@ export async function DashboardShell({
     { href: "/profile" as Route, icon: "profile", label: messages.nav.profile },
     { href: "/settings" as Route, icon: "settings", label: messages.nav.settings },
   ] as const;
-  const resourceItems: Array<{ href: Route; icon: Parameters<typeof PollexAppIcon>[0]["icon"]; label: string }> = [
+  const resourceItems: Array<{ href: Route; icon: PollexAppIconName; label: string }> = [
     { href: "/pricing" as Route, icon: "pricing", label: messages.nav.pricing },
     { href: "/docs" as Route, icon: "docs", label: messages.nav.docs },
   ] as const;
@@ -137,51 +138,16 @@ export async function DashboardShell({
     { href: "/dashboard" as Route, icon: "dashboard" as const, label: messages.nav.dashboard };
 
   return (
-    <div className="dashboard-shell pollex-dashboard-shell">
-      <aside className="dashboard-sidebar">
-        <div className="dashboard-sidebar-brand">
-          <Brand sidebar href="/dashboard" />
-        </div>
-
-        <nav className="dashboard-sidebar-nav">
-          <div className="dashboard-sidebar-group">
-            <p className="dashboard-sidebar-label">{messages.nav.product}</p>
-            {navItems.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`dashboard-sidebar-link ${item.href === activePath ? "active" : ""}`.trim()}
-              >
-                <span className="dashboard-sidebar-link-icon" aria-hidden="true">
-                  <PollexAppIcon icon={item.icon} />
-                </span>
-                <span className="dashboard-sidebar-link-copy">{item.label}</span>
-              </Link>
-            ))}
-          </div>
-
-          <div className="dashboard-sidebar-group">
-            <p className="dashboard-sidebar-label">{messages.nav.resources}</p>
-            {resourceItems.map((item) => (
-              <Link key={item.href} href={item.href} className="dashboard-sidebar-link">
-                <span className="dashboard-sidebar-link-icon" aria-hidden="true">
-                  <PollexAppIcon icon={item.icon} />
-                </span>
-                <span className="dashboard-sidebar-link-copy">{item.label}</span>
-              </Link>
-            ))}
-          </div>
-        </nav>
-
-        <Link className="dashboard-workspace-card" href="/profile">
-          <div className="dashboard-workspace-avatar">{initials}</div>
-          <div>
-            <strong>{user?.workspace_name ?? "Workspace name"}</strong>
-            <span>{user?.plan_name ?? "Pollex workspace"}</span>
-          </div>
-        </Link>
-      </aside>
-
+    <DashboardSidebarFrame
+      activePath={activePath}
+      initials={initials}
+      navItems={navItems}
+      planName={user?.plan_name ?? "Pollex workspace"}
+      productLabel={messages.nav.product}
+      resourceItems={resourceItems}
+      resourcesLabel={messages.nav.resources}
+      workspaceName={user?.workspace_name ?? "Workspace name"}
+    >
       <main className="dashboard-main">
         <MobileNavMenu
           brandHref="/dashboard"
@@ -231,6 +197,6 @@ export async function DashboardShell({
           </nav>
         </footer>
       </main>
-    </div>
+    </DashboardSidebarFrame>
   );
 }

@@ -274,6 +274,7 @@ export function DashboardWorkbench({
   const [isChatLoading, setIsChatLoading] = useState(false);
   const activeInsightOption = insightDiscussionOptions.find((option) => option.key === selectedInsightKey) ?? insightDiscussionOptions[0] ?? null;
   const activeChatPrompts = activeInsightOption ? buildInsightChatPrompts(activeInsightOption.insight) : [];
+  const hasUserChatMessage = chatMessages.some((message) => message.role === "user");
 
   useEffect(() => {
     if (insightDiscussionOptions.length === 0) {
@@ -836,184 +837,186 @@ export function DashboardWorkbench({
 
         {activeTab === "insights" ? (
           <section className="pollex-insights-workspace">
-            <div className="pollex-insights-chat-stage">
-              {activeInsightOption ? (
-                <div className="pollex-insight-chat">
-                  <div className="pollex-insight-chat-hero">
-                    <div className="pollex-insight-chat-copy">
-                      <span className="eyebrow">Model context protocol</span>
-                      <h2 className="heading">Issue discussion</h2>
-                      <p className="panel-copy">Ask about likely causes, supporting evidence, and what to test next. Replies stay grounded in the selected insight, related issue severity, and recent workspace sessions.</p>
-                    </div>
-                    <div className="pollex-insight-chat-hero-tags">
-                      <Tag tone={issueToneMap[activeInsightOption.insight.issue_type] ?? "default"}>
-                        {getIssueLabel(activeInsightOption.insight.issue_type)}
-                      </Tag>
-                      <Tag>{formatScreenLabel(activeInsightOption.insight.screen)}</Tag>
-                    </div>
+            <div className="pollex-insight-selector" role="tablist" aria-label="Issues to discuss">
+              {insightDiscussionOptions.map((option, index) => (
+                <button
+                  key={option.key}
+                  type="button"
+                  role="tab"
+                  aria-selected={activeInsightOption?.key === option.key}
+                  className={`pollex-chat-focus-chip ${activeInsightOption?.key === option.key ? "active" : ""}`.trim()}
+                  onClick={() => handleInsightFocusSelect(option)}
+                >
+                  <div className="pollex-chat-focus-chip-topline">
+                    <span className="pollex-chat-focus-rank">{String(index + 1).padStart(2, "0")}</span>
+                    <Tag tone={issueToneMap[option.insight.issue_type] ?? "default"}>{getIssueLabel(option.insight.issue_type)}</Tag>
                   </div>
-
-                  <div className="pollex-insight-chat-meta">
-                    <span>MCP context packet is attached</span>
-                    <span>{chatMessages.length} messages in this thread</span>
-                    <span>{activeInsightOption.insight.affected_users_count} impacted users</span>
-                  </div>
-
-                  <div className="pollex-chat-thread" ref={chatThreadRef}>
-                    <div className="pollex-chat-thread-break">Today</div>
-                    {chatMessages.map((message) => (
-                      <article className={`pollex-chat-message pollex-chat-message-${message.role}`.trim()} key={message.id}>
-                        <div className={`pollex-chat-avatar pollex-chat-avatar-${message.role}`.trim()}>
-                          {message.role === "assistant" ? "AI" : "You"}
-                        </div>
-                        <div className="pollex-chat-message-body">
-                          <div className="pollex-chat-bubble-top">
-                            <strong>{message.role === "assistant" ? "Context analyst" : "You"}</strong>
-                            <span>{message.role === "assistant" ? "Grounded answer" : "Question"}</span>
-                          </div>
-                          <div className={`pollex-chat-bubble pollex-chat-bubble-${message.role}`.trim()}>
-                            <p>{message.content}</p>
-                            {message.evidence.length > 0 ? (
-                              <div className="pollex-chat-evidence">
-                                {message.evidence.map((item) => (
-                                  <div className="pollex-chat-evidence-item" key={`${message.id}-${item.label}`}>
-                                    <strong>{item.label}</strong>
-                                    <span>{item.detail}</span>
-                                  </div>
-                                ))}
-                              </div>
-                            ) : null}
-                          </div>
-                        </div>
-                      </article>
-                    ))}
-                    {isChatLoading ? (
-                      <article className="pollex-chat-message pollex-chat-message-assistant pollex-chat-bubble-loading">
-                        <div className="pollex-chat-avatar pollex-chat-avatar-assistant">AI</div>
-                        <div className="pollex-chat-message-body">
-                          <div className="pollex-chat-bubble-top">
-                            <strong>Context analyst</strong>
-                            <span>Thinking</span>
-                          </div>
-                          <div className="pollex-chat-bubble pollex-chat-bubble-assistant">
-                            <p>Reviewing the current issue snapshot, related sessions, and workspace evidence.</p>
-                          </div>
-                        </div>
-                      </article>
-                    ) : null}
-                  </div>
-
-                  <div className="pollex-chat-prompt-row">
-                    {activeChatPrompts.map((prompt) => (
-                      <button
-                        key={prompt}
-                        type="button"
-                        className="pollex-chat-prompt"
-                        onClick={() => void submitInsightChatQuestion(prompt)}
-                        disabled={isChatLoading}
-                      >
-                        {prompt}
-                      </button>
-                    ))}
-                  </div>
-
-                  <form
-                    className="pollex-chat-compose"
-                    onSubmit={(event) => {
-                      event.preventDefault();
-                      void submitInsightChatQuestion(chatDraft);
-                    }}
-                  >
-                    <div className="pollex-chat-compose-shell">
-                      <textarea
-                        className="pollex-chat-input"
-                        rows={3}
-                        value={chatDraft}
-                        onChange={(event) => setChatDraft(event.target.value)}
-                        placeholder={`Ask about ${activeInsightOption.insight.title.toLowerCase()}...`}
-                      />
-                      <div className="pollex-chat-compose-actions">
-                        <span className={`pollex-chat-status ${chatError ? "pollex-chat-status-error" : ""}`.trim()}>
-                          {chatError ?? "Ask about causes, confidence, or what to test next."}
-                        </span>
-                        <button
-                          className="pollex-chat-send"
-                          type="submit"
-                          aria-label={isChatLoading ? "Thinking" : "Send message"}
-                          disabled={isChatLoading || !chatDraft.trim()}
-                        >
-                          <svg viewBox="0 0 24 24" aria-hidden="true">
-                            <path d="M4 12 20 4l-4.5 16-3.2-5.3L4 12Z" />
-                            <path d="M11.8 14.7 20 4" />
-                          </svg>
-                        </button>
-                      </div>
-                    </div>
-                  </form>
-                </div>
-              ) : (
-                <div className="pollex-insight-chat pollex-insight-chat-empty">
-                  <p className="empty-copy">Issue discussion will become available once Pollex has insights to analyze.</p>
-                </div>
-              )}
+                  <strong>{option.insight.title}</strong>
+                  <span>{formatScreenLabel(option.insight.screen)}</span>
+                </button>
+              ))}
             </div>
 
-            <aside className="pollex-insights-rail">
-              <div className="pollex-insights-rail-head">
-                <span className="eyebrow">Investigation workspace</span>
-                <h2 className="heading">Keep the active issue in view while you chat</h2>
-                <p className="panel-copy">Use the right rail to switch friction threads and inspect the evidence behind the current conversation.</p>
-              </div>
-
-              {activeInsightOption ? (
-                <>
-                  <div className="pollex-insight-focus-list" role="tablist" aria-label="Issues to discuss">
-                    {insightDiscussionOptions.map((option, index) => (
-                      <button
-                        key={option.key}
-                        type="button"
-                        role="tab"
-                        aria-selected={activeInsightOption.key === option.key}
-                        className={`pollex-chat-focus-chip ${activeInsightOption.key === option.key ? "active" : ""}`.trim()}
-                        onClick={() => handleInsightFocusSelect(option)}
-                      >
-                        <div className="pollex-chat-focus-chip-topline">
-                          <span className="pollex-chat-focus-rank">{String(index + 1).padStart(2, "0")}</span>
-                          <Tag tone={issueToneMap[option.insight.issue_type] ?? "default"}>{getIssueLabel(option.insight.issue_type)}</Tag>
-                        </div>
-                        <strong>{option.insight.title}</strong>
-                        <span>{formatScreenLabel(option.insight.screen)}</span>
-                      </button>
-                    ))}
+            {activeInsightOption ? (
+              <div className="pollex-insight-main">
+                <div className="pollex-insights-chat-stage">
+                  <div className="pollex-insight-summary-bar">
+                    <div>
+                      <span className="eyebrow">Selected issue</span>
+                      <strong>{activeInsightOption.insight.title}</strong>
+                    </div>
+                    <div className="pollex-insight-summary-metrics">
+                      <span>{getIssueLabel(activeInsightOption.insight.issue_type)}</span>
+                      <span>{formatScreenLabel(activeInsightOption.insight.screen)}</span>
+                      <span>{activeInsightOption.insight.frequency} signals</span>
+                      <span>{activeInsightOption.insight.affected_users_count} affected</span>
+                    </div>
                   </div>
 
-                  <section className="pollex-insight-context-panel">
-                    <div className="pollex-insight-context-head">
-                      <div>
-                        <span className="eyebrow">Selected issue</span>
-                        <h3>{activeInsightOption.insight.title}</h3>
+                  <div className="pollex-insight-chat">
+                    <div className="pollex-insight-chat-hero">
+                      <div className="pollex-insight-chat-copy">
+                        <span className="eyebrow">Investigation chat</span>
+                        <h2 className="heading">Discuss the selected issue</h2>
                       </div>
-                      <Tag tone={issueToneMap[activeInsightOption.insight.issue_type] ?? "default"}>
-                        {formatScreenLabel(activeInsightOption.insight.screen)}
-                      </Tag>
-                    </div>
-                    <p>{activeInsightOption.insight.impact}</p>
-                    <div className="pollex-insight-context-metrics">
-                      <div>
-                        <span>Signal volume</span>
-                        <strong>{activeInsightOption.insight.frequency}</strong>
-                      </div>
-                      <div>
-                        <span>Affected users</span>
-                        <strong>{activeInsightOption.insight.affected_users_count}</strong>
+                      <div className="pollex-insight-chat-hero-tags">
+                        <Tag tone={issueToneMap[activeInsightOption.insight.issue_type] ?? "default"}>
+                          {getIssueLabel(activeInsightOption.insight.issue_type)}
+                        </Tag>
+                        <Tag>{formatScreenLabel(activeInsightOption.insight.screen)}</Tag>
                       </div>
                     </div>
-                  </section>
-                </>
-              ) : (
+
+                    <div className="pollex-chat-thread" ref={chatThreadRef}>
+                      <div className="pollex-chat-thread-break">Today</div>
+                      {chatMessages.map((message) => (
+                        <article className={`pollex-chat-message pollex-chat-message-${message.role}`.trim()} key={message.id}>
+                          <div className={`pollex-chat-avatar pollex-chat-avatar-${message.role}`.trim()}>
+                            {message.role === "assistant" ? "AI" : "You"}
+                          </div>
+                          <div className="pollex-chat-message-body">
+                            <div className="pollex-chat-bubble-top">
+                              <strong>{message.role === "assistant" ? "Context analyst" : "You"}</strong>
+                              <span>{message.role === "assistant" ? "Grounded answer" : "Question"}</span>
+                            </div>
+                            <div className={`pollex-chat-bubble pollex-chat-bubble-${message.role}`.trim()}>
+                              <p>{message.content}</p>
+                              {message.evidence.length > 0 ? (
+                                <div className="pollex-chat-evidence">
+                                  {message.evidence.map((item) => (
+                                    <div className="pollex-chat-evidence-item" key={`${message.id}-${item.label}`}>
+                                      <strong>{item.label}</strong>
+                                      <span>{item.detail}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : null}
+                            </div>
+                          </div>
+                        </article>
+                      ))}
+                      {isChatLoading ? (
+                        <article className="pollex-chat-message pollex-chat-message-assistant pollex-chat-bubble-loading">
+                          <div className="pollex-chat-avatar pollex-chat-avatar-assistant">AI</div>
+                          <div className="pollex-chat-message-body">
+                            <div className="pollex-chat-bubble-top">
+                              <strong>Context analyst</strong>
+                              <span>Thinking</span>
+                            </div>
+                            <div className="pollex-chat-bubble pollex-chat-bubble-assistant">
+                              <p>Reviewing the current issue snapshot, related sessions, and workspace evidence.</p>
+                            </div>
+                          </div>
+                        </article>
+                      ) : null}
+                    </div>
+
+                    {!hasUserChatMessage ? (
+                      <div className="pollex-chat-prompt-row">
+                        {activeChatPrompts.map((prompt) => (
+                          <button
+                            key={prompt}
+                            type="button"
+                            className="pollex-chat-prompt"
+                            onClick={() => void submitInsightChatQuestion(prompt)}
+                            disabled={isChatLoading}
+                          >
+                            {prompt}
+                          </button>
+                        ))}
+                      </div>
+                    ) : null}
+
+                    <form
+                      className="pollex-chat-compose"
+                      onSubmit={(event) => {
+                        event.preventDefault();
+                        void submitInsightChatQuestion(chatDraft);
+                      }}
+                    >
+                      <div className="pollex-chat-compose-shell">
+                        <textarea
+                          className="pollex-chat-input"
+                          rows={1}
+                          value={chatDraft}
+                          onChange={(event) => setChatDraft(event.target.value)}
+                          placeholder={`Ask about ${activeInsightOption.insight.title.toLowerCase()}...`}
+                        />
+                        <div className="pollex-chat-compose-actions">
+                          <span className={`pollex-chat-status ${chatError ? "pollex-chat-status-error" : ""}`.trim()}>
+                            {chatError ?? "Ask about causes, confidence, or next test."}
+                          </span>
+                          <button
+                            className="pollex-chat-send"
+                            type="submit"
+                            aria-label={isChatLoading ? "Thinking" : "Send message"}
+                            disabled={isChatLoading || !chatDraft.trim()}
+                          >
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                              <path d="M4 12 20 4l-4.5 16-3.2-5.3L4 12Z" />
+                              <path d="M11.8 14.7 20 4" />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+
+                <aside className="pollex-insight-evidence-panel">
+                  <div className="pollex-insight-context-head">
+                    <div>
+                      <span className="eyebrow">Evidence</span>
+                      <h3>{activeInsightOption.insight.title}</h3>
+                    </div>
+                    <Tag tone={issueToneMap[activeInsightOption.insight.issue_type] ?? "default"}>
+                      {formatScreenLabel(activeInsightOption.insight.screen)}
+                    </Tag>
+                  </div>
+                  <p>{activeInsightOption.insight.impact}</p>
+                  <div className="pollex-insight-context-metrics">
+                    <div>
+                      <span>Signal volume</span>
+                      <strong>{activeInsightOption.insight.frequency}</strong>
+                    </div>
+                    <div>
+                      <span>Affected users</span>
+                      <strong>{activeInsightOption.insight.affected_users_count}</strong>
+                    </div>
+                  </div>
+                  <div className="pollex-insight-suggestion-list">
+                    <span className="eyebrow">Suggested tests</span>
+                    {activeInsightOption.insight.suggestions.slice(0, 3).map((suggestion) => (
+                      <p key={suggestion}>{suggestion}</p>
+                    ))}
+                  </div>
+                </aside>
+              </div>
+            ) : (
+              <div className="pollex-insight-chat pollex-insight-chat-empty">
                 <p className="empty-copy">Issue discussion will become available once Pollex has insights to analyze.</p>
-              )}
-            </aside>
+              </div>
+            )}
           </section>
         ) : null}
 

@@ -18,10 +18,46 @@ type FloatingShapeConfig = {
 };
 
 const ctaShapes: FloatingShapeConfig[] = [
-  { src: "/pollex-shapes/square.png", alt: "", width: 68, height: 68, left: "6%", top: "18%", rotate: "-18deg", delay: "0.4s" },
-  { src: "/pollex-shapes/e_line.png", alt: "", width: 96, height: 58, left: "79%", top: "16%", rotate: "38deg", delay: "1s" },
-  { src: "/pollex-shapes/x_line.png", alt: "", width: 74, height: 74, left: "10%", top: "72%", rotate: "16deg", delay: "1.6s" },
-  { src: "/pollex-shapes/triangle.png", alt: "", width: 88, height: 88, left: "87%", top: "64%", rotate: "-18deg", delay: "0.7s" },
+  {
+    src: "/pollex-shapes/square.png",
+    alt: "",
+    width: 68,
+    height: 68,
+    left: "6%",
+    top: "18%",
+    rotate: "-18deg",
+    delay: "0.4s",
+  },
+  {
+    src: "/pollex-shapes/e_line.png",
+    alt: "",
+    width: 96,
+    height: 58,
+    left: "79%",
+    top: "16%",
+    rotate: "38deg",
+    delay: "1s",
+  },
+  {
+    src: "/pollex-shapes/x_line.png",
+    alt: "",
+    width: 74,
+    height: 74,
+    left: "10%",
+    top: "72%",
+    rotate: "16deg",
+    delay: "1.6s",
+  },
+  {
+    src: "/pollex-shapes/triangle.png",
+    alt: "",
+    width: 88,
+    height: 88,
+    left: "87%",
+    top: "64%",
+    rotate: "-18deg",
+    delay: "0.7s",
+  },
 ];
 
 const processSteps = [
@@ -30,25 +66,44 @@ const processSteps = [
     shapeHeight: 96,
     shapeWidth: 22,
     title: "Track",
-    body: "Capture clicks, taps, hesitation, and interaction patterns without changing your product flow.",
+    label: "Behavior signals",
+    body: "Capture clicks, taps, hesitation, rage bursts, and path changes without interrupting the product.",
   },
   {
     shape: "/pollex-shapes/e_line.png",
     shapeHeight: 52,
     shapeWidth: 86,
     title: "Understand",
-    body: "Detect friction, intent, and repeated paths so your team sees what users are actually trying to do.",
+    label: "Intent model",
+    body: "Turn scattered events into a clear read on what the user tried, where they paused, and why it matters.",
   },
   {
     shape: "/pollex-shapes/x_line.png",
     shapeHeight: 62,
     shapeWidth: 62,
     title: "Adapt",
-    body: "Personalize interface and content variants with Liquid instead of shipping one UI for everyone.",
+    label: "Liquid response",
+    body: "Ship better hierarchy, copy, and recovery states while the session is still alive.",
   },
 ] as const;
 
-const experienceBullets = ["Heatmaps", "Rage/dead clicks", "Session insights", "Behavior signals"] as const;
+const signalRows = [
+  {
+    label: "Friction",
+    value: "Rage taps",
+    detail: "12 bursts around the disabled CTA",
+  },
+  {
+    label: "Intent",
+    value: "Retrying checkout",
+    detail: "Repeated return to discount field",
+  },
+  {
+    label: "Recovery",
+    value: "Variant ready",
+    detail: "Reduce fields and raise support copy",
+  },
+] as const;
 
 const liquidBullets = [
   "Dynamic UI/content variants",
@@ -58,14 +113,19 @@ const liquidBullets = [
 
 const actionCards = [
   {
-    title: "Insights",
-    body: "Detect friction like rage taps, dead clicks, hesitation, and drop-off moments before they become churn.",
+    title: "Signal",
+    body: "Pollex watches the moments that static analytics flatten: hesitation, repeated taps, reversal paths, and recovery intent.",
     lines: ["Rage taps", "Dead clicks", "Hesitation", "Drop-off paths"],
   },
   {
-    title: "Action",
-    body: "Use Liquid to adapt layouts, content, and CTA hierarchy based on what the user is signaling in real time.",
-    lines: ["Interface variants", "Copy shifts", "Layout priority", "Targeted recovery"],
+    title: "Response",
+    body: "Liquid uses those signals to change the product surface itself, from copy priority to field order and CTA recovery.",
+    lines: [
+      "Interface variants",
+      "Copy shifts",
+      "Layout priority",
+      "Targeted recovery",
+    ],
   },
 ] as const;
 
@@ -86,8 +146,17 @@ function FloatingShape({ shape }: { shape: FloatingShapeConfig }) {
   } as CSSProperties;
 
   return (
-    <div className={`pollex-home-shape ${shape.className ?? ""}`.trim()} style={style} aria-hidden="true">
-      <Image alt={shape.alt} src={shape.src} width={shape.width} height={shape.height} />
+    <div
+      className={`pollex-home-shape ${shape.className ?? ""}`.trim()}
+      style={style}
+      aria-hidden="true"
+    >
+      <Image
+        alt={shape.alt}
+        src={shape.src}
+        width={shape.width}
+        height={shape.height}
+      />
     </div>
   );
 }
@@ -114,20 +183,21 @@ function ProductMock() {
   return (
     <div className="pollex-product-mock">
       <div className="pollex-product-mock-topbar">
-        <span>Session 04</span>
-        <span>Drop-off detected</span>
+        <span>Behavior workbench</span>
+        <span>Live signal</span>
       </div>
 
       <div className="pollex-product-mock-shell">
         <div className="pollex-product-mock-sidebar">
           <div>
-            <span className="pollex-product-mock-label">Signals</span>
-            <strong>Heatmap</strong>
+            <span className="pollex-product-mock-label">Surface</span>
+            <strong>Checkout flow</strong>
           </div>
           <div className="pollex-product-mock-stack">
-            <div className="pollex-product-chip active">Tap density</div>
+            <div className="pollex-product-chip active">Behavior signals</div>
             <div className="pollex-product-chip">Rage clicks</div>
             <div className="pollex-product-chip">Intent path</div>
+            <div className="pollex-product-chip">Liquid response</div>
           </div>
         </div>
 
@@ -151,14 +221,19 @@ function ProductMock() {
 
         <div className="pollex-product-mock-insights">
           <div className="pollex-product-note">
-            <span className="pollex-product-mock-label">Rage clicks</span>
+            <span className="pollex-product-mock-label">Friction</span>
             <strong>12 bursts</strong>
-            <p>Primary CTA ignored after second field.</p>
+            <p>Primary CTA ignored after the second field.</p>
           </div>
           <div className="pollex-product-note">
             <span className="pollex-product-mock-label">Intent</span>
             <strong>Retrying checkout</strong>
             <p>Users pause on discount input before exiting.</p>
+          </div>
+          <div className="pollex-product-note pollex-product-note-active">
+            <span className="pollex-product-mock-label">Liquid</span>
+            <strong>Recovery variant</strong>
+            <p>Shorter form and clearer reassurance are ready.</p>
           </div>
         </div>
       </div>
@@ -172,7 +247,13 @@ function LiquidCompare() {
       <article className="pollex-liquid-card">
         <div className="pollex-liquid-card-head">
           <span>Before</span>
-          <Image alt="" src="/pollex-shapes/l_line.png" width={18} height={72} aria-hidden="true" />
+          <Image
+            alt=""
+            src="/pollex-shapes/l_line.png"
+            width={18}
+            height={72}
+            aria-hidden="true"
+          />
         </div>
         <div className="pollex-liquid-ui dense">
           <div className="pollex-liquid-ui-copy">
@@ -189,19 +270,33 @@ function LiquidCompare() {
       </article>
 
       <div className="pollex-liquid-arrow" aria-hidden="true">
-        <Image alt="" src="/pollex-shapes/triangle.png" width={58} height={58} />
+        <Image
+          alt=""
+          src="/pollex-shapes/triangle.png"
+          width={58}
+          height={58}
+        />
       </div>
 
       <article className="pollex-liquid-card active">
         <div className="pollex-liquid-card-head">
           <span>After</span>
-          <Image alt="" src="/pollex-shapes/e_line.png" width={72} height={42} aria-hidden="true" />
+          <Image
+            alt=""
+            src="/pollex-shapes/e_line.png"
+            width={72}
+            height={42}
+            aria-hidden="true"
+          />
         </div>
         <div className="pollex-liquid-ui">
           <div className="pollex-liquid-variant-pill">Liquid variant</div>
           <div className="pollex-liquid-ui-copy">
             <strong>Intent-aware recovery</strong>
-            <p>CTA priority, copy, and field order adapt to hesitation and repeat behavior.</p>
+            <p>
+              CTA priority, copy, and field order adapt to hesitation and repeat
+              behavior.
+            </p>
           </div>
           <div className="pollex-liquid-ui-form refined">
             <span />
@@ -230,10 +325,15 @@ export function PollexLanding({
 
         <div className="pollex-home-hero-content">
           <div className="pollex-home-hero-copy">
-            <p className="pollex-home-eyebrow">Behavior intelligence, built for adaptive interfaces</p>
-            <h1>Automatically detect UX issues and adapt your UI for every user.</h1>
+            <p className="pollex-home-eyebrow">
+              Behavior intelligence, built for adaptive interfaces
+            </p>
+            <h1>
+              Automatically detect UX issues and adapt your UI for every user.
+            </h1>
             <p className="pollex-home-subtext">
-              Track behavior, understand intent, and personalize experiences without rewriting your app.
+              Track behavior, understand intent, and personalize experiences
+              without rewriting your app.
             </p>
             <div className="pollex-home-actions">
               <Link className="pollex-home-button primary" href={primaryHref}>
@@ -246,9 +346,18 @@ export function PollexLanding({
           </div>
 
           <div className="pollex-home-hero-center">
-            <p className="pollex-home-hero-note">Pollex connects product signal, friction analysis, and Liquid-driven adaptation.</p>
+            <p className="pollex-home-hero-note">
+              Pollex connects product signal, friction analysis, and
+              Liquid-driven adaptation.
+            </p>
             <div className="pollex-home-logo-pill">
-              <Image alt="Pollex logo" src="/logo.png" width={430} height={82} priority />
+              <Image
+                alt="Pollex logo"
+                src="/logo.png"
+                width={430}
+                height={82}
+                priority
+              />
             </div>
             <div className="pollex-home-flow">
               <span>Track</span>
@@ -260,40 +369,53 @@ export function PollexLanding({
       </section>
 
       <section className="pollex-home pollex-home-section">
-        <SectionHeading
-          eyebrow="How it works"
-          title="Capture behavior, interpret intent, and turn signal into interface changes."
-          body="A simple three-step system keeps the product story clear while preserving the same premium visual language."
-        />
+        <div className="pollex-story-grid">
+          <SectionHeading
+            eyebrow="From observation to adaptation"
+            title="Pollex closes the loop that analytics leave open."
+            body="Most tools tell you what happened after the session is gone. Pollex reads the behavior signal, explains the user intent, and gives Liquid a response the interface can use."
+          />
 
-        <div className="pollex-process-grid">
-          {processSteps.map((step, index) => (
-            <article className="pollex-process-card" key={step.title}>
-              <div className="pollex-process-topline">
-                <span className="pollex-process-index">0{index + 1}</span>
-                <Image alt="" src={step.shape} width={step.shapeWidth} height={step.shapeHeight} aria-hidden="true" />
-              </div>
-              <h3>{step.title}</h3>
-              <p>{step.body}</p>
-            </article>
-          ))}
+          <div className="pollex-process-grid">
+            {processSteps.map((step, index) => (
+              <article className="pollex-process-card" key={step.title}>
+                <div className="pollex-process-topline">
+                  <span className="pollex-process-index">0{index + 1}</span>
+                  <Image
+                    alt=""
+                    src={step.shape}
+                    width={step.shapeWidth}
+                    height={step.shapeHeight}
+                    aria-hidden="true"
+                  />
+                </div>
+                <p className="pollex-process-label">{step.label}</p>
+                <h3>{step.title}</h3>
+                <p>{step.body}</p>
+              </article>
+            ))}
+          </div>
         </div>
       </section>
 
-      <section className="pollex-home pollex-home-section">
+      <section className="pollex-home pollex-home-section pollex-home-section-product">
         <div className="pollex-home-split">
           <div className="pollex-home-copy-column">
             <SectionHeading
               eyebrow="Product in action"
-              title="See what your users actually experience"
-              body="Follow live friction patterns across sessions and screens instead of inferring them from static analytics."
+              title="A workbench for the moment where users get stuck."
+              body="Follow live friction patterns across screens, then connect them to the response your product should show next."
             />
 
-            <ul className="pollex-home-bullet-list">
-              {experienceBullets.map((item) => (
-                <li key={item}>{item}</li>
+            <div className="pollex-signal-list">
+              {signalRows.map((row) => (
+                <div className="pollex-signal-row" key={row.value}>
+                  <span>{row.label}</span>
+                  <strong>{row.value}</strong>
+                  <p>{row.detail}</p>
+                </div>
               ))}
-            </ul>
+            </div>
           </div>
 
           <ProductMock />
@@ -305,7 +427,7 @@ export function PollexLanding({
           <div className="pollex-home-copy-column">
             <SectionHeading
               eyebrow="Liquid engine"
-              title="Liquid adapts the interface to the user"
+              title="Liquid turns behavior into a better interface."
               body="Pollex does not stop at reporting. Liquid uses behavior signals to present better content, clearer hierarchy, and more relevant UI states."
             />
 
@@ -323,7 +445,7 @@ export function PollexLanding({
       <section className="pollex-home pollex-home-section">
         <SectionHeading
           eyebrow="Insights + action"
-          title="Detect the problem, then respond inside the product."
+          title="From insight to adaptation, without another experiment queue."
           body="The loop is short: surface friction patterns, decide what matters, and trigger the right interface response."
         />
 
@@ -334,7 +456,11 @@ export function PollexLanding({
                 <h3>{card.title}</h3>
                 <Image
                   alt=""
-                  src={index === 0 ? "/pollex-shapes/x_line.png" : "/pollex-shapes/triangle.png"}
+                  src={
+                    index === 0
+                      ? "/pollex-shapes/x_line.png"
+                      : "/pollex-shapes/triangle.png"
+                  }
                   width={index === 0 ? 54 : 60}
                   height={index === 0 ? 54 : 60}
                   aria-hidden="true"
@@ -357,7 +483,7 @@ export function PollexLanding({
             <SectionHeading
               eyebrow="Integration"
               title="Integrates in minutes"
-              body="Drop in the SDK, start collecting behavior events, and unlock Pollex across product surfaces."
+              body="Drop in the SDK, start collecting behavior events, and unlock Pollex across web, iOS, and Android surfaces."
             />
 
             <div className="pollex-platform-row">
@@ -400,16 +526,27 @@ pollex.init({ apiKey: "your_key" })`}</code>
       </section>
 
       <section className="pollex-home pollex-home-final-cta">
-        <div className="pollex-home-hero-field pollex-home-cta-field" aria-hidden="true">
+        <div
+          className="pollex-home-hero-field pollex-home-cta-field"
+          aria-hidden="true"
+        >
           {ctaShapes.map((shape) => (
-            <FloatingShape key={`${shape.src}-${shape.left}-${shape.top}`} shape={shape} />
+            <FloatingShape
+              key={`${shape.src}-${shape.left}-${shape.top}`}
+              shape={shape}
+            />
           ))}
         </div>
 
         <div className="pollex-home-final-copy">
           <p className="pollex-home-eyebrow">Start now</p>
-          <h2>Start adapting your UI today</h2>
-          <p>Move from observation to action with a landing page story that matches the product itself: precise, adaptive, and premium.</p>
+          <h2>
+            Make the product respond while the moment is still recoverable.
+          </h2>
+          <p>
+            Move from observation to action with a system that reads behavior,
+            understands intent, and adapts the interface in time.
+          </p>
           <div className="pollex-home-actions">
             <Link className="pollex-home-button primary" href={primaryHref}>
               Start Free

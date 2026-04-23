@@ -17,7 +17,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 
-type PollexAppIconName =
+export type PollexAppIconName =
   | "dashboard"
   | "usage"
   | "heatmap"
