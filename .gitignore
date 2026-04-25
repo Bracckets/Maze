@@ -12,3 +12,6 @@ tmp/
 __pycache__/
 *.pyc
 web/tsconfig.tsbuildinfo
+pollex/packages/*/dist/
+pollex/apps/*/dist/
+legacy/
