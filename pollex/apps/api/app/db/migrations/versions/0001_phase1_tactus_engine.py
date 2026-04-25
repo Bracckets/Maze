@@ -54,6 +54,8 @@ def upgrade() -> None:
         sa.Column("project_id", postgresql.UUID(as_uuid=False), sa.ForeignKey("projects.id"), nullable=False),
         sa.Column("environment", sa.Text(), nullable=False),
         sa.Column("key_hash", sa.Text(), nullable=False, unique=True),
+        sa.Column("key_prefix", sa.Text(), server_default="px", nullable=False),
+        sa.Column("last_four", sa.Text(), server_default="", nullable=False),
         sa.Column("name", sa.Text()),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()")),
         sa.Column("last_used_at", sa.DateTime(timezone=True)),

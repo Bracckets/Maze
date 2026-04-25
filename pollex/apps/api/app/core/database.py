@@ -4,8 +4,9 @@ from collections.abc import AsyncGenerator
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Index, Integer, Numeric, String, Text, UniqueConstraint
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Index, Integer, Numeric, String, Text, UniqueConstraint, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -59,6 +60,8 @@ class ApiKey(Base):
     project_id: Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("projects.id"), nullable=False)
     environment: Mapped[str] = mapped_column(Text, nullable=False)
     key_hash: Mapped[str] = mapped_column(Text, unique=True, nullable=False)
+    key_prefix: Mapped[str] = mapped_column(Text, default="px", nullable=False)
+    last_four: Mapped[str] = mapped_column(Text, default="", nullable=False)
     name: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -250,10 +253,45 @@ def get_sessionmaker() -> async_sessionmaker[AsyncSession]:
 
 
 async def init_database() -> None:
-    engine = create_async_engine(get_settings().database_url, pool_pre_ping=True)
-    async with engine.begin() as connection:
-        await connection.run_sync(Base.metadata.create_all)
+    settings = get_settings()
+    database_url = settings.database_url
+    if settings.auto_create_database:
+        await ensure_database_exists(database_url)
+    engine = create_async_engine(database_url, pool_pre_ping=True)
+    if settings.auto_create_tables:
+        async with engine.begin() as connection:
+            await connection.run_sync(Base.metadata.create_all)
+            await connection.execute(text("ALTER TABLE api_keys ADD COLUMN IF NOT EXISTS key_prefix TEXT NOT NULL DEFAULT 'px'"))
+            await connection.execute(text("ALTER TABLE api_keys ADD COLUMN IF NOT EXISTS last_four TEXT NOT NULL DEFAULT ''"))
     await engine.dispose()
+
+
+async def ensure_database_exists(database_url: str) -> None:
+    url = make_url(database_url)
+    database_name = url.database
+    if not database_name:
+        return
+
+    admin_database = "postgres" if database_name != "postgres" else "template1"
+    admin_engine = create_async_engine(
+        url.set(database=admin_database),
+        isolation_level="AUTOCOMMIT",
+        pool_pre_ping=True,
+    )
+    try:
+        async with admin_engine.connect() as connection:
+            exists = await connection.scalar(
+                text("select 1 from pg_database where datname = :database_name"),
+                {"database_name": database_name},
+            )
+            if exists is None:
+                await connection.execute(text(f"CREATE DATABASE {_quote_identifier(database_name)}"))
+    finally:
+        await admin_engine.dispose()
+
+
+def _quote_identifier(identifier: str) -> str:
+    return '"' + identifier.replace('"', '""') + '"'
 
 
 async def get_session() -> AsyncGenerator[AsyncSession, None]:

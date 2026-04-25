@@ -35,16 +35,23 @@ import { z } from "zod";
 import "./styles.css";
 import {
   clearToken,
+  createApiKey,
   createProject,
+  getStoredUser,
   getToken,
   login,
+  restoreSupabaseSession,
+  revokeApiKey,
   runPlayground,
+  signOut,
   studioFetch,
   updateDesignSystem,
   updatePolicy,
 } from "./api";
 import { DemoPage } from "./demo";
+import { hasSupabaseConfig } from "./supabase";
 import type {
+  ApiKey,
   Decision,
   DesignSystem,
   ElementRow,
@@ -54,6 +61,7 @@ import type {
   Policy,
   Profile,
   Project,
+  StudioSettings,
 } from "./types";
 import {
   Button,
@@ -93,6 +101,16 @@ function RootLayout() {
 function Shell() {
   const navigate = useNavigate();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [hasSession, setHasSession] = useState(() => Boolean(getToken()));
+  useEffect(() => {
+    let mounted = true;
+    restoreSupabaseSession().then((token) => {
+      if (mounted) setHasSession(Boolean(token));
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
   const nav = [
     { to: "/dashboard", label: "Dashboard", icon: "dashboard" },
     { to: "/projects", label: "Projects", icon: "projects" },
@@ -103,6 +121,8 @@ function Shell() {
     { to: "/design-system", label: "Design System", icon: "design" },
     { to: "/playground", label: "Playground", icon: "playground" },
     { to: "/demo", label: "Demo", icon: "demo" },
+    { to: "/settings", label: "Settings", icon: "settings" },
+    { to: "/account", label: "Account", icon: "account" },
     { to: "/docs", label: "Docs", icon: "docs" },
   ];
   return (
@@ -159,8 +179,9 @@ function Shell() {
           </div>
           <Button
             variant="secondary"
-            onClick={() => {
-              clearToken();
+            onClick={async () => {
+              await signOut();
+              setHasSession(false);
               void navigate({ to: "/login" });
             }}
           >
@@ -168,7 +189,7 @@ function Shell() {
           </Button>
         </header>
         <div className="mx-auto max-w-7xl p-5 lg:p-6">
-          {!getToken() ? (
+          {!hasSession ? (
             <Panel title="Studio session">
               <div className="flex items-center justify-between gap-4">
                 <p className="text-sm text-gray-600">
@@ -214,6 +235,13 @@ function NavIcon({ icon, className }: { icon: string; className: string }) {
     design: <path d="M4 20l6-16h4l6 16M7 14h10" />,
     playground: <path d="M8 5l10 7-10 7z" />,
     demo: <path d="M4 7h16M7 4v16M17 4v16M4 17h16" />,
+    settings: <path d="M12 15.5A3.5 3.5 0 1 0 12 8a3.5 3.5 0 0 0 0 7.5zM19.4 15a1.7 1.7 0 0 0 .34 1.88l.04.04a2 2 0 0 1-2.83 2.83l-.04-.04A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .92V20a2 2 0 0 1-4 0v-.06a1.7 1.7 0 0 0-1-.92 1.7 1.7 0 0 0-1.88.34l-.04.04a2 2 0 1 1-2.83-2.83l.04-.04A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.92-1H3.6a2 2 0 0 1 0-4h.06a1.7 1.7 0 0 0 .92-1 1.7 1.7 0 0 0-.34-1.88l-.04-.04a2 2 0 0 1 2.83-2.83l.04.04A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.92V3.6a2 2 0 0 1 4 0v.06a1.7 1.7 0 0 0 1 .92 1.7 1.7 0 0 0 1.88-.34l.04-.04a2 2 0 1 1 2.83 2.83l-.04.04A1.7 1.7 0 0 0 19.4 9c.17.36.5.7.92 1h.08a2 2 0 0 1 0 4h-.06a1.7 1.7 0 0 0-.94 1z" />,
+    account: (
+      <>
+        <circle cx="12" cy="8" r="3" />
+        <path d="M5 20a7 7 0 0 1 14 0" />
+      </>
+    ),
     docs: <path d="M7 3h7l4 4v14H7zM14 3v5h5M10 13h6M10 17h4" />,
   };
 
@@ -367,7 +395,76 @@ function ProjectsPage() {
         columns={["name", "slug", "created_at"]}
         rows={data.map((row) => ({ ...row }))}
       />
+      <div className="grid gap-4 lg:grid-cols-2">
+        {data.map((project) => (
+          <ProjectApiKeysPanel key={project.id} project={project} />
+        ))}
+      </div>
     </div>
+  );
+}
+
+function ProjectApiKeysPanel({ project }: { project: Project }) {
+  const client = useQueryClient();
+  const [createdKey, setCreatedKey] = useState<ApiKey | null>(null);
+  const form = useForm({ defaultValues: { name: "Browser SDK", environment: "development" } });
+  const { data = [] } = useQuery({
+    queryKey: ["api-keys", project.id],
+    queryFn: () => studioFetch<ApiKey[]>(`/studio/projects/${project.id}/api-keys`),
+  });
+  const createMutation = useMutation({
+    mutationFn: (values: { name: string; environment: string }) => createApiKey(project.id, values) as Promise<ApiKey>,
+    onSuccess: (key) => {
+      setCreatedKey(key);
+      form.reset({ name: "Browser SDK", environment: "development" });
+      void client.invalidateQueries({ queryKey: ["api-keys", project.id] });
+    },
+  });
+  const revokeMutation = useMutation({
+    mutationFn: (keyId: string) => revokeApiKey(keyId),
+    onSuccess: () => void client.invalidateQueries({ queryKey: ["api-keys", project.id] }),
+  });
+
+  return (
+    <Panel title={`${project.name} API keys`}>
+      <form
+        className="grid gap-3 md:grid-cols-[1fr_150px_auto]"
+        onSubmit={form.handleSubmit((values) => createMutation.mutate(values))}
+      >
+        <TextInput placeholder="Key name" {...form.register("name")} />
+        <TextInput placeholder="environment" {...form.register("environment")} />
+        <Button disabled={createMutation.isPending}>Create key</Button>
+      </form>
+      {createdKey?.key ? (
+        <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3">
+          <div className="text-xs font-semibold text-amber-800">Copy this key now. It is shown once.</div>
+          <code className="mt-2 block overflow-x-auto rounded-lg bg-white p-2 text-xs text-gray-900">{createdKey.key}</code>
+        </div>
+      ) : null}
+      <div className="mt-4 space-y-2">
+        {data.length ? (
+          data.map((key) => (
+            <div key={key.id} className="flex items-center justify-between gap-3 rounded-xl border border-gray-200 p-3">
+              <div>
+                <div className="text-sm font-semibold text-gray-950">{key.name ?? "SDK key"}</div>
+                <div className="text-xs text-gray-500">
+                  {key.environment} / {key.key_prefix}...{key.last_four} / {key.revoked_at ? "revoked" : "active"}
+                </div>
+              </div>
+              <Button
+                variant="secondary"
+                disabled={Boolean(key.revoked_at) || revokeMutation.isPending}
+                onClick={() => revokeMutation.mutate(key.id)}
+              >
+                Revoke
+              </Button>
+            </div>
+          ))
+        ) : (
+          <EmptyState title="No API keys yet." />
+        )}
+      </div>
+    </Panel>
   );
 }
 
@@ -896,6 +993,112 @@ function DocsPage() {
   );
 }
 
+function AccountPage() {
+  const navigate = useNavigate();
+  const user = getStoredUser();
+  const { data } = useQuery({
+    queryKey: ["me"],
+    queryFn: () => studioFetch<{ id: string; email: string }>("/studio/auth/me"),
+  });
+  const current = data ?? user;
+  return (
+    <div className="space-y-5">
+      <PageTitle title="Account" subtitle="Studio identity and session state." />
+      <Panel title="Supabase user">
+        <div className="grid gap-3 md:grid-cols-2">
+          <Metric label="Email" value={current?.email ?? "Unknown"} />
+          <Metric label="User ID" value={current?.id ? maskMiddle(current.id) : "Local dev"} />
+        </div>
+        <div className="mt-4 flex items-center justify-between gap-4 rounded-xl border border-gray-200 p-3">
+          <div>
+            <div className="text-sm font-semibold text-gray-950">Session</div>
+            <div className="text-xs text-gray-500">{hasSupabaseConfig ? "Supabase access token" : "Local development token"}</div>
+          </div>
+          <Button
+            variant="secondary"
+            onClick={async () => {
+              await signOut();
+              void navigate({ to: "/login" });
+            }}
+          >
+            Sign out
+          </Button>
+        </div>
+      </Panel>
+    </div>
+  );
+}
+
+function SettingsPage() {
+  const { data } = useQuery({
+    queryKey: ["settings"],
+    queryFn: () => studioFetch<StudioSettings>("/studio/settings"),
+  });
+  const { data: projects = [] } = useQuery({
+    queryKey: ["projects"],
+    queryFn: () => studioFetch<Project[]>("/studio/projects"),
+  });
+  if (!data) return <EmptyState title="Loading settings..." />;
+  return (
+    <div className="space-y-5">
+      <PageTitle title="Settings" subtitle="Pre-beta integration and deployment controls." />
+      <div className="rounded-3xl border border-[#2A2D31] bg-[#0E0E0F] p-5 text-white">
+        <div className="grid gap-4 md:grid-cols-3">
+          <Metric label="Environment" value={data.environment} />
+          <Metric label="Projects" value={projects.length} />
+          <Metric label="Agent provider" value={data.agents.provider} />
+        </div>
+      </div>
+      <div className="grid gap-5 lg:grid-cols-2">
+        <Panel title="Supabase">
+          <StatusRow label="URL" active={data.supabase.url_configured} />
+          <StatusRow label="Anon key" active={data.supabase.anon_key_configured} />
+          <StatusRow label="JWT secret" active={data.supabase.jwt_secret_configured} />
+        </Panel>
+        <Panel title="Backend">
+          <StatusRow label="Auto-create database" active={data.api.auto_create_database} />
+          <StatusRow label="Auto-create tables" active={data.api.auto_create_tables} />
+          <div className="mt-3 text-xs text-gray-500">CORS origins</div>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {data.api.cors_origins.map((origin) => (
+              <TraitTag key={origin} trait={origin} />
+            ))}
+          </div>
+        </Panel>
+      </div>
+      <Panel title="Project API keys">
+        <div className="space-y-2">
+          {projects.length ? (
+            projects.map((project) => (
+              <Link
+                key={project.id}
+                to="/projects"
+                className="flex items-center justify-between rounded-xl border border-gray-200 p-3 text-sm transition hover:bg-gray-50"
+              >
+                <span className="font-medium text-gray-950">{project.name}</span>
+                <span className="text-gray-500">{project.slug}</span>
+              </Link>
+            ))
+          ) : (
+            <EmptyState title="Create a project before issuing API keys." />
+          )}
+        </div>
+      </Panel>
+    </div>
+  );
+}
+
+function StatusRow({ label, active }: { label: string; active: boolean }) {
+  return (
+    <div className="flex items-center justify-between border-b border-gray-100 py-3 last:border-0">
+      <span className="text-sm text-gray-700">{label}</span>
+      <span className={`rounded-full px-3 py-1 text-xs font-medium ${active ? "bg-gray-950 text-white" : "bg-gray-100 text-gray-500"}`}>
+        {active ? "Configured" : "Missing"}
+      </span>
+    </div>
+  );
+}
+
 function TraceView({ trace }: { trace: PlaygroundTrace }) {
   return (
     <div className="space-y-3">
@@ -1240,6 +1443,10 @@ function formatDate(value?: string | null) {
   return value ? new Date(value).toLocaleString() : "";
 }
 
+function maskMiddle(value: string) {
+  return value.length > 12 ? `${value.slice(0, 6)}...${value.slice(-4)}` : value;
+}
+
 const rootRoute = createRootRoute({ component: RootLayout });
 const loginRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -1311,6 +1518,16 @@ const demoRoute = createRoute({
   path: "/demo",
   component: DemoPage,
 });
+const settingsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/settings",
+  component: SettingsPage,
+});
+const accountRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/account",
+  component: AccountPage,
+});
 const docsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/docs",
@@ -1337,6 +1554,8 @@ const routeTree = rootRoute.addChildren([
   designRoute,
   playgroundRoute,
   demoRoute,
+  settingsRoute,
+  accountRoute,
   docsRoute,
 ]);
 const router = createRouter({ routeTree });

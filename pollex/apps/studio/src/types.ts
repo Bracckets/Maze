@@ -19,6 +19,40 @@ export interface Project {
   created_at?: string;
 }
 
+export interface ApiKey {
+  id: string;
+  workspace_id: string;
+  project_id: string;
+  environment: string;
+  name?: string;
+  key_prefix: string;
+  last_four: string;
+  created_at?: string;
+  last_used_at?: string | null;
+  revoked_at?: string | null;
+  key?: string;
+}
+
+export interface StudioSettings {
+  user: { id: string; email: string };
+  environment: string;
+  api: {
+    app_name: string;
+    cors_origins: string[];
+    auto_create_database: boolean;
+    auto_create_tables: boolean;
+  };
+  supabase: {
+    url_configured: boolean;
+    anon_key_configured: boolean;
+    jwt_secret_configured: boolean;
+  };
+  agents: {
+    provider: string;
+    model: string;
+  };
+}
+
 export interface ElementRow {
   id: string;
   element_key: string;

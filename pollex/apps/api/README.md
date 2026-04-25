@@ -9,19 +9,17 @@ Phase 1 implements the Tactus Engine backend only: SDK identify, event ingestion
 
 ## Environment
 
-Set `DATABASE_URL` for the API and Alembic:
+Copy `.env.example` to `.env` and set real values locally. Do not commit `.env`.
 
-```bash
-DATABASE_URL=postgresql+psycopg://postgres:postgres@127.0.0.1:5432/pollex
-```
+Required for Supabase-backed pre-beta:
 
-Optional:
+- `DATABASE_URL`
+- `SUPABASE_URL`
+- `SUPABASE_ANON_KEY`
+- `SUPABASE_JWT_SECRET`
+- `STUDIO_CORS_ORIGINS`
 
-```bash
-APP_NAME="Pollex Tactus API"
-ENVIRONMENT=development
-TACTUS_LLM_PROVIDER=none
-```
+For Render, configure these as environment variables in the service. Keep `AUTO_CREATE_DATABASE=false` and `AUTO_CREATE_TABLES=false` in production, and run migrations during deployment.
 
 ## Tactus Agents
 

@@ -1,19 +1,13 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import Any
+
+from pydantic import ValidationError
 
 from app.tactus.agents.llm import LLMClient, build_llm_client
 from app.tactus.agents.privacy import compact_llm_payload, sanitize_adaptations
+from app.tactus.agents.schemas import AgentContext, AgentResult, CompactLLMPayload, ModelProposal
 from app.tactus.propose.rules import Proposal
-
-
-@dataclass(frozen=True)
-class AgentResult:
-    proposal: Proposal | None
-    signals: list[str]
-    used_llm: bool
-    reason: str
 
 
 class TactusAgentService:
@@ -30,15 +24,32 @@ class TactusAgentService:
         deterministic_proposal: Proposal | None,
     ) -> AgentResult:
         signals = classify_signals(profile, context)
+        agent_context = AgentContext(
+            profile=profile,
+            element=element,
+            allow=allow,
+            constraints=constraints,
+            context=context,
+            signals=signals,
+        )
         if deterministic_proposal and deterministic_proposal.confidence >= 0.55:
-            return AgentResult(deterministic_proposal, signals, False, "deterministic")
+            return AgentResult(proposal=deterministic_proposal, signals=signals, used_llm=False, reason="deterministic")
 
-        payload = compact_llm_payload(profile, element, allow, constraints, context, signals)
-        model_response = await self.llm_client.complete_json(payload)
-        proposal = proposal_from_model_response(model_response, set(payload["allowed_fields"]))
+        payload = CompactLLMPayload.model_validate(
+            compact_llm_payload(
+                agent_context.profile,
+                agent_context.element,
+                agent_context.allow,
+                agent_context.constraints,
+                agent_context.context,
+                agent_context.signals,
+            )
+        )
+        model_response = await self.llm_client.complete_json(payload.model_dump())
+        proposal = proposal_from_model_response(model_response, set(payload.allowed_fields))
         if proposal is None:
-            return AgentResult(deterministic_proposal, signals, False, "fallback_to_deterministic")
-        return AgentResult(proposal, signals, True, "llm_specialist")
+            return AgentResult(proposal=deterministic_proposal, signals=signals, used_llm=False, reason="fallback_to_deterministic")
+        return AgentResult(proposal=proposal, signals=signals, used_llm=True, reason="llm_specialist")
 
 
 def classify_signals(profile: dict[str, Any], context: dict[str, Any]) -> list[str]:
@@ -63,18 +74,16 @@ def classify_signals(profile: dict[str, Any], context: dict[str, Any]) -> list[s
 def proposal_from_model_response(response: dict[str, Any] | None, allowed_fields: set[str]) -> Proposal | None:
     if not response:
         return None
-    adaptations = sanitize_adaptations(response.get("adaptations"), allowed_fields)
+    try:
+        parsed = ModelProposal.model_validate(response)
+    except ValidationError:
+        return None
+    adaptations = sanitize_adaptations(parsed.adaptations, allowed_fields)
     if not adaptations:
         return None
-    confidence = response.get("confidence", 0.5)
-    try:
-        confidence_value = min(0.85, max(0.0, float(confidence)))
-    except (TypeError, ValueError):
-        confidence_value = 0.5
-    reason = response.get("reason")
     return Proposal(
         adaptations=adaptations,
-        confidence=confidence_value,
-        reason=str(reason)[:180] if reason else "LLM specialist proposed a safe adaptation.",
+        confidence=parsed.confidence,
+        reason=parsed.reason[:180],
         source="llm",
     )

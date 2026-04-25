@@ -2,7 +2,9 @@
 node_modules/
 # Ignore environment variable files
 .env
-.env.example
+.env.*
+!.env.example
+!.env.local.example
 .log
 .next/
 .playwright-cli
@@ -14,4 +16,5 @@ __pycache__/
 web/tsconfig.tsbuildinfo
 pollex/packages/*/dist/
 pollex/apps/*/dist/
+pollex/apps/*/.vite/
 legacy/

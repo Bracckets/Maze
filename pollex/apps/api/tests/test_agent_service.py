@@ -81,3 +81,24 @@ def test_sanitize_adaptations_blocks_unsupported_fields_and_sensitive_text() -> 
         {"text": "Use password 123", "tooltip": "Safe help", "layout": "wide"},
         {"text", "tooltip", "layout"},
     ) == {"tooltip": "Safe help"}
+
+
+@pytest.mark.asyncio
+async def test_agent_service_falls_back_on_malformed_llm_output() -> None:
+    from app.tactus.propose.rules import Proposal
+
+    deterministic = Proposal({"tooltip": "Safe help"}, 0.2, "Low confidence deterministic hint.")
+    service = TactusAgentService(FakeLLM({"adaptations": "not-an-object", "confidence": "bad"}))
+
+    result = await service.propose(
+        {"traits": {"prefers_more_guidance": True}, "scores": {"hesitation_score": 0.7}},
+        {"key": "checkout.continue", "type": "button", "intent": "progress", "default_props": {"text": "Continue"}},
+        {"tooltip": True},
+        {"maxTextLength": 24},
+        {"screen": "checkout"},
+        deterministic,
+    )
+
+    assert result.proposal is deterministic
+    assert result.reason == "fallback_to_deterministic"
+    assert result.used_llm is False

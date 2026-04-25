@@ -5,10 +5,12 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 from uuid import uuid4
 
+from dataclasses import dataclass
+
 from fastapi import APIRouter, Depends, Header, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy import func, or_, select
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import (
@@ -16,6 +18,7 @@ from app.core.database import (
     AdaptationPolicy,
     DesignSystem,
     InteractionEvent,
+    ApiKey,
     Project,
     UiElement,
     UxProfile,
@@ -23,7 +26,8 @@ from app.core.database import (
     get_session,
     utcnow,
 )
-from app.core.security import create_studio_token, verify_studio_token
+from app.core.config import get_settings
+from app.core.security import create_studio_token, generate_api_key, hash_api_key, verify_supabase_jwt
 from app.sdk.schemas import ResolveRequest
 from app.tactus.policy.validator import PolicyValidator
 from app.tactus.propose.engine import ProposalEngine
@@ -31,6 +35,8 @@ from app.tactus.resolve.orchestrator import fallback_decision
 
 
 router = APIRouter(prefix="/studio", tags=["studio"])
+LOCAL_PROJECTS: dict[tuple[str, str], dict[str, Any]] = {}
+LOCAL_DESIGN_SYSTEM: dict[str, Any] | None = None
 
 
 class StudioAuthRequest(BaseModel):
@@ -48,6 +54,17 @@ class ProjectCreateRequest(BaseModel):
     slug: str
     workspace_name: str = "Default Workspace"
     workspace_slug: str = "default"
+
+
+class ApiKeyCreateRequest(BaseModel):
+    name: str = "Default SDK key"
+    environment: str = "development"
+
+
+@dataclass(frozen=True)
+class StudioAuthContext:
+    user_id: str
+    email: str
 
 
 class PolicyUpdateRequest(BaseModel):
@@ -71,17 +88,24 @@ class PlaygroundResolveRequest(ResolveRequest):
     design_system: dict[str, Any] = Field(default_factory=dict)
 
 
-def require_studio_auth(authorization: str | None = Header(default=None)) -> str:
+def require_studio_auth(authorization: str | None = Header(default=None)) -> StudioAuthContext:
     if not authorization or not authorization.lower().startswith("bearer "):
         raise HTTPException(status_code=401, detail="Missing Studio token")
-    subject = verify_studio_token(authorization.split(" ", 1)[1].strip())
-    if not subject:
+    claims = verify_supabase_jwt(authorization.split(" ", 1)[1].strip())
+    if not claims:
         raise HTTPException(status_code=401, detail="Invalid Studio token")
-    return subject
+    user_id = str(claims.get("sub") or "")
+    email = str(claims.get("email") or claims.get("user_metadata", {}).get("email") or user_id)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid Studio token")
+    return StudioAuthContext(user_id=user_id, email=email)
 
 
 @router.post("/auth/login", response_model=StudioAuthResponse)
 async def login(request: StudioAuthRequest) -> StudioAuthResponse:
+    settings = get_settings()
+    if settings.is_production:
+        raise HTTPException(status_code=501, detail="Use Supabase Auth from Studio")
     if not request.email.strip() or not request.password:
         raise HTTPException(status_code=400, detail="Email and password are required")
     return StudioAuthResponse(token=create_studio_token(request.email), user={"email": request.email})
@@ -93,8 +117,32 @@ async def signup(request: StudioAuthRequest) -> StudioAuthResponse:
 
 
 @router.get("/auth/me")
-async def me(subject: str = Depends(require_studio_auth)) -> dict[str, str]:
-    return {"email": subject}
+async def me(subject: StudioAuthContext = Depends(require_studio_auth)) -> dict[str, str]:
+    return {"id": subject.user_id, "email": subject.email}
+
+
+@router.get("/settings")
+async def studio_settings(subject: StudioAuthContext = Depends(require_studio_auth)) -> dict[str, Any]:
+    settings = get_settings()
+    return {
+        "user": {"id": subject.user_id, "email": subject.email},
+        "environment": settings.environment,
+        "api": {
+            "app_name": settings.app_name,
+            "cors_origins": settings.cors_origins,
+            "auto_create_database": settings.auto_create_database,
+            "auto_create_tables": settings.auto_create_tables,
+        },
+        "supabase": {
+            "url_configured": bool(settings.supabase_url),
+            "anon_key_configured": bool(settings.supabase_anon_key),
+            "jwt_secret_configured": bool(settings.supabase_jwt_secret),
+        },
+        "agents": {
+            "provider": settings.tactus_llm_provider,
+            "model": settings.tactus_llm_model,
+        },
+    }
 
 
 @router.get("/overview")
@@ -132,14 +180,23 @@ async def overview(_: str = Depends(require_studio_auth), session: AsyncSession 
             "top_traits": [{"trait": key, "count": count} for key, count in trait_counts.most_common(8)],
             "decisions_over_time": [{"date": day, "count": count} for day, count in sorted(by_day.items())],
         }
-    except Exception:
+    except SQLAlchemyError:
+        await session.rollback()
+        if get_settings().is_production:
+            raise HTTPException(status_code=503, detail="Database unavailable")
         return empty_overview()
 
 
 @router.get("/projects")
 async def projects(_: str = Depends(require_studio_auth), session: AsyncSession = Depends(get_session)) -> list[dict[str, Any]]:
-    rows = (await session.execute(select(Project))).scalars().all()
-    return [serialize_project(row) for row in rows]
+    try:
+        rows = (await session.execute(select(Project))).scalars().all()
+        return [serialize_project(row) for row in rows]
+    except SQLAlchemyError:
+        await session.rollback()
+        if get_settings().is_production:
+            raise HTTPException(status_code=503, detail="Database unavailable")
+        return list(LOCAL_PROJECTS.values())
 
 
 @router.post("/projects")
@@ -148,27 +205,100 @@ async def create_project(
     _: str = Depends(require_studio_auth),
     session: AsyncSession = Depends(get_session),
 ) -> dict[str, Any]:
-    workspace = (await session.execute(select(Workspace).where(Workspace.slug == request.workspace_slug))).scalar_one_or_none()
-    if workspace is None:
-        workspace = Workspace(id=str(uuid4()), name=request.workspace_name, slug=request.workspace_slug)
-        session.add(workspace)
-        await session.flush()
-    project = Project(id=str(uuid4()), workspace_id=workspace.id, name=request.name, slug=request.slug)
-    session.add(project)
+    try:
+        workspace = (await session.execute(select(Workspace).where(Workspace.slug == request.workspace_slug))).scalar_one_or_none()
+        if workspace is None:
+            workspace = Workspace(id=str(uuid4()), name=request.workspace_name, slug=request.workspace_slug)
+            session.add(workspace)
+            await session.flush()
+        project = Project(id=str(uuid4()), workspace_id=workspace.id, name=request.name, slug=request.slug)
+        session.add(project)
+        await session.commit()
+        await session.refresh(project)
+        return serialize_project(project)
+    except IntegrityError as exc:
+        await session.rollback()
+        raise HTTPException(status_code=409, detail="Project slug already exists in this workspace") from exc
+    except SQLAlchemyError:
+        await session.rollback()
+        if get_settings().is_production:
+            raise HTTPException(status_code=503, detail="Database unavailable")
+        return create_local_project(request)
+
+
+@router.get("/projects/{project_id}/api-keys")
+async def api_keys(
+    project_id: str,
+    _: StudioAuthContext = Depends(require_studio_auth),
+    session: AsyncSession = Depends(get_session),
+) -> list[dict[str, Any]]:
+    rows = (
+        await session.execute(
+            select(ApiKey).where(ApiKey.project_id == project_id).order_by(ApiKey.created_at.desc())
+        )
+    ).scalars().all()
+    return [serialize_api_key(row) for row in rows]
+
+
+@router.post("/projects/{project_id}/api-keys")
+async def create_api_key(
+    project_id: str,
+    request: ApiKeyCreateRequest,
+    _: StudioAuthContext = Depends(require_studio_auth),
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, Any]:
+    project = (await session.execute(select(Project).where(Project.id == project_id))).scalar_one_or_none()
+    if project is None:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    plaintext = generate_api_key()
+    row = ApiKey(
+        id=str(uuid4()),
+        workspace_id=project.workspace_id,
+        project_id=project.id,
+        environment=request.environment,
+        key_hash=hash_api_key(plaintext),
+        key_prefix=plaintext[:6],
+        last_four=plaintext[-4:],
+        name=request.name,
+    )
+    session.add(row)
     await session.commit()
-    await session.refresh(project)
-    return serialize_project(project)
+    await session.refresh(row)
+    return {**serialize_api_key(row), "key": plaintext}
+
+
+@router.post("/api-keys/{key_id}/revoke")
+async def revoke_api_key(
+    key_id: str,
+    _: StudioAuthContext = Depends(require_studio_auth),
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, Any]:
+    row = (await session.execute(select(ApiKey).where(ApiKey.id == key_id))).scalar_one_or_none()
+    if row is None:
+        raise HTTPException(status_code=404, detail="API key not found")
+    if row.revoked_at is None:
+        row.revoked_at = utcnow()
+        await session.commit()
+        await session.refresh(row)
+    return serialize_api_key(row)
 
 
 @router.get("/elements")
 async def elements(_: str = Depends(require_studio_auth), session: AsyncSession = Depends(get_session)) -> list[dict[str, Any]]:
-    rows = (await session.execute(select(UiElement).order_by(UiElement.last_seen_at.desc()))).scalars().all()
-    output = []
-    for row in rows:
-        decision_count = await scalar_count(session, select(func.count(AdaptationDecision.id)).where(AdaptationDecision.element_key == row.element_key))
-        policy = await load_policy_for_element(session, row.element_key)
-        output.append({**serialize_element(row), "mode": getattr(policy, "mode", "observe"), "recent_decisions": decision_count})
-    return output
+    try:
+        rows = (await session.execute(select(UiElement).order_by(UiElement.last_seen_at.desc()))).scalars().all()
+        output = []
+        for row in rows:
+            decision_count = await scalar_count(session, select(func.count(AdaptationDecision.id)).where(AdaptationDecision.element_key == row.element_key))
+            policy = await load_policy_for_element(session, row.element_key)
+            output.append({**serialize_element(row), "mode": getattr(policy, "mode", "observe"), "recent_decisions": decision_count})
+        return output
+    except SQLAlchemyError:
+        await session.rollback()
+        if get_settings().is_production:
+            raise HTTPException(status_code=503, detail="Database unavailable")
+        return []
 
 
 @router.get("/elements/{element_key:path}")
@@ -177,34 +307,46 @@ async def element_detail(
     _: str = Depends(require_studio_auth),
     session: AsyncSession = Depends(get_session),
 ) -> dict[str, Any]:
-    row = (await session.execute(select(UiElement).where(UiElement.element_key == element_key))).scalar_one_or_none()
-    if row is None:
+    try:
+        row = (await session.execute(select(UiElement).where(UiElement.element_key == element_key))).scalar_one_or_none()
+        if row is None:
+            raise HTTPException(status_code=404, detail="Element not found")
+        decisions = (await session.execute(select(AdaptationDecision).where(AdaptationDecision.element_key == element_key).order_by(AdaptationDecision.created_at.desc()).limit(20))).scalars().all()
+        events = (await session.execute(select(InteractionEvent).where(InteractionEvent.element_key == element_key).limit(200))).scalars().all()
+        subject_ids = {event.subject_id for event in events if event.subject_id}
+        profiles = (await session.execute(select(UxProfile).where(UxProfile.subject_id.in_(subject_ids)))).scalars().all() if subject_ids else []
+        trait_counts = Counter()
+        for profile in profiles:
+            for key, value in (profile.traits or {}).items():
+                if value is True:
+                    trait_counts[key] += 1
+        return {
+            "element": serialize_element(row),
+            "policy": serialize_policy(await load_policy_for_element(session, element_key)),
+            "recent_decisions": [serialize_decision(decision) for decision in decisions],
+            "trait_distribution": [{"trait": key, "count": count} for key, count in trait_counts.most_common()],
+        }
+    except SQLAlchemyError:
+        await session.rollback()
+        if get_settings().is_production:
+            raise HTTPException(status_code=503, detail="Database unavailable")
         raise HTTPException(status_code=404, detail="Element not found")
-    decisions = (await session.execute(select(AdaptationDecision).where(AdaptationDecision.element_key == element_key).order_by(AdaptationDecision.created_at.desc()).limit(20))).scalars().all()
-    events = (await session.execute(select(InteractionEvent).where(InteractionEvent.element_key == element_key).limit(200))).scalars().all()
-    subject_ids = {event.subject_id for event in events if event.subject_id}
-    profiles = (await session.execute(select(UxProfile).where(UxProfile.subject_id.in_(subject_ids)))).scalars().all() if subject_ids else []
-    trait_counts = Counter()
-    for profile in profiles:
-        for key, value in (profile.traits or {}).items():
-            if value is True:
-                trait_counts[key] += 1
-    return {
-        "element": serialize_element(row),
-        "policy": serialize_policy(await load_policy_for_element(session, element_key)),
-        "recent_decisions": [serialize_decision(decision) for decision in decisions],
-        "trait_distribution": [{"trait": key, "count": count} for key, count in trait_counts.most_common()],
-    }
 
 
 @router.get("/profiles")
 async def profiles(_: str = Depends(require_studio_auth), session: AsyncSession = Depends(get_session)) -> list[dict[str, Any]]:
-    rows = (await session.execute(select(UxProfile).order_by(UxProfile.last_seen_at.desc()))).scalars().all()
-    output = []
-    for row in rows:
-        decision_count = await scalar_count(session, select(func.count(AdaptationDecision.id)).where(AdaptationDecision.subject_id == row.subject_id))
-        output.append({**serialize_profile(row), "decision_count": decision_count})
-    return output
+    try:
+        rows = (await session.execute(select(UxProfile).order_by(UxProfile.last_seen_at.desc()))).scalars().all()
+        output = []
+        for row in rows:
+            decision_count = await scalar_count(session, select(func.count(AdaptationDecision.id)).where(AdaptationDecision.subject_id == row.subject_id))
+            output.append({**serialize_profile(row), "decision_count": decision_count})
+        return output
+    except SQLAlchemyError:
+        await session.rollback()
+        if get_settings().is_production:
+            raise HTTPException(status_code=503, detail="Database unavailable")
+        return []
 
 
 @router.get("/profiles/{subject_id:path}")
@@ -213,22 +355,34 @@ async def profile_detail(
     _: str = Depends(require_studio_auth),
     session: AsyncSession = Depends(get_session),
 ) -> dict[str, Any]:
-    row = (await session.execute(select(UxProfile).where(UxProfile.subject_id == subject_id))).scalar_one_or_none()
-    if row is None:
+    try:
+        row = (await session.execute(select(UxProfile).where(UxProfile.subject_id == subject_id))).scalar_one_or_none()
+        if row is None:
+            raise HTTPException(status_code=404, detail="Profile not found")
+        events = (await session.execute(select(InteractionEvent).where(or_(InteractionEvent.subject_id == subject_id, InteractionEvent.anonymous_id == row.anonymous_id)).order_by(InteractionEvent.occurred_at.desc()).limit(50))).scalars().all()
+        decisions = (await session.execute(select(AdaptationDecision).where(AdaptationDecision.subject_id == subject_id).order_by(AdaptationDecision.created_at.desc()).limit(50))).scalars().all()
+        return {
+            "profile": serialize_profile(row),
+            "events": [serialize_event(event) for event in events],
+            "decisions": [serialize_decision(decision) for decision in decisions],
+        }
+    except SQLAlchemyError:
+        await session.rollback()
+        if get_settings().is_production:
+            raise HTTPException(status_code=503, detail="Database unavailable")
         raise HTTPException(status_code=404, detail="Profile not found")
-    events = (await session.execute(select(InteractionEvent).where(or_(InteractionEvent.subject_id == subject_id, InteractionEvent.anonymous_id == row.anonymous_id)).order_by(InteractionEvent.occurred_at.desc()).limit(50))).scalars().all()
-    decisions = (await session.execute(select(AdaptationDecision).where(AdaptationDecision.subject_id == subject_id).order_by(AdaptationDecision.created_at.desc()).limit(50))).scalars().all()
-    return {
-        "profile": serialize_profile(row),
-        "events": [serialize_event(event) for event in events],
-        "decisions": [serialize_decision(decision) for decision in decisions],
-    }
 
 
 @router.get("/decisions")
 async def decisions(_: str = Depends(require_studio_auth), session: AsyncSession = Depends(get_session)) -> list[dict[str, Any]]:
-    rows = (await session.execute(select(AdaptationDecision).order_by(AdaptationDecision.created_at.desc()).limit(200))).scalars().all()
-    return [serialize_decision(row) for row in rows]
+    try:
+        rows = (await session.execute(select(AdaptationDecision).order_by(AdaptationDecision.created_at.desc()).limit(200))).scalars().all()
+        return [serialize_decision(row) for row in rows]
+    except SQLAlchemyError:
+        await session.rollback()
+        if get_settings().is_production:
+            raise HTTPException(status_code=503, detail="Database unavailable")
+        return []
 
 
 @router.get("/decisions/{decision_id}")
@@ -237,24 +391,36 @@ async def decision_detail(
     _: str = Depends(require_studio_auth),
     session: AsyncSession = Depends(get_session),
 ) -> dict[str, Any]:
-    row = (await session.execute(select(AdaptationDecision).where(AdaptationDecision.id == decision_id))).scalar_one_or_none()
-    if row is None:
+    try:
+        row = (await session.execute(select(AdaptationDecision).where(AdaptationDecision.id == decision_id))).scalar_one_or_none()
+        if row is None:
+            raise HTTPException(status_code=404, detail="Decision not found")
+        profile = (await session.execute(select(UxProfile).where(UxProfile.subject_id == row.subject_id))).scalar_one_or_none() if row.subject_id else None
+        policy = await load_policy_for_element(session, row.element_key)
+        return {
+            "decision": serialize_decision(row),
+            "blocked": row.blocked or [],
+            "proposal": {"proposal_id": row.proposal_id},
+            "policy": serialize_policy(policy),
+            "profile": serialize_profile(profile) if profile else None,
+        }
+    except SQLAlchemyError:
+        await session.rollback()
+        if get_settings().is_production:
+            raise HTTPException(status_code=503, detail="Database unavailable")
         raise HTTPException(status_code=404, detail="Decision not found")
-    profile = (await session.execute(select(UxProfile).where(UxProfile.subject_id == row.subject_id))).scalar_one_or_none() if row.subject_id else None
-    policy = await load_policy_for_element(session, row.element_key)
-    return {
-        "decision": serialize_decision(row),
-        "blocked": row.blocked or [],
-        "proposal": {"proposal_id": row.proposal_id},
-        "policy": serialize_policy(policy),
-        "profile": serialize_profile(profile) if profile else None,
-    }
 
 
 @router.get("/policies")
 async def policies(_: str = Depends(require_studio_auth), session: AsyncSession = Depends(get_session)) -> list[dict[str, Any]]:
-    rows = (await session.execute(select(AdaptationPolicy).order_by(AdaptationPolicy.updated_at.desc()))).scalars().all()
-    return [serialize_policy(row) for row in rows]
+    try:
+        rows = (await session.execute(select(AdaptationPolicy).order_by(AdaptationPolicy.updated_at.desc()))).scalars().all()
+        return [serialize_policy(row) for row in rows]
+    except SQLAlchemyError:
+        await session.rollback()
+        if get_settings().is_production:
+            raise HTTPException(status_code=503, detail="Database unavailable")
+        return [default_policy()]
 
 
 @router.put("/policies/{policy_id}")
@@ -264,18 +430,22 @@ async def update_policy(
     _: str = Depends(require_studio_auth),
     session: AsyncSession = Depends(get_session),
 ) -> dict[str, Any]:
-    row = (await session.execute(select(AdaptationPolicy).where(AdaptationPolicy.id == policy_id))).scalar_one_or_none()
-    if row is None:
-        raise HTTPException(status_code=404, detail="Policy not found")
-    row.mode = request.mode
-    row.allowed_adaptations = request.allowed_adaptations
-    row.blocked_adaptations = request.blocked_adaptations
-    row.risk_policy = request.risk_policy
-    row.sensitive_context_rules = request.sensitive_context_rules
-    row.updated_at = utcnow()
-    await session.commit()
-    await session.refresh(row)
-    return serialize_policy(row)
+    try:
+        row = (await session.execute(select(AdaptationPolicy).where(AdaptationPolicy.id == policy_id))).scalar_one_or_none()
+        if row is None:
+            raise HTTPException(status_code=404, detail="Policy not found")
+        row.mode = request.mode
+        row.allowed_adaptations = request.allowed_adaptations
+        row.blocked_adaptations = request.blocked_adaptations
+        row.risk_policy = request.risk_policy
+        row.sensitive_context_rules = request.sensitive_context_rules
+        row.updated_at = utcnow()
+        await session.commit()
+        await session.refresh(row)
+        return serialize_policy(row)
+    except SQLAlchemyError:
+        await session.rollback()
+        raise HTTPException(status_code=503, detail="Database unavailable")
 
 
 @router.get("/design-system")
@@ -283,7 +453,10 @@ async def design_system(_: str = Depends(require_studio_auth), session: AsyncSes
     try:
         row = (await session.execute(select(DesignSystem).order_by(DesignSystem.version.desc()).limit(1))).scalar_one_or_none()
     except SQLAlchemyError:
-        return default_design_system()
+        await session.rollback()
+        if get_settings().is_production:
+            raise HTTPException(status_code=503, detail="Database unavailable")
+        return LOCAL_DESIGN_SYSTEM or default_design_system()
     return serialize_design_system(row) if row else default_design_system()
 
 
@@ -293,22 +466,28 @@ async def update_design_system(
     _: str = Depends(require_studio_auth),
     session: AsyncSession = Depends(get_session),
 ) -> dict[str, Any]:
-    current = (await session.execute(select(DesignSystem).order_by(DesignSystem.version.desc()).limit(1))).scalar_one_or_none()
-    workspace_id, project_id = await default_scope(session)
-    row = DesignSystem(
-        id=str(uuid4()),
-        workspace_id=getattr(current, "workspace_id", workspace_id),
-        project_id=getattr(current, "project_id", project_id),
-        name=request.name,
-        version=(getattr(current, "version", 0) or 0) + 1,
-        tokens=request.tokens,
-        component_contracts=request.component_contracts,
-        brand_voice=request.brand_voice,
-    )
-    session.add(row)
-    await session.commit()
-    await session.refresh(row)
-    return serialize_design_system(row)
+    try:
+        current = (await session.execute(select(DesignSystem).order_by(DesignSystem.version.desc()).limit(1))).scalar_one_or_none()
+        workspace_id, project_id = await default_scope(session)
+        row = DesignSystem(
+            id=str(uuid4()),
+            workspace_id=getattr(current, "workspace_id", workspace_id),
+            project_id=getattr(current, "project_id", project_id),
+            name=request.name,
+            version=(getattr(current, "version", 0) or 0) + 1,
+            tokens=request.tokens,
+            component_contracts=request.component_contracts,
+            brand_voice=request.brand_voice,
+        )
+        session.add(row)
+        await session.commit()
+        await session.refresh(row)
+        return serialize_design_system(row)
+    except SQLAlchemyError:
+        await session.rollback()
+        if get_settings().is_production:
+            raise HTTPException(status_code=503, detail="Database unavailable")
+        return local_design_system(request)
 
 
 @router.get("/playground/presets")
@@ -385,8 +564,57 @@ async def load_policy_for_element(session: AsyncSession, element_key: str) -> Ad
     return row or default_policy()
 
 
+def create_local_project(request: ProjectCreateRequest) -> dict[str, Any]:
+    key = (request.workspace_slug, request.slug)
+    if key in LOCAL_PROJECTS:
+        raise HTTPException(status_code=409, detail="Project slug already exists in this workspace")
+
+    project = {
+        "id": str(uuid4()),
+        "workspace_id": f"local-{request.workspace_slug}",
+        "name": request.name,
+        "slug": request.slug,
+        "created_at": iso(utcnow()),
+    }
+    LOCAL_PROJECTS[key] = project
+    return project
+
+
+def local_design_system(request: DesignSystemUpdateRequest) -> dict[str, Any]:
+    global LOCAL_DESIGN_SYSTEM
+    current_version = int((LOCAL_DESIGN_SYSTEM or {}).get("version", 0))
+    LOCAL_DESIGN_SYSTEM = {
+        "id": "local",
+        "workspace_id": "local-default",
+        "project_id": "local-default",
+        "name": request.name,
+        "version": current_version + 1,
+        "tokens": request.tokens,
+        "component_contracts": request.component_contracts,
+        "brand_voice": request.brand_voice,
+        "created_at": (LOCAL_DESIGN_SYSTEM or {}).get("created_at") or iso(utcnow()),
+        "updated_at": iso(utcnow()),
+    }
+    return LOCAL_DESIGN_SYSTEM
+
+
 def serialize_project(row: Project) -> dict[str, Any]:
     return {"id": row.id, "workspace_id": row.workspace_id, "name": row.name, "slug": row.slug, "created_at": iso(row.created_at)}
+
+
+def serialize_api_key(row: ApiKey) -> dict[str, Any]:
+    return {
+        "id": row.id,
+        "workspace_id": row.workspace_id,
+        "project_id": row.project_id,
+        "environment": row.environment,
+        "name": row.name,
+        "key_prefix": row.key_prefix,
+        "last_four": row.last_four,
+        "created_at": iso(row.created_at),
+        "last_used_at": iso(row.last_used_at),
+        "revoked_at": iso(row.revoked_at),
+    }
 
 
 def serialize_element(row: UiElement) -> dict[str, Any]:

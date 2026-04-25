@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: pollex-api
+    runtime: python
+    rootDir: pollex/apps/api
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: AUTO_CREATE_DATABASE
+        value: false
+      - key: AUTO_CREATE_TABLES
+        value: false
+      - key: DATABASE_URL
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_JWT_SECRET
+        sync: false
+      - key: STUDIO_CORS_ORIGINS
+        sync: false
