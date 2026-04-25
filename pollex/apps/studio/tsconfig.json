@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "lib": ["ESNext", "DOM"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "noEmit": true,
+    "paths": {
+      "@pollex/sdk-react": ["../../packages/sdk-react/src"],
+      "@pollex/sdk-js": ["../../packages/sdk-js/src"],
+      "@pollex/shared-types": ["../../packages/shared-types/src"]
+    },
+    "strict": true,
+    "target": "ESNext",
+    "types": ["node", "vite/client"]
+  },
+  "include": ["src", "vite.config.ts"]
+}

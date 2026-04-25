@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "declaration": true,
+    "declarationMap": true,
+    "jsx": "react-jsx",
+    "lib": ["ESNext", "DOM"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "outDir": "dist",
+    "paths": {
+      "@pollex/sdk-js": ["../sdk-js/src"],
+      "@pollex/shared-types": ["../shared-types/src"]
+    },
+    "strict": true,
+    "target": "ESNext",
+    "types": ["node", "vitest/globals"]
+  },
+  "include": ["src", "tests"]
+}

@@ -1,0 +1,14 @@
+.pollex-size-sm {
+  min-height: 2rem;
+  padding-inline: 0.75rem;
+}
+
+.pollex-size-md {
+  min-height: 2.5rem;
+  padding-inline: 1rem;
+}
+
+.pollex-size-lg {
+  min-height: 3rem;
+  padding-inline: 1.25rem;
+}

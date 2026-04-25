@@ -1,0 +1,147 @@
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color: #ffffff;
+  background: #0e0e0f;
+  font-family:
+    "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-synthesis: none;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+body {
+  background: #0e0e0f;
+}
+
+@layer components {
+  .panel {
+    @apply rounded-2xl border border-[#2A2D31] bg-[#171719];
+  }
+
+  .table-cell {
+    @apply whitespace-nowrap px-4 py-3 text-sm text-[#A1A1AA];
+  }
+
+  .field-label {
+    @apply text-xs font-medium uppercase tracking-normal text-[#A1A1AA];
+  }
+}
+
+.bg-gray-50,
+.bg-white {
+  background-color: #0e0e0f !important;
+}
+
+.bg-white\/90,
+.bg-white\/95 {
+  background-color: rgb(23 23 25 / 0.92) !important;
+}
+
+.bg-gray-100,
+.bg-gray-200,
+.bg-indigo-50,
+.bg-indigo-100,
+.bg-yellow-100,
+.bg-green-100,
+.bg-red-50 {
+  background-color: #1f1f24 !important;
+}
+
+.border-gray-100,
+.border-gray-200,
+.border-gray-300,
+.divide-gray-100 > :not([hidden]) ~ :not([hidden]),
+.divide-gray-200 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #2a2d31 !important;
+}
+
+.text-gray-950,
+.text-gray-900,
+.text-gray-800,
+.text-gray-700,
+.text-indigo-600,
+.text-indigo-700,
+.text-green-800,
+.text-yellow-800,
+.text-red-800 {
+  color: #ffffff !important;
+}
+
+.text-gray-600,
+.text-gray-500,
+.text-gray-400 {
+  color: #a1a1aa !important;
+}
+
+.bg-indigo-600,
+.hover\:bg-indigo-700:hover {
+  background-color: #ffffff !important;
+  color: #0e0e0f !important;
+}
+
+a.active {
+  background-color: #ffffff !important;
+  color: #0e0e0f !important;
+}
+
+.border-indigo-600 {
+  border-color: #ffffff !important;
+}
+
+.focus\:border-indigo-500:focus {
+  border-color: #ffffff !important;
+}
+
+.focus\:ring-indigo-100:focus {
+  --tw-ring-color: rgb(255 255 255 / 0.16) !important;
+}
+
+input,
+textarea,
+select {
+  color: #ffffff;
+  background: #171719;
+  border-color: #2a2d31;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #666a70;
+}
+
+button {
+  border-radius: 9999px;
+}
+
+button.border:hover {
+  background-color: #ffffff !important;
+  border-color: #ffffff !important;
+  color: #0e0e0f !important;
+}
+
+.pollex-pill {
+  border: 1px solid #2a2d31;
+  background: #0e0e0f;
+  color: #ffffff;
+}
+
+.pollex-pill:hover,
+.pollex-pill-active {
+  border-color: #ffffff;
+  background: #ffffff;
+  color: #0e0e0f;
+}
+
+table {
+  color: #a1a1aa;
+}
